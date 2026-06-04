@@ -1,19 +1,24 @@
-# BookNow
+# Yatri Point
 
-A comprehensive booking platform for Buses, Hotels, and Restaurants.
+Bihar's #1 travel booking platform — Book Bus, Hotel, Cab & Café in one place.
 
 ## Features
 
-- **Unified Booking:** Book multiple services in one flow.
-- **Real-time Availability:** seamless integration.
-- **Secure Payments:** (mocked for now).
-- **User Dashboard:** Manage all your bookings.
+- **Bus Booking:** Search routes, view seat maps, book and pay online
+- **Hotel Booking:** Browse hotels, select room types, and book instantly
+- **Cab / Taxi:** Book rapid cars for local travel
+- **Café Reservations:** Reserve tables at partner cafés
+- **Collaborator Portal:** Business dashboard for partner operators
+- **Secure Payments:** Razorpay integration with UPI fallback
+- **Admin Panel:** Full admin control over orders, collabs & verifications
 
 ## Tech Stack
 
-- **Frontend:** React, Vite, Tailwind CSS, daisyUI, Framer Motion
-- **State Management:** React Query, React Context
-- **Routing:** React Router v6
+- **Backend:** Node.js, Express.js (ESM)
+- **Database:** Supabase (PostgreSQL)
+- **Auth:** Firebase Auth + JWT + Google OAuth
+- **Payments:** Razorpay + Fast2SMS (OTP)
+- **Email:** Nodemailer (SMTP)
 
 ## Getting Started
 
@@ -22,20 +27,22 @@ A comprehensive booking platform for Buses, Hotels, and Restaurants.
     npm install
     ```
 
-2.  **Run the development server:**
+2.  **Setup environment variables:**
+    ```bash
+    cp .env.example .env
+    # Fill in your keys
+    ```
+
+3.  **Run the development server:**
     ```bash
     npm run dev
     ```
 
-3.  **Build for production:**
-    ```bash
-    npm run build
-    ```
-
 ## Folder Structure
 
-- `src/components`: Reusable UI components and layouts.
-- `src/features`: Feature-specific logic (auth, bus, hotel, etc.).
-- `src/pages`: Route components.
-- `src/routes`: App routing configuration.
-- `src/services`: API services.
+- `controllers/`: Route controller logic
+- `routes/`: Express route definitions
+- `services/`: Business logic & external service integrations
+- `middleware/`: Auth & validation middleware
+- `utils/`: Database client, JWT helpers, OTP helpers
+- `public/`: Static assets (PWA manifest, robots.txt, sitemap)
