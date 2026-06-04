@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- user-scalable=no prevents WebView double-tap zoom; feels native -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- Makes it feel like a native app when added to home screen / wrapped in WebView -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Yatri Point">
+    <!-- ===== PRIMARY SEO ===== -->
+    <meta name="description" content="Yatri Point (Yatri Point) — Bihar's #1 travel booking platform. Book Budget & Luxury Buses, Hotels, Rapid Cars and Cafés across Madhubani, Darbhanga, Jaynagar & 10+ cities. Travel & Stay! JAI MATA DI">
+    <meta name="keywords" content="bus booking Bihar, hotel booking Madhubani, Darbhanga bus, Mithila travel, Yatri Point, Bihar travel, rapid car Bihar, book bus online Bihar, Jaynagar bus booking">
+    <meta name="author" content="Yatri Point — Yatri Point">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://yatripoint.com/">
+
+    <!-- ===== OPEN GRAPH (Facebook / WhatsApp Share) ===== -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Yatri Point — Book Bus, Hotel & Rapid Car in Bihar">
+    <meta property="og:description" content="Bihar's #1 travel booking app. Book buses, hotels, rapid cars & cafés across 13+ Mithila cities. Instant UPI payments. JAI MATA DI">
+    <meta property="og:url" content="https://yatripoint.com/">
+    <meta property="og:image" content="https://yatripoint.com/icons/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Yatri Point">
+    <meta property="og:locale" content="en_IN">
+
+    <!-- ===== TWITTER CARD ===== -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Yatri Point — Book Bus, Hotel & Rapid Car in Bihar">
+    <meta name="twitter:description" content="Bihar's #1 travel booking app. Book buses, hotels & rapid cars across 13+ Mithila cities. Instant UPI payments.">
+    <meta name="twitter:image" content="https://yatripoint.com/icons/og-image.png">
+
+    <!-- ===== STRUCTURED DATA (Rich Results on Google) ===== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "TravelAgency",
+      "name": "Yatri Point — Yatri Point",
+      "url": "https://yatripoint.com",
+      "logo": "https://yatripoint.com/icons/icon-512.png",
+      "description": "Bihar's #1 travel booking platform for buses, hotels, rapid cars & cafés across Mithila region.",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Madhubani",
+        "addressRegion": "Bihar",
+        "addressCountry": "IN"
+      },
+      "telephone": "+91-72502-76840",
+      "areaServed": ["Madhubani", "Darbhanga", "Jaynagar", "Basopatti", "Benipatti", "Sakri", "Bihar"],
+      "priceRange": "₹",
+      "openingHours": "Mo-Su 00:00-23:59"
+    }
+    </script>
+    <meta name="theme-color" content="#d84e55">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Yatri Point | Yatri Point — Book Bus, Hotel & Rapid Car | Bihar</title>
+
+    <!-- ===== FONTS ===== -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Poppins:wght@400;600;700;800&display=swap">
+
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase SDK (storage + auth for phone OTP) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <!-- ===== SERVICE WORKER (PWA offline support) ===== -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+    </script>
+</head>
+
+<body>
+<div id="recaptcha-container"></div>
+
+
+    <!-- SPLASH -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-title">JAI MATA DI</div>
+        <div class="splash-sub">YATRI POINT — Travel & Stay</div>
+    </div>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo" onclick="navigateTo('home')">
+                                    <h1>
+                <img src="yatri-logo.png" alt="Yatri Point Logo" class="brand-logo" 
+                     style="height: 80px; width: auto; max-width: 300px; object-fit: contain; vertical-align: middle; background: #ffffff; padding: 4px 12px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin: 0;"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <span style="display:none; font-size: 1.5rem; color: white; font-weight: 900; background: rgba(0,0,0,0.2); padding: 5px 15px; border-radius: 8px;">YATRI POINT</span>
+            </h1>
+            
+        </div>
+        <div class="header-right">
+            <ul class="nav-links" id="navLinksDesktop">
+                <li><a href="#" data-section="home" class="active" onclick="navigateTo('home');return false">Home</a>
+                </li>
+                <li><a href="#" data-section="help" onclick="navigateTo('help');return false">Help</a></li>
+                <li><a href="#" data-section="about" onclick="navigateTo('about');return false">About</a></li>
+                <li><a href="collaborator-dashboard.html">Partner Portal</a></li>
+                                <li><a href="#" data-section="terms" onclick="navigateTo('terms');return false">T&C</a></li>
+
+            </ul>
+
+            <div class="auth-btns" id="authBtns">
+                <button class="btn-login" onclick="openModal('loginModal')">Login</button>
+                <button class="btn-signup" onclick="openModal('signupModal')">Sign Up</button>
+            </div>
+
+            <div id="userSection" class="user-menu" style="display:none" onclick="toggleDropdown()">
+                <div class="user-avatar" id="userAvatar"><span id="userInitial">U</span></div>
+                <span class="user-name" id="userNameDisplay">User</span>
+                <span class="dropdown-arrow">▼</span>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+                    <a href="#" onclick="openProfile();return false">👤 Profile</a>
+                    <a href="#" onclick="logout();return false">🚪 Logout</a>
+                </div>
+            </div>
+
+            <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#" onclick="navigateTo('home');return false">🏠 Home</a>
+        <a href="#" onclick="showCafes();return false">☕ Café</a>
+        <a href="#" onclick="navigateTo('help');return false">❓ Help</a>
+        <a href="#" onclick="navigateTo('about');return false">ℹ️ About</a>
+        <a href="collaborator-dashboard.html">📊 Partner Portal</a>
+        <a href="#" onclick="navigateTo('terms');return false">📜 T&C</a>
+                <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+
+        <div class="mobile-auth" id="mobileAuth">
+            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();">🔑 Login</button>
+            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();">📝 Sign Up</button>
+        </div>
+    </div>
+
+    <!-- ===== HOME SECTION ===== -->
+    <div class="page-section active" id="section-home">
+        <!-- HERO -->
+        <section class="hero">
+            <div class="hero-content">
+                <h2>Welcome to Yatri Point</h2>
+                <p class="tagline">YATRI POINT — Travel & Stay</p>
+                <p class="brand-sub">Bus • Hotel • Rapid Car — Book Instantly Across India</p>
+            </div>
+        </section>
+
+        <!-- BOOKING -->
+        <div class="booking-section">
+            <div class="booking-tabs">
+                <button class="active" onclick="switchTab('bus',this)">🚌 Bus</button>
+                <button onclick="switchTab('hotel',this)">🏨 Hotel</button>
+                <button onclick="switchTab('car',this)">🚗 Rapid Car</button>
+                <button onclick="showCafes()">☕ Café</button>
+            </div>
+
+            <!-- BUS FORM -->
+            <form class="booking-form active" id="busForm" onsubmit="searchBuses(event)">
+                <div class="form-group">
+                    <label>From</label>
+                    <select id="busFrom" class="location-select" data-placeholder="Select City..." required></select>
+                </div>
+                <div class="form-group">
+                    <label>To</label>
+                    <select id="busTo" class="location-select" data-placeholder="Select City..." required></select>
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="busDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Passengers</label>
+                    <select id="busPassengers" required>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </div>
+                <div class="filter-row" id="busFilters">
+                    <span class="filter-chip" data-filter="luxury" onclick="toggleFilter(this)">💎 Luxury</span>
+                    <span class="filter-chip active" data-filter="standard" onclick="toggleFilter(this)">🚌 Standard</span>
+                    <span class="filter-chip" data-filter="nonac" onclick="toggleFilter(this)">🌀 Non-AC</span>
+                    <span class="filter-chip" data-filter="ac" onclick="toggleFilter(this)">❄️ AC</span>
+                    <span class="filter-chip" data-filter="sleeper" onclick="toggleFilter(this)">🛏️ Sleeper</span>
+                    <span class="filter-chip" data-filter="seater" onclick="toggleFilter(this)">💺 Seater</span>
+                </div>
+                <button type="submit" class="search-btn">🔍 Search Buses</button>
+            </form>
+
+            <!-- HOTEL FORM -->
+            <form class="booking-form" id="hotelForm" onsubmit="searchHotels(event)">
+                <div class="form-group">
+                    <label>Location</label>
+                    <select id="hotelLocation" required>
+                        <option value="">Select Location...</option>
+                        <option value="Madhubani">Madhubani</option>
+                        <option value="Darbhanga">Darbhanga</option>
+                        <option value="Patna">Patna</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Check-In</label>
+                    <input type="date" id="hotelCheckin" required>
+                </div>
+                <div class="form-group">
+                    <label>Check-Out</label>
+                    <input type="date" id="hotelCheckout" required>
+                </div>
+                <div class="form-group">
+                    <label>Guests</label>
+                    <select id="hotelGuests" required>
+                        <option value="1">1 Guest</option>
+                        <option value="2">2 Guests</option>
+                        <option value="3">3 Guests</option>
+                        <option value="4">4 Guests</option>
+                    </select>
+                </div>
+                <button type="submit" class="search-btn">🔍 Search Hotels</button>
+            </form>
+
+            <!-- RAPID CAR FORM -->
+            <form class="booking-form" id="carForm" onsubmit="searchCars(event)">
+                <div class="form-group">
+                    <label>City</label>
+                    <select id="carCity" class="location-select" data-placeholder="Select City..." required></select>
+                </div>
+                <div class="form-group">
+                    <label>Boarding Point</label>
+                    <input type="text" id="carBoarding" placeholder="e.g. Station Road, Near SBI Bank" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Dropping Point</label>
+                    <input type="text" id="carDropping" placeholder="e.g. Airport, Bus Stand" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Date</label>
+                    <input type="date" id="carDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="time" id="carTime" required>
+                </div>
+                <div class="form-group">
+                    <label>Passengers</label>
+                    <select id="carPassengers" required>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6+</option>
+                    </select>
+                </div>
+
+                <!-- Live Location Toggle -->
+                <div class="live-location-toggle" id="liveLocationBox">
+                    <div class="live-loc-info">
+                        <span class="live-loc-icon">LIVE</span>
+                        <div>
+                            <strong>Share Live Location</strong>
+                            <small>Driver can track you during ride · Auto-stops after ride ends</small>
+                        </div>
+                    </div>
+                    <label class="toggle-switch" title="Enable live location sharing">
+                        <input type="checkbox" id="liveLocationToggle" onchange="toggleLiveLocation(this)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div id="liveLocationStatus" style="display:none;font-size:0.78rem;color:#27ae60;text-align:center;padding:4px 0 2px;font-weight:600;">
+                    Live location active — will auto-stop when ride ends
+                </div>
+
+                <button type="submit" class="search-btn">🚗 Find Rapid Car</button>
+            </form>
+        </div>
+
+        <!-- SERVICES CARDS -->
+        <section class="services">
+            <h3>✨ Why Choose Yatri Point?</h3>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">🚌</div>
+                    <h4>All India Bus</h4>
+                    <p>Low/Luxury, AC/Non-AC, Sleeper/Seater — animated seat selection with instant booking.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🏨</div>
+                    <h4>Premium Hotels</h4>
+                    <p>General, AC & Balcony rooms with verified properties and clear policies.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🚗</div>
+                    <h4>Rapid Car</h4>
+                    <p>Instant cab booking with auto-calculated distance & pricing across 6 cities.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">☕</div>
+                    <h4>Café & Restaurant</h4>
+                    <p>Explore the best local eateries of Mithila — from tea to thali!</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- ===== RESULTS SECTION ===== -->
+    <div class="page-section" id="section-results">
+        <div class="results-view active">
+            <button class="back-btn" onclick="goBack()">← Back to Search</button>
+            <div class="results-header" id="resultsHeader">Results</div>
+            
+            <!-- Advanced Split Search Discovery Layout -->
+            <div class="search-discovery-layout">
+                <!-- Filters Sidebar -->
+                <aside class="filters-sidebar" id="busFiltersSidebar" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h3 style="font-size:1.1rem; font-weight:800; color:var(--dark);">🛠️ Filters</h3>
+                        <button onclick="resetAllFilters()" style="background:none; border:none; color:var(--primary); font-size:0.75rem; font-weight:700; cursor:pointer; text-transform:uppercase; font-family:inherit;">Clear All</button>
+                    </div>
+
+                    <!-- Price Range Filter -->
+                    <div class="filter-section">
+                        <h4>Price Range</h4>
+                        <input type="range" id="filterPriceRange" min="200" max="3000" value="3000" class="price-range-slider" oninput="updatePriceFilterVal(this.value)">
+                        <div class="price-values">
+                            <span>₹200</span>
+                            <span id="priceRangeMaxDisplay">Max: ₹3000</span>
+                        </div>
+                    </div>
+
+                    <!-- Bus Type Filter -->
+                    <div class="filter-section">
+                        <h4>Bus Type</h4>
+                        <div class="filter-group-vertical">
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="bus-type-checkbox" value="AC" onchange="triggerFilterUpdate()"> AC
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="bus-type-checkbox" value="Non-AC" onchange="triggerFilterUpdate()"> Non-AC
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="bus-type-checkbox" value="Sleeper" onchange="triggerFilterUpdate()"> Sleeper
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="bus-type-checkbox" value="Seater" onchange="triggerFilterUpdate()"> Seater
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Departure Time Filter -->
+                    <div class="filter-section">
+                        <h4>Departure Time</h4>
+                        <div class="filter-group-vertical">
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="depart-time-checkbox" value="morning" onchange="triggerFilterUpdate()"> Morning (6 AM - 12 PM)
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="depart-time-checkbox" value="afternoon" onchange="triggerFilterUpdate()"> Afternoon (12 PM - 6 PM)
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="depart-time-checkbox" value="evening" onchange="triggerFilterUpdate()"> Evening (6 PM - 12 AM)
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="depart-time-checkbox" value="night" onchange="triggerFilterUpdate()"> Night (12 AM - 6 AM)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Operator Filter -->
+                    <div class="filter-section">
+                        <h4>Operators</h4>
+                        <div class="filter-group-vertical" id="filterOperatorsContainer">
+                            <!-- Dynamic operator checkboxes -->
+                        </div>
+                    </div>
+
+                    <!-- Ratings Filter -->
+                    <div class="filter-section">
+                        <h4>Min Operator Rating</h4>
+                        <div class="filter-group-vertical">
+                            <label class="filter-checkbox-label">
+                                <input type="radio" name="filterRating" value="0" checked onchange="triggerFilterUpdate()"> Show All
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="radio" name="filterRating" value="4.5" onchange="triggerFilterUpdate()"> 🌟 4.5 &amp; above
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="radio" name="filterRating" value="4.0" onchange="triggerFilterUpdate()"> 🌟 4.0 &amp; above
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="radio" name="filterRating" value="3.5" onchange="triggerFilterUpdate()"> 🌟 3.5 &amp; above
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Amenities Filter -->
+                    <div class="filter-section">
+                        <h4>Amenities</h4>
+                        <div class="filter-group-vertical">
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="amenity-checkbox" value="AC" onchange="triggerFilterUpdate()"> AC
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="amenity-checkbox" value="WiFi" onchange="triggerFilterUpdate()"> WiFi
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="amenity-checkbox" value="Water Bottle" onchange="triggerFilterUpdate()"> Water Bottle
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="amenity-checkbox" value="Blankets" onchange="triggerFilterUpdate()"> Blankets
+                            </label>
+                            <label class="filter-checkbox-label">
+                                <input type="checkbox" class="amenity-checkbox" value="Charging Point" onchange="triggerFilterUpdate()"> Charging Point
+                            </label>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Results Wrapper -->
+                <div class="bus-results-wrapper">
+                    <!-- Sorting Bar -->
+                    <div class="sorting-bar" id="busSortingBar" style="display:none;">
+                        <span class="sorting-label">Sort By:</span>
+                        <div class="sorting-options">
+                            <button class="sort-btn active" id="sortPriceLow" onclick="triggerSort('price_low')">Lowest Price</button>
+                            <button class="sort-btn" id="sortPriceHigh" onclick="triggerSort('price_high')">Highest Price</button>
+                            <button class="sort-btn" id="sortDepEarliest" onclick="triggerSort('dep_earliest')">Earliest Departure</button>
+                            <button class="sort-btn" id="sortDepLatest" onclick="triggerSort('dep_latest')">Latest Departure</button>
+                            <button class="sort-btn" id="sortDuration" onclick="triggerSort('duration')">Shortest Duration</button>
+                            <button class="sort-btn" id="sortRating" onclick="triggerSort('rating')">Highest Rating</button>
+                        </div>
+                    </div>
+
+                    <div class="results-container" id="resultsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BOOKINGS SECTION ===== -->
+    <div class="page-section" id="section-bookings">
+        <div style="max-width:900px;margin:0 auto;padding:1.5rem;">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;">📅 Your Bookings</h2>
+            <div id="bookingsList"></div>
+        </div>
+    </div>
+
+    <!-- ===== PROFILE SECTION ===== -->
+    <div class="page-section" id="section-profile">
+        <div style="max-width:560px;margin:0 auto;padding:1.5rem;">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;">👤 My Profile</h2>
+
+            <!-- Profile Card -->
+            <div
+                style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;margin-bottom:1.2rem;">
+                <!-- Photo -->
+                <div style="position:relative;display:inline-block;margin-bottom:1rem;">
+                    <div id="profilePhotoWrapper"
+                        style="width:90px;height:90px;border-radius:50%;overflow:hidden;margin:0 auto;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:2.5rem;color:#fff;cursor:pointer;border:3px solid var(--primary);"
+                        onclick="document.getElementById('photoFileInput').click()" title="Change photo">
+                        <span id="profilePhotoInitial">U</span>
+                    </div>
+                    <div style="position:absolute;bottom:0;right:0;background:var(--primary);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;"
+                        onclick="document.getElementById('photoFileInput').click()" title="Upload photo">
+                        <span style="color:#fff;font-size:13px;">📷</span>
+                    </div>
+                    <input type="file" id="photoFileInput" accept="image/*" style="display:none"
+                        onchange="handlePhotoUpload(event)">
+                </div>
+                <div id="profileName" style="font-size:1.3rem;font-weight:700;margin-bottom:.25rem;">Loading...</div>
+                <div id="profileUploadStatus" style="font-size:.78rem;color:var(--gray);min-height:1rem;"></div>
+            </div>
+
+            <!-- Info fields -->
+            <div
+                style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;display:flex;flex-direction:column;gap:1rem;">
+                <!-- Email -->
+                <div style="display:flex;align-items:center;gap:.8rem;">
+                    <div style="font-size:1.4rem;">📧</div>
+                    <div style="flex:1;">
+                        <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Gmail</div>
+                        <div id="profileEmail" style="font-size:.95rem;font-weight:600;">—</div>
+                    </div>
+                    <span id="emailVerifiedBadge"
+                        style="background:#d4edda;color:#155724;font-size:.72rem;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;">Verified</span>
+                </div>
+
+                <hr style="border:0;border-top:1px solid var(--border);">
+
+                <!-- Phone -->
+                <div>
+                    <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;">
+                        <div style="font-size:1.4rem;">📱</div>
+                        <div style="flex:1;">
+                            <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Mobile Number (India
+                                only)</div>
+                            <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not verified</div>
+                        </div>
+                        <span id="phoneVerifiedBadge"
+                            style="display:none;background:#d4edda;color:#155724;font-size:.72rem;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;">Verified</span>
+                    </div>
+                    <div id="phoneEditSection">
+                        <div style="display:flex;gap:.5rem;">
+                            <div
+                                style="display:flex;align-items:center;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:0 .6rem;font-weight:600;color:var(--gray);font-size:.9rem;">
+                                +91</div>
+                            <input id="profilePhoneInput" type="tel" placeholder="10-digit mobile number" maxlength="10"
+                                pattern="[6-9][0-9]{9}"
+                                style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--bg);color:var(--text);"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                            <button id="sendOtpBtn" class="btn-primary" style="padding:.6rem 1rem;white-space:nowrap;"
+                                onclick="initSendOTP()">Send OTP</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit name -->
+            <div
+                style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;margin-top:1rem;">
+                <label style="font-size:.8rem;color:var(--gray);font-weight:600;display:block;margin-bottom:.4rem;">FULL
+                    NAME</label>
+                <div style="display:flex;gap:.5rem;">
+                    <input id="profileNameInput" type="text" maxlength="80"
+                        style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.95rem;background:var(--bg);color:var(--text);"
+                        placeholder="Your full name">
+                    <button class="btn-primary" style="padding:.6rem 1rem;" onclick="saveProfileName()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CAFÉ SECTION ===== -->
+    <div class="page-section" id="section-cafe">
+        <div style="max-width:1000px;margin:0 auto;padding:1.5rem;">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1rem;">☕ Café & Restaurant</h2>
+            <div style="margin-bottom:1rem;">
+                <select id="cafeLocation" onchange="filterCafes()"
+                    style="padding:.5rem 1rem;border:2px solid var(--border);border-radius:6px;font-size:.9rem;">
+                    <option value="">All Locations</option>
+                    <option value="Madhubani">Madhubani</option>
+                    <option value="Darbhanga">Darbhanga</option>
+                    <option value="Patna">Patna</option>
+                </select>
+            </div>
+            <div class="cafe-grid" id="cafeGrid"></div>
+        </div>
+    </div>
+
+    <!-- ===== HELP PAGE ===== -->
+    <div class="page-section" id="section-help">
+        <div class="page-view active">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h2>❓ Help & Support</h2>
+            <div class="policy-card"><strong>📞 Customer Support:</strong> Call 8178030064 (9AM–9PM)</div>
+            <div class="policy-card"><strong>📧 Email:</strong> support@mithilasafar.com</div>
+            <div class="policy-card"><strong>💬 WhatsApp:</strong> Send "HELP" to +91-8178030064</div>
+            <div class="policy-card"><strong>🔄 Refunds:</strong> Cancellations 24h before — full refund. Within 24h — 50% refund.</div>
+            <div class="policy-card"><strong>🎫 Booking Issues:</strong> Share your Booking ID via WhatsApp for instant support.</div>
+    </div>
+</div>
+
+    <!-- ===== CAFE SEAT SELECTION MODAL ===== -->
+    <div class="modal" id="cafeSeatModal" onclick="closeOnOverlay(event,'cafeSeatModal')">
+        <div class="modal-content wide">
+            <button class="close-modal" onclick="closeModal('cafeSeatModal')">×</button>
+            <h2 id="cafeName">☕ Café Seat Booking</h2>
+            <p class="subtitle" id="cafeInfo">Cafe Address & Info</p>
+            <div class="seat-legend">
+                <span><span class="dot avail"></span> Available</span>
+                <span><span class="dot sel"></span> Selected</span>
+                <span><span class="dot taken"></span> Booked</span>
+            </div>
+            <div class="seat-grid" id="cafeSeatGrid"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);">
+                <div>
+                    <span style="font-size:.85rem;color:var(--gray);">Selected: <strong id="cafeSeatCount">0</strong> seat(s)</span><br>
+                    <span style="font-size:.85rem;color:var(--gray);">Price/seat: ₹<span id="cafeSeatPrice">0</span></span>
+                </div>
+                <div>
+                    <span style="font-size:1.2rem;font-weight:700;color:var(--primary);">Total: ₹<span id="cafeSeatTotal">0</span></span>
+                </div>
+            </div>
+            <button class="btn-primary" style="margin-top:1rem;width:100%;padding:.7rem;" onclick="confirmCafeSeats()">Proceed to Payment →</button>
+        </div>
+    </div>
+
+    <!-- ===== BUS DETAILS & POLICIES MODAL ===== -->
+    <div class="modal" id="busDetailsModal" onclick="closeOnOverlay(event,'busDetailsModal')">
+        <div class="modal-content wide" style="max-width: 600px;">
+            <button class="close-modal" onclick="closeModal('busDetailsModal')">×</button>
+            <h2 id="detailsBusName">XYZ Travels</h2>
+            <p class="subtitle" id="detailsBusType">AC Sleeper</p>
+            
+            <div style="display:flex; flex-direction:column; gap:1.2rem; margin:1.2rem 0;">
+                <!-- Route Details -->
+                <div style="background:var(--light); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="font-size:0.9rem; font-weight:800; color:var(--dark); margin-bottom:0.8rem; text-transform:uppercase; letter-spacing:0.5px;">📍 Route & Timeline</h4>
+                    <div class="details-timeline" id="detailsJourneyTimeline">
+                        <!-- Dynamic timeline nodes -->
+                    </div>
+                </div>
+
+                <!-- Operator Details -->
+                <div style="background:var(--light); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="font-size:0.9rem; font-weight:800; color:var(--dark); margin-bottom:0.8rem; text-transform:uppercase; letter-spacing:0.5px;">🏢 Operator Details</h4>
+                    <p style="font-size:0.85rem; margin-bottom:0.3rem;"><strong>Operator:</strong> <span id="detailsOperatorName">XYZ Travels</span></p>
+                    <p style="font-size:0.85rem; margin-bottom:0.3rem;"><strong>Contact Phone:</strong> <span id="detailsOperatorPhone">8178030064</span></p>
+                    <p style="font-size:0.85rem;"><strong>Support Email:</strong> <span id="detailsOperatorEmail">support@mithilasafar.com</span></p>
+                </div>
+
+                <!-- Amenities -->
+                <div style="background:var(--light); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="font-size:0.9rem; font-weight:800; color:var(--dark); margin-bottom:0.8rem; text-transform:uppercase; letter-spacing:0.5px;">✨ Available Amenities</h4>
+                    <div class="amenity-icons-list" id="detailsAmenitiesList" style="gap: 0.5rem;">
+                        <!-- Dynamic tags -->
+                    </div>
+                </div>
+
+                <!-- Policies -->
+                <div class="policy-grid-box">
+                    <div class="policy-block">
+                        <h5>🛡️ Cancellation Policy</h5>
+                        <p id="detailsCancelPolicy">Cancellation details...</p>
+                    </div>
+                    <div class="policy-block">
+                        <h5>💸 Refund Policy</h5>
+                        <p id="detailsRefundPolicy">Refund details...</p>
+                    </div>
+                </div>
+
+                <!-- Photos -->
+                <div style="background:var(--light); padding:1rem; border-radius:12px; border:1px solid var(--border);">
+                    <h4 style="font-size:0.9rem; font-weight:800; color:var(--dark); margin-bottom:0.8rem; text-transform:uppercase; letter-spacing:0.5px;">📸 Bus Photos</h4>
+                    <div id="detailsPhotosList" style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                        <!-- Dynamic photo thumbnails -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BOOKING DETAIL MODAL ===== -->
+    <div class="modal" id="bookingDetailModal" onclick="closeOnOverlay(event,'bookingDetailModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('bookingDetailModal')">×</button>
+            <div id="bookingDetailContent"></div>
+        </div>
+    </div>
+
+
+    <!-- ===== OTP VERIFICATION MODAL ===== -->
+    <div class="modal" id="otpModal" onclick="closeOnOverlay(event,'otpModal')">
+        <div class="modal-content" style="max-width:380px;">
+            <button class="close-modal" onclick="closeModal('otpModal')">×</button>
+            <h2>📱 Verify Phone</h2>
+            <p class="subtitle" id="otpSubtitle">Enter OTP sent to +91 XXXXXXXXXX</p>
+            <div style="margin:1.2rem 0;">
+                <input id="otpInput" type="tel" maxlength="6" placeholder="6-digit OTP"
+                    style="width:100%;padding:1rem;border:2px solid var(--border);border-radius:10px;font-size:1.4rem;text-align:center;letter-spacing:.3rem;font-weight:700;background:var(--bg);color:var(--text);"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            </div>
+            <button class="btn-primary" style="width:100%;" onclick="confirmOTP()">✅ Verify OTP</button>
+            <p style="text-align:center;margin-top:.8rem;font-size:.85rem;color:var(--gray);">Didn't receive? <a
+                    href="#" onclick="resendOTP();return false;" style="color:var(--primary);">Resend OTP</a></p>
+            <p id="otpError"
+                style="color:var(--danger);text-align:center;font-size:.85rem;margin-top:.5rem;display:none;"></p>
+        </div>
+    </div>
+
+    <!-- ===== EMAIL OTP VERIFICATION MODAL ===== -->
+    <div class="modal" id="emailOtpModal" onclick="closeOnOverlay(event,'emailOtpModal')">
+        <div class="modal-content" style="max-width:380px;">
+            <button class="close-modal" onclick="closeModal('emailOtpModal')">×</button>
+            <h2>✉️ Verify Email</h2>
+            <p class="subtitle" id="emailOtpSubtitle">Enter the 6-digit verification code sent to your email</p>
+            <div style="margin:1.2rem 0;">
+                <input id="emailOtpInput" type="tel" maxlength="6" placeholder="6-digit Code"
+                    style="width:100%;padding:1rem;border:2px solid var(--border);border-radius:10px;font-size:1.4rem;text-align:center;letter-spacing:.3rem;font-weight:700;background:var(--bg);color:var(--text);"
+                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            </div>
+            <button class="btn-primary" id="btnVerifyEmailOtp" style="width:100%;" onclick="confirmEmailOTP()">✅ Verify & Login</button>
+            <p style="text-align:center;margin-top:.8rem;font-size:.85rem;color:var(--gray);">Didn't receive? <a
+                    href="#" id="resendEmailOtpLink" onclick="resendEmailOTP();return false;" style="color:var(--primary);">Resend Code</a></p>
+            <p id="emailOtpError"
+                style="color:var(--danger);text-align:center;font-size:.85rem;margin-top:.5rem;display:none;"></p>
+        </div>
+    </div>
+
+    <!-- ===== LOGIN MODAL ===== -->
+    <div class="modal" id="loginModal" onclick="closeOnOverlay(event,'loginModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('loginModal')">×</button>
+            <h2>🙏 Welcome Back</h2>
+            <p class="subtitle">Login to Yatri Point</p>
+            <form class="modal-form" onsubmit="handleLogin(event)">
+                <input type="text" id="loginEmail" placeholder="Email or Phone Number" required>
+                <div style="position:relative;">
+                    <input type="password" id="loginPassword" placeholder="Password" required style="padding-right:40px;">
+                    <span onclick="togglePassword('loginPassword',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+            </form>
+            <div class="divider"><span>OR</span></div>
+            <div id="googleSignInBtn" style="display:flex;justify-content:center;"></div>
+            <div class="modal-toggle">
+                Don't have an account? <a onclick="switchModals('loginModal','signupModal')">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SIGNUP MODAL ===== -->
+    <div class="modal" id="signupModal" onclick="closeOnOverlay(event,'signupModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('signupModal')">×</button>
+            <h2>🙏 Create Account</h2>
+            <p class="subtitle">Join Yatri Point</p>
+            <form class="modal-form" onsubmit="handleSignup(event)">
+                <input type="text" id="signupName" placeholder="Full Name" required>
+                <input type="email" id="signupEmail" placeholder="Email Address" required>
+                <input type="tel" id="signupPhone" placeholder="Phone Number (+91)" required>
+                <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" required minlength="6">
+                <button type="submit" class="btn-primary">Create Account</button>
+            </form>
+            <div class="divider"><span>OR</span></div>
+            <div id="googleSignInBtnSignup" style="display:flex;justify-content:center;"></div>
+            <div class="modal-toggle">
+                Already have an account? <a onclick="switchModals('signupModal','loginModal')">Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SEAT SELECTION MODAL ===== -->
+    <div class="modal" id="seatModal" onclick="closeOnOverlay(event,'seatModal')">
+        <div class="modal-content wide">
+            <button class="close-modal" onclick="closeModal('seatModal')">×</button>
+            <h2>💺 Select Your Seats</h2>
+            <p class="subtitle" id="seatBusName">Bus Name</p>
+            <div class="seat-legend">
+                <span><span class="dot avail"></span> Available</span>
+                <span><span class="dot sel"></span> Selected</span>
+                <span><span class="dot taken"></span> Booked</span>
+            </div>
+            <div class="seat-grid" id="seatGrid"></div>
+            <div
+                style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;padding-top:.8rem;border-top:1px solid var(--border);">
+                <div>
+                    <span style="font-size:.85rem;color:var(--gray);">Selected: <strong
+                            id="seatCount">0/1</strong></span><br>
+                    <span style="font-size:.85rem;color:var(--gray);">Price/seat: ₹<span id="seatPrice">0</span></span>
+                </div>
+                <div>
+                    <span style="font-size:1.2rem;font-weight:700;color:var(--primary);">Total: ₹<span
+                            id="seatTotal">0</span></span>
+                </div>
+            </div>
+            <button class="btn-primary" style="margin-top:1rem;width:100%;padding:.7rem;"
+                onclick="confirmSeatSelection()">Continue →</button>
+        </div>
+    </div>
+
+    <!-- ===== PASSENGER DETAILS MODAL ===== -->
+    <div class="modal" id="passengerModal" onclick="closeOnOverlay(event,'passengerModal')">
+        <div class="modal-content wide">
+            <button class="close-modal" onclick="closeModal('passengerModal')">×</button>
+            <h2>👤 Passenger Details</h2>
+            <p class="subtitle">Fill details for all passengers</p>
+            <form class="modal-form" onsubmit="confirmPassengers(event)">
+                <div id="passengerFields"></div>
+                <div style="padding-top:.8rem;border-top:1px solid var(--border);margin-top:.5rem;text-align:right;">
+                    <span style="font-size:1.1rem;font-weight:700;color:var(--primary);">Total: ₹<span
+                            id="passengerTotal">0</span></span>
+                </div>
+                <button type="submit" class="btn-primary">Proceed to Payment →</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== ROOM SELECTION MODAL ===== -->
+    <div class="modal" id="roomModal" onclick="closeOnOverlay(event,'roomModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('roomModal')">×</button>
+            <h2>🏨 Select Room</h2>
+            <p class="subtitle" id="roomHotelName">Hotel Name</p>
+            <div style="display:flex;flex-direction:column;gap:.8rem;margin:1rem 0;">
+                <div class="pay-method" onclick="confirmRoom('general')"
+                    style="text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+                    <div><strong>🛏️ General Room</strong><br><small style="color:var(--gray)">Standard comfort,
+                            fan/AC</small></div>
+                    <strong style="color:var(--primary)">₹<span id="roomGenPrice">0</span></strong>
+                </div>
+                <div class="pay-method" onclick="confirmRoom('ac')"
+                    style="text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+                    <div><strong>❄️ AC Room</strong><br><small style="color:var(--gray)">Air conditioned,
+                            premium</small></div>
+                    <strong style="color:var(--primary)">₹<span id="roomAcPrice">0</span></strong>
+                </div>
+                <div class="pay-method" onclick="confirmRoom('balcony')"
+                    style="text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">
+                    <div><strong>🌅 Balcony Room</strong><br><small style="color:var(--gray)">AC + private balcony
+                            view</small></div>
+                    <strong style="color:var(--primary)">₹<span id="roomBalcPrice">0</span></strong>
+                </div>
+            </div>
+            <div class="policy-card" style="font-size:.78rem;">
+                <strong>Hotel Policies:</strong><br>
+                ✅ Check-in: 3:00 PM · Check-out: 12:00 PM<br>
+                📋 Valid Govt ID required<br>
+                🚭 No smoking · 🐾 No pets<br>
+                👥 Max 2 adults + 1 child per room<br>
+                🕘 Visitors: 9AM–9PM only
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FULL-SCREEN PAYMENT PAGE ===== -->
+    <div id="paymentPage" class="payment-fullscreen">
+        <div class="payment-header">
+            <button onclick="closePaymentPage()" class="pay-back-btn">← Back</button>
+            <h3>💳 Payment</h3>
+            <span></span>
+        </div>
+        <div class="payment-body">
+            <div class="pay-amount-box">
+                <div class="pay-row"><span>Subtotal</span><span>₹<span id="paySubtotal">0</span></span></div>
+                <div class="pay-row"><span>Discount</span><span style="color:var(--success);">-₹<span id="payDiscount">0</span></span></div>
+                <div class="pay-row pay-total"><span>Total Payable</span><span>₹<span id="payFinal">0</span></span></div>
+            </div>
+            
+            <div class="pay-coupon" style="display:flex; gap:10px; margin-bottom: 1.5rem;">
+                <input type="text" id="couponInput" placeholder="Coupon code (if any)"
+                    style="flex:1; padding:0.8rem; border-radius:10px; border:1px solid var(--border); background:var(--bg); color:var(--text);">
+                <button onclick="applyCoupon()" class="btn-primary" style="padding:0 1.5rem; min-height:unset; height:48px;">Apply</button>
+            </div>
+
+            <div class="pay-advance" style="margin-bottom: 1.5rem; background:rgba(0,0,0,0.03); padding:1rem; border-radius:12px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" id="advanceCheck" onchange="toggleAdvance(this)" style="width:20px; height:20px;"> 
+                    Pay 30% Advance Only
+                </label>
+                <div id="advanceInfo" style="display:none;font-size:.85rem;color:var(--gray);margin-top:.5rem; padding-left:30px;">
+                    Pay Now: <strong>₹<span id="advanceAmt">0</span></strong> · Due Later: <strong>₹<span id="dueAmt">0</span></strong>
+                </div>
+            </div>
+
+            <!-- Razorpay Section -->
+            <div id="razorpaySection" style="text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
+                <div style="font-size:3.5rem; margin-bottom:1rem;">🔐</div>
+                <h3 style="margin-bottom:0.5rem; color:var(--primary);">Secure Checkout</h3>
+                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:2rem;">One-tap payment via UPI, Cards, Netbanking or Wallets.</p>
+                
+                <button class="pay-now-btn" id="razorpayBtn" onclick="payViaRazorpay()" 
+                    style="background:var(--primary); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(216,78,85,0.35); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span>Pay ₹<span id="razorpayBtnAmount">0</span></span>
+                    <span style="font-size:1.4rem;">→</span>
+                </button>
+                
+                <div style="display:flex; align-items:center; justify-content:center; gap:15px; margin-top:1.5rem; opacity:0.6;">
+                    <img src="https://admin.razorpay.com/assets/badges/razorpay-badge.svg" alt="Razorpay Secure" style="height:25px;">
+                </div>
+            </div>
+
+            <!-- UPI QR Code Section -->
+            <div id="upiSection" style="margin-top:1.5rem; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
+                <div style="font-size:2.5rem; margin-bottom:0.5rem;">📱</div>
+                <h3 style="margin-bottom:0.3rem; color:var(--success);">UPI QR Payment</h3>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:1.5rem;">Scan QR code with any UPI app (GPay, PhonePe, Paytm)</p>
+                
+                <div style="background:white; padding:1.5rem; border-radius:12px; display:inline-block; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
+                    <img src="/public/images/upi-qr-code.png" alt="UPI QR Code" style="width:280px; height:auto; display:block;">
+                </div>
+                
+                <div style="margin-top:1.5rem; padding:1rem; background:rgba(0,128,0,0.05); border-radius:10px; border:1px solid rgba(0,128,0,0.2);">
+                    <p style="font-size:0.9rem; color:var(--text); margin-bottom:0.5rem;"><strong>Payment Steps:</strong></p>
+                    <ol style="font-size:0.85rem; color:var(--gray); text-align:left; padding-left:1.2rem; line-height:1.8;">
+                        <li>Open any UPI app (GPay, PhonePe, Paytm)</li>
+                        <li>Scan the QR code above</li>
+                        <li>Enter amount: <strong><span id="upiAmount">0</span></strong></li>
+                        <li>Complete payment and share screenshot</li>
+                    </ol>
+                </div>
+                
+                <div style="margin-top:1.5rem; display:flex; align-items:center; justify-content:center; gap:20px; opacity:0.7;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png" alt="GPay" style="height:30px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png" alt="PhonePe" style="height:30px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Paytm_logo.png/512px-Paytm_logo.png" alt="Paytm" style="height:30px;">
+                </div>
+                
+                <p style="margin-top:1rem; font-size:0.8rem; color:var(--gray);">
+                    <strong>UPI ID:</strong> your-upi-id@upi<br>
+                    <strong>Name:</strong> SUDHAKAR KUMAR MISHRA
+                </p>
+                
+                <button class="pay-now-btn" onclick="confirmUpiPayment()" 
+                    style="margin-top:1.5rem; background:var(--success); font-size:1.1rem; width:100%; padding:1rem; border-radius:14px; box-shadow:0 8px 25px rgba(0,128,0,0.35); font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span>✅ I've Completed UPI Payment</span>
+                </button>
+            </div>
+            
+        </div>
+    </div>
+            </div>
+            
+        </div>
+    </div>
+
+
+    <!-- ===== TICKET MODAL ===== -->
+    <div class="modal" id="ticketModal" onclick="closeOnOverlay(event,'ticketModal')">
+        <div class="modal-content" style="max-width: 500px; padding: 1rem;">
+            <button class="close-modal" onclick="closeModal('ticketModal')">×</button>
+            <div id="ticketContent"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>Yatri Point</h4>
+                <p>Travel & Stay</p>
+                <p>Your trusted travel partner across Mithila Region.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <a href="#" onclick="navigateTo('home');return false">Home</a>
+                <a href="#" onclick="navigateTo('about');return false">About Us</a>
+                <a href="#" onclick="navigateTo('help');return false">Help & Support</a>
+                <a href="terms.html">Terms & Conditions</a>
+                                <a href="privacy.html">Privacy Policy</a>
+
+            </div>
+            <div class="footer-col">
+                <h4>Services</h4>
+                <a href="#"
+                    onclick="switchTab('bus',document.querySelector('.booking-tabs button:nth-child(1)'));navigateTo('home');return false">Bus
+                    Booking</a>
+                <a href="#"
+                    onclick="switchTab('hotel',document.querySelector('.booking-tabs button:nth-child(2)'));navigateTo('home');return false">Hotel
+                    Booking</a>
+                <a href="#"
+                    onclick="switchTab('car',document.querySelector('.booking-tabs button:nth-child(3)'));navigateTo('home');return false">Rapid
+                    Car</a>
+                <a href="#" onclick="showCafes();return false">Café Guide</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p>📞 +91-72502 76840</p>
+                <p>📍 Madhubani, Bihar</p>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 Yatri Point (Yatri Point). All rights reserved. 🙏 JAI MATA DI</div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

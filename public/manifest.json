@@ -1,0 +1,43 @@
+{
+  "name": "Yatri Point — Yatri Point",
+  "short_name": "Yatri Point",
+  "description": "Book Buses, Hotels & Rapid Cars across Mithila Region. Travel & Stay!",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#d84e55",
+  "theme_color": "#d84e55",
+  "orientation": "portrait-primary",
+  "lang": "en-IN",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["travel", "transportation"],
+  "shortcuts": [
+    {
+      "name": "Book Bus",
+      "short_name": "Bus",
+      "description": "Search and book a bus",
+      "url": "/?tab=bus",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Book Hotel",
+      "short_name": "Hotel",
+      "description": "Find and book a hotel",
+      "url": "/?tab=hotel",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

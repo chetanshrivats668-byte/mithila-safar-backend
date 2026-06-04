@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Business Dashboard | Yatri Point</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0a0f2e;--navy2:#0d1540;--navy3:#111b52;
+  --gold:#f5c518;--gold2:#e8b400;--gold-dim:rgba(245,197,24,.12);
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --text:#e8eaf6;--text2:#9fa8da;
+  --border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.07)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── AUTH ── */
+.auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.12) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 20%,rgba(245,197,24,.08) 0%,transparent 50%),var(--navy)}
+.auth-box{background:rgba(13,21,64,.85);backdrop-filter:blur(30px);border:1px solid rgba(245,197,24,.2);
+  padding:2.5rem;border-radius:28px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.6)}
+.auth-box .brand{text-align:center;margin-bottom:1.8rem}
+.auth-box .brand .icon{width:64px;height:64px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:18px;display:inline-flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:.8rem;box-shadow:0 8px 28px rgba(245,197,24,.3)}
+.auth-box .brand h1{font-size:1.5rem;font-weight:900;color:#fff}
+.auth-box .brand p{font-size:.82rem;color:var(--text2);font-weight:500}
+.auth-tabs{display:flex;gap:4px;background:rgba(255,255,255,.05);border-radius:12px;padding:4px;margin-bottom:1.5rem}
+.auth-tab{flex:1;padding:.7rem;border:none;border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer;font-family:inherit;transition:.2s;background:transparent;color:var(--text2)}
+.auth-tab.active{background:var(--gold);color:var(--navy)}
+.auth-form{display:none}.auth-form.active{display:block}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.4rem}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:.8rem 1rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:12px;font-size:.9rem;color:#fff;outline:none;font-family:inherit;transition:.2s;box-sizing:border-box;max-width:100%}
+.form-group input:focus,.form-group select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,197,24,.1)}
+.form-group input::placeholder{color:rgba(255,255,255,.25)}
+.form-group select option{background:var(--navy2);color:#fff}
+.btn-primary{width:100%;padding:1rem;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);border:none;border-radius:12px;font-size:.95rem;font-weight:900;cursor:pointer;font-family:inherit;transition:.2s;box-shadow:0 6px 20px rgba(245,197,24,.25)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 10px 30px rgba(245,197,24,.35)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-sec{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:.7rem 1.2rem;border-radius:10px;font-weight:600;font-size:.82rem;cursor:pointer;font-family:inherit;transition:.2s}
+.btn-sec:hover{background:rgba(245,197,24,.1);border-color:rgba(245,197,24,.3);color:var(--gold)}
+.btn-sm{padding:.5rem 1rem;font-size:.78rem;border-radius:8px}
+.btn-approve{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.28)}
+.btn-reject{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.22)}
+.btn-icon{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid var(--border);background:var(--card2);cursor:pointer;font-size:.9rem;transition:.2s}
+.btn-icon:hover{background:rgba(245,197,24,.1);border-color:rgba(245,197,24,.3)}
+
+/* ── DASHBOARD LAYOUT ── */
+.dboard{display:none;min-height:100vh}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:250px;background:var(--navy2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:50;overflow-y:auto}
+.sb-head{padding:1.2rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.7rem;flex-shrink:0}
+.sb-head .ico{width:36px;height:36px;background:linear-gradient(135deg,var(--gold),var(--gold2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.sb-head h2{font-size:.9rem;font-weight:800;color:#fff;line-height:1.2}
+.sb-head h2 span{color:var(--gold)}
+.sb-head .small{font-size:.65rem;color:var(--text2);font-weight:500}
+.sb-nav{flex:1;padding:.8rem;display:flex;flex-direction:column;gap:.2rem}
+.sb-link{display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;border-radius:10px;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--text2);border:none;background:transparent;width:100%;text-align:left;transition:.2s;font-family:inherit}
+.sb-link:hover{background:var(--card2);color:#fff}
+.sb-link.active{background:var(--gold-dim);color:var(--gold)}
+.sb-link .ico{width:20px;text-align:center;font-size:1rem}
+.sb-link .badge{margin-left:auto;background:var(--red);color:#fff;font-size:.6rem;font-weight:800;padding:.1rem .45rem;border-radius:99px}
+.sb-link .verified{color:var(--blue);font-size:.7rem;margin-left:auto}
+.sb-prof{padding:.8rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:.7rem}
+.sb-prof .av{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:var(--navy);flex-shrink:0}
+.sb-prof .info{flex:1;min-width:0}
+.sb-prof .info .name{font-size:.8rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-prof .info .type{font-size:.65rem;color:var(--text2);text-transform:capitalize}
+.sb-prof .logout-btn{width:32px;height:32px;border-radius:8px;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.05);color:#fca5a5;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;transition:.2s}
+.sb-prof .logout-btn:hover{background:rgba(239,68,68,.15);color:#fff}
+
+.main{margin-left:250px;padding:1.5rem;min-height:100vh}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:.8rem}
+.topbar h1{font-size:1.3rem;font-weight:800;color:#fff}
+.topbar h1 span{color:var(--gold)}
+.topbar .sub{font-size:.78rem;color:var(--text2);font-weight:500}
+.topbar-r{display:flex;align-items:center;gap:.6rem}
+.business-badge{display:flex;align-items:center;gap:6px;padding:5px 14px;background:var(--gold-dim);border-radius:20px;font-size:.72rem;font-weight:700;color:var(--gold);border:1px solid rgba(245,197,24,.15);text-transform:capitalize}
+.verified-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,.12);color:var(--blue);padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:700;border:1px solid rgba(59,130,246,.2)}
+.verified-badge svg{width:12px;height:12px;fill:var(--blue)}
+
+/* ── PANES ── */
+.pane{display:none}.pane.active{display:block}
+
+/* ── STAT CARDS ── */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin-bottom:1.5rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:-15px;right:-15px;width:80px;height:80px;border-radius:50%;filter:blur(30px);opacity:.25;pointer-events:none}
+.stat.gold::after{background:var(--gold)}
+.stat.green::after{background:var(--green)}
+.stat.blue::after{background:var(--blue)}
+.stat.amber::after{background:var(--amber)}
+.stat .ico{font-size:1.4rem;margin-bottom:.5rem}
+.stat .num{font-size:2rem;font-weight:900;line-height:1;margin-bottom:.2rem;font-variant-numeric:tabular-nums}
+.stat.gold .num{color:var(--gold)}
+.stat.green .num{color:var(--green)}
+.stat.blue .num{color:var(--blue)}
+.stat.amber .num{color:var(--amber)}
+.stat .lbl{font-size:.7rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+
+/* ── SECTION ── */
+.section{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:1.5rem;margin-bottom:1.2rem}
+.section h3{font-size:.78rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border)}
+.section .hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:1px solid var(--border)}
+.section .hdr h3{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.section .hdr .actions{display:flex;gap:.5rem}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:.68rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:.6rem .8rem;border-bottom:1px solid var(--border)}
+td{padding:.6rem .8rem;font-size:.82rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:var(--card2)}
+
+/* ── CARDS ── */
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.item-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;transition:.2s;cursor:default}
+.item-card:hover{border-color:rgba(255,255,255,.12);background:var(--card2)}
+.item-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.8rem}
+.item-card .top .name{font-weight:700;font-size:.9rem;color:#fff}
+.item-card .top .sub{font-size:.72rem;color:var(--text2);margin-top:2px}
+.item-card .body{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.item-card .body .fld{font-size:.72rem}
+.item-card .body .fld .l{color:var(--text2);font-size:.65rem;text-transform:uppercase;letter-spacing:.04em}
+.item-card .body .fld .v{color:#fff;font-weight:600;font-size:.82rem}
+.item-card .foot{display:flex;gap:.4rem;margin-top:.8rem;padding-top:.8rem;border-top:1px solid var(--border)}
+
+/* ── BUS SEAT MANAGEMENT SYSTEM ── */
+.seat-manager-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+.kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+@media (max-width: 768px) {
+  .kpi-bar { grid-template-columns: repeat(2, 1fr); }
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.kpi-val { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+.kpi-lbl { font-size: 0.72rem; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Filter chips */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.filter-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: var(--card2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+.filter-chip:hover {
+  color: #fff;
+  border-color: rgba(255,255,255,0.15);
+}
+.filter-chip.active {
+  background: var(--gold-dim);
+  color: var(--gold);
+  border-color: rgba(245, 197, 24, 0.3);
+}
+
+/* Bus chassis container */
+.bus-chassis {
+  background: #0f172a;
+  border: 4px solid #334155;
+  border-radius: 36px 36px 20px 20px;
+  padding: 3rem 1.5rem 1.5rem 1.5rem;
+  max-width: 420px;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6);
+}
+.bus-cabin-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5rem;
+  background: #1e293b;
+  border-bottom: 3px solid #334155;
+  border-radius: 32px 32px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  color: var(--text2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.bus-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  row-gap: 14px;
+  align-items: center;
+  justify-items: center;
+}
+
+/* Seat Wrapper */
+.seat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* The Seat structure */
+.seat-wrapper {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.seat-wrapper:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+.seat-wrapper:active {
+  transform: translateY(0) scale(0.95);
+}
+
+/* SVG seat outline styles */
+.seat-icon-svg {
+  width: 42px;
+  height: 42px;
+  display: block;
+  transition: all 0.2s ease;
+}
+.seat-wrapper.available .seat-icon-svg {
+  color: #10b981;
+  fill: #ffffff;
+}
+.seat-wrapper.booked_male .seat-icon-svg {
+  color: #3b82f6;
+  fill: #3b82f6;
+}
+.seat-wrapper.booked_female .seat-icon-svg {
+  color: #ec4899;
+  fill: #ec4899;
+}
+.seat-wrapper.blocked .seat-icon-svg {
+  color: #475569;
+  fill: #475569;
+  opacity: 0.6;
+}
+
+/* Overlay gender icons on top of seat */
+.seat-overlay-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  color: #fff;
+  pointer-events: none;
+}
+.seat-wrapper.blocked .seat-overlay-icon {
+  color: #cbd5e1;
+  width: 14px;
+  height: 14px;
+}
+
+/* Fare and Label details below seat */
+.seat-label-text {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--text2);
+  line-height: 1;
+}
+.seat-fare-text {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #fb923c;
+  line-height: 1.1;
+}
+
+/* Aisle spacer */
+.aisle-spacer {
+  grid-column: span 1;
+  width: 100%;
+  height: 42px;
+  pointer-events: none;
+}
+.empty-spacer {
+  grid-column: span 1;
+  width: 100%;
+  height: 42px;
+  pointer-events: none;
+}
+
+/* Dimming effect for filters */
+.seat-item.dimmed {
+  opacity: 0.15;
+  filter: blur(0.5px) grayscale(60%);
+}
+
+/* Dynamic popover menu */
+.seat-popover {
+  position: absolute;
+  z-index: 200;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.7);
+  min-width: 180px;
+  animation: popoverReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top center;
+}
+@keyframes popoverReveal {
+  from { opacity: 0; transform: scale(0.9) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.popover-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.popover-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.popover-btn.male:hover { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.popover-btn.female:hover { background: rgba(236, 72, 153, 0.15); color: #f472b6; }
+.popover-btn.block:hover { background: rgba(71, 85, 105, 0.2); color: #94a3b8; }
+.popover-btn.reset:hover { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+/* Seat spinner overlay */
+.seat-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: seatSpin 0.8s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+@keyframes seatSpin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Style legacy seat-layout to fall back nicely */
+.seat-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 1.5rem;
+  background: var(--navy3);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  min-height: 300px;
+  justify-content: center;
+}
+.seat-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.seat-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.seat-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text2);
+}
+
+/* ── BADGES / CHIPS ── */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.65rem;font-weight:700;text-transform:capitalize}
+.chip.green{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.25)}
+.chip.red{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.22)}
+.chip.amber{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.25)}
+.chip.blue{background:rgba(59,130,246,.12);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
+.chip.gold{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,197,24,.2)}
+
+/* ── MODAL ── */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:100;align-items:center;justify-content:center;padding:1rem}
+.modal.active{display:flex}
+.modal-box{background:var(--navy2);border:1px solid var(--border);border-radius:24px;padding:2rem;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 40px 80px rgba(0,0,0,.5)}
+.modal-box h2{font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:1.2rem}
+.modal-box .close{float:right;background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;padding:0;line-height:1}
+
+/* ── MOBILE ── */
+.svc-label:has(input:checked){background:var(--gold-dim)!important;border-color:rgba(245,197,24,.3)!important;color:var(--gold)!important}
+#regServiceFields input{box-sizing:border-box;width:100%;max-width:100%}
+#regServiceFields .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:480px){#regServiceFields .grid-2{grid-template-columns:1fr}}
+#regServiceFields { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; }
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:sticky;top:0;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;padding:0;overflow-x:auto}
+  .sb-head{display:none}
+  .sb-nav{flex-direction:row;padding:.5rem;gap:.2rem}
+  .sb-link{white-space:nowrap;padding:.5rem .7rem;font-size:.75rem}
+  .sb-prof{display:none}
+  .main{margin-left:0;padding:1rem}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .grid-cards{grid-template-columns:1fr}
+  .modal-box{margin:.5rem;padding:1.2rem}
+}
+@media(max-width:480px){
+  .stats{grid-template-columns:1fr 1fr}
+  .seat{width:32px;height:32px;font-size:.55rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════ AUTH SCREEN ════════════ -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box">
+      <div class="brand">
+        <div class="icon" style="font-size:1.8rem;font-weight:900;color:var(--gold)">YP</div>
+        <h1>Partner Portal</h1>
+        <p>YATRI POINT · MITHILA SAFAR</p>
+      </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuth('login')">Login</button>
+      <button class="auth-tab" onclick="switchAuth('register')">Apply</button>
+    </div>
+
+    <!-- LOGIN -->
+    <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+      <div class="auth-tabs" style="background: rgba(255,255,255,.03); margin-bottom: 1rem; border-radius: 12px; display: flex; gap: 4px; padding: 4px;">
+        <button type="button" class="auth-tab active" id="btnLoginPass" onclick="toggleLoginMethod('pass')" style="font-size: .75rem; padding: .5rem; flex: 1;">🔑 Password</button>
+        <button type="button" class="auth-tab" id="btnLoginPhone" onclick="toggleLoginMethod('phone')" style="font-size: .75rem; padding: .5rem; flex: 1;">📱 Phone OTP</button>
+      </div>
+
+      <!-- Password Login Fields -->
+      <div id="loginPassFields">
+        <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+        <div class="form-group"><label>Password</label><div style="position:relative"><input type="password" id="loginPassword" placeholder="Enter password" style="padding-right:44px"><button type="button" onclick="togglePassword('loginPassword',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text2);cursor:pointer;font-size:.72rem;font-weight:700;padding:6px 10px;text-transform:uppercase;letter-spacing:.04em;font-family:inherit">Show</button></div></div>
+        <div class="form-group" id="loginOtpGroup" style="display:none">
+          <label>OTP Code <small style="color:var(--amber);font-weight:400">(sent to your email)</small></label>
+          <input type="text" id="loginOtpInput" placeholder="Enter 6-digit OTP">
+        </div>
+      </div>
+
+      <!-- Phone OTP Login Fields -->
+      <div id="loginPhoneFields" style="display:none">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <div style="display:flex; gap:8px;">
+            <input type="tel" id="loginPhone" placeholder="9876543210" style="flex:1" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+            <button type="button" id="sendLoginOtpBtn" class="btn-sec" style="padding: 0 .8rem; border-radius: 12px; font-size: .8rem; white-space: nowrap;" onclick="sendLoginPhoneOtp()">Send OTP</button>
+          </div>
+        </div>
+        <div class="form-group" id="loginPhoneOtpGroup" style="display:none">
+          <label>OTP Code</label>
+          <input type="text" id="loginPhoneOtpInput" placeholder="Enter 6-digit OTP" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+      </div>
+
+      <div id="loginError" style="color:#fca5a5;font-size:.82rem;margin-bottom:.8rem;display:none"></div>
+      <button class="btn-primary" id="loginBtn" type="submit">Login</button>
+    </form>
+
+    <!-- APPLICATION -->
+    <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="appName" placeholder="Your full name" required></div>
+      <div class="form-group"><label>Email *</label><input type="email" id="appEmail" placeholder="your@email.com" required></div>
+      
+      <div class="form-group">
+        <label>Phone Number *</label>
+        <div style="display:flex; gap:8px;">
+          <input type="tel" id="appPhone" placeholder="9876543210" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required style="flex:1">
+          <button type="button" id="sendOtpBtn" class="btn-sec" style="padding: 0 .8rem; border-radius: 12px; font-size: .8rem; white-space: nowrap;" onclick="sendRegisterPhoneOtp()">Send OTP</button>
+        </div>
+        <div id="otpSection" style="display:none; margin-top:8px;">
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="appOtp" placeholder="Enter 6-digit OTP" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')" style="flex:1">
+            <button type="button" id="verifyOtpBtn" class="btn-sec btn-approve" style="padding: 0 1rem; border-radius: 12px; font-size: .8rem; white-space: nowrap;" onclick="verifyRegisterPhoneOtp()">Verify</button>
+          </div>
+          <small id="otpStatus" style="display:block; margin-top:4px; font-size:.72rem; color:var(--text2);"></small>
+        </div>
+      </div>
+
+      <div class="form-group"><label>Password (for future login) *</label><div style="position:relative"><input type="password" id="appPassword" placeholder="Min 6 characters" minlength="6" required style="padding-right:44px"><button type="button" onclick="togglePassword('appPassword',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text2);cursor:pointer;font-size:.72rem;font-weight:700;padding:6px 10px;text-transform:uppercase;letter-spacing:.04em;font-family:inherit">Show</button></div></div>
+      
+      <div class="form-group"><label>UPI ID for Payment *</label><input type="text" id="appUpiId" placeholder="yourname@upi" required></div>
+      
+      <div class="form-group"><label>Aadhaar ID *</label><input type="text" id="appAadhaar" placeholder="12-digit Aadhaar number" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+      
+      <div class="form-group"><label>Years of Experience</label><input type="number" id="appExperience" placeholder="e.g. 5" min="0" max="100"></div>
+
+      <div class="form-group">
+        <label>Service Category *</label>
+        <select id="appServiceCat" required onchange="onDashboardCategoryChange()">
+          <option value="">— Select —</option>
+          <option value="bus">🚌 Bus</option>
+          <option value="cab">🚗 Cab / Taxi</option>
+          <option value="hotel">🏨 Hotel</option>
+          <option value="cafe">☕ Café</option>
+        </select>
+      </div>
+
+      <!-- Service-Specific Dynamic Fields Wrapper -->
+      <div id="dynamicCategoryFields" style="margin-top: 1rem;">
+        
+        <!-- BUS ROUTE SECTION -->
+        <div id="section-bus-dashboard" class="dashboard-cat-section" style="display:none">
+          <div class="form-group">
+            <label>Bus Route *</label>
+            <div id="dashboardRouteCities" style="display:flex; flex-direction:column; gap:8px;">
+              <div class="route-station" style="display:flex; gap:8px; align-items:center;">
+                <input type="text" class="dashboard-route-city-input" placeholder="Starting city" oninput="updateDashboardRoutePreview()" style="flex:1">
+                <button type="button" class="btn-icon btn-reject remove-city" style="display:none; width:36px; height:36px;" onclick="removeDashboardRouteCity(this)">✕</button>
+              </div>
+              <div class="route-station" style="display:flex; gap:8px; align-items:center;">
+                <input type="text" class="dashboard-route-city-input" placeholder="Destination city" oninput="updateDashboardRoutePreview()" style="flex:1">
+                <button type="button" class="btn-icon btn-reject remove-city" style="display:none; width:36px; height:36px;" onclick="removeDashboardRouteCity(this)">✕</button>
+              </div>
+            </div>
+            <button type="button" class="btn-sec btn-sm" onclick="addDashboardRouteCity()" style="margin-top:8px;">+ Add Stop</button>
+            <small style="color:var(--text2); font-size:.72rem; display:block; margin-top:4px;">Enter cities in ordered sequence from start to destination.</small>
+            
+            <div class="route-preview" id="dashboardRoutePreview" style="display:none; margin-top:10px; padding:10px; border-radius:8px; background:rgba(255,255,255,.03); border:1px solid var(--border)">
+              <div style="font-size:.7rem; font-weight:700; color:var(--gold); text-transform:uppercase; margin-bottom:4px;">Real-time Route Sequence:</div>
+              <div id="dashboardRoutePathDisplay" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:.82rem;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CAB SECTION -->
+        <div id="section-cab-dashboard" class="dashboard-cat-section" style="display:none">
+          <div class="form-group">
+            <label>Running City / Operating City *</label>
+            <input type="text" id="dashboardCabCity" placeholder="e.g. Patna, Ranchi, Delhi, Kolkata">
+            <small style="color:var(--text2); font-size:.72rem; display:block; margin-top:4px;">City or list of cities where your cab service operates.</small>
+          </div>
+        </div>
+
+        <!-- HOTEL SECTION -->
+        <div id="section-hotel-dashboard" class="dashboard-cat-section" style="display:none">
+          <div class="form-group">
+            <label>Full Hotel Address *</label>
+            <textarea id="dashboardHotelAddress" rows="2" placeholder="Street, building, area..."></textarea>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>City *</label><input type="text" id="dashboardHotelCity" placeholder="City"></div>
+            <div class="form-group"><label>State *</label><input type="text" id="dashboardHotelState" placeholder="State"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Landmark</label><input type="text" id="dashboardHotelLandmark" placeholder="Near..."></div>
+            <div class="form-group"><label>Pin Code *</label><input type="text" id="dashboardHotelPincode" placeholder="6-digit PIN" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
+        </div>
+
+        <!-- CAFE SECTION -->
+        <div id="section-cafe-dashboard" class="dashboard-cat-section" style="display:none">
+          <div class="form-group">
+            <label>Full Cafe Address *</label>
+            <textarea id="dashboardCafeAddress" rows="2" placeholder="Street, building, area..."></textarea>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>City *</label><input type="text" id="dashboardCafeCity" placeholder="City"></div>
+            <div class="form-group"><label>State *</label><input type="text" id="dashboardCafeState" placeholder="State"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Landmark</label><input type="text" id="dashboardCafeLandmark" placeholder="Near..."></div>
+            <div class="form-group"><label>Pin Code *</label><input type="text" id="dashboardCafePincode" placeholder="6-digit PIN" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="form-group" style="margin-top:1rem;"><label>Documents (optional)</label><input type="text" id="appDocuments" placeholder="Links to documents (e.g. Google Drive, or upload later)"></div>
+      
+      <div id="regError" style="color:#fca5a5;font-size:.82rem;margin-bottom:.8rem;display:none"></div>
+      <div id="appSuccess" style="color:#86efac;font-size:.82rem;margin-bottom:.8rem;display:none;background:rgba(34,197,94,.1);padding:.8rem;border-radius:10px;border:1px solid rgba(34,197,94,.25)"></div>
+      <button class="btn-primary" id="registerBtn" type="submit">Submit Application</button>
+      <p style="margin-top:.8rem;font-size:.75rem;color:var(--text2);text-align:center">Your application will be reviewed by our team. You will be notified once approved.</p>
+    </form>
+  </div>
+</div>
+
+<!-- ════════════ DASHBOARD ════════════ -->
+<div class="dboard" id="dboard">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+      <div class="sb-head">
+        <div class="ico">🚌</div>
+        <div><h2>Yatri <span>Partner</span></h2><div class="small" id="sbBizType">Business Dashboard</div></div>
+      </div>
+      <nav class="sb-nav" id="sbNav">
+        <button class="sb-link active" onclick="switchPane('overview')"><span class="ico">📊</span>Overview</button>
+        <button class="sb-link" onclick="switchPane('inventory')"><span class="ico" id="invIcon">🚌</span><span id="invLabel">Buses</span></button>
+        <button class="sb-link" onclick="switchPane('bookings')"><span class="ico">📋</span>Bookings<span class="badge" id="bookingBadge" style="display:none">0</span></button>
+        <button class="sb-link" onclick="switchPane('pricing')"><span class="ico">💰</span>Pricing</button>
+        <button class="sb-link" onclick="switchPane('schedule')"><span class="ico">📅</span>Schedule</button>
+        <button class="sb-link" onclick="switchPane('analytics')"><span class="ico">📈</span>Analytics</button>
+        <button class="sb-link" onclick="switchPane('profile')"><span class="ico">👤</span>Profile</button>
+    </nav>
+    <div class="sb-prof">
+      <div class="av" id="sbAvatar">YP</div>
+      <div class="info">
+        <div class="name" id="sbName">Loading...</div>
+        <div class="type" id="sbType">Business Partner</div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Welcome, <span>Partner</span></h1>
+        <div class="sub" id="pageSub">Manage your business inventory, bookings & earnings</div>
+      </div>
+      <div class="topbar-r">
+        <span class="business-badge" id="bizBadge">Bus Service</span>
+        <span class="verified-badge" id="verifiedBadge" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> Verified
+        </span>
+      </div>
+    </div>
+
+    <!-- PANE: OVERVIEW -->
+    <div class="pane active" id="pane-overview">
+      <div class="stats">
+        <div class="stat gold"><div class="ico">💰</div><div class="num" id="ovEarnings">₹0</div><div class="lbl">Total Earnings</div></div>
+        <div class="stat green"><div class="ico">📦</div><div class="num" id="ovBookings">0</div><div class="lbl">Total Bookings</div></div>
+        <div class="stat blue"><div class="ico" id="ovInvIcon">🚌</div><div class="num" id="ovInventory">0</div><div class="lbl" id="ovInvLabel">Active Buses</div></div>
+        <div class="stat amber"><div class="ico">📊</div><div class="num" id="ovOccupancy">0%</div><div class="lbl">Occupancy Rate</div></div>
+      </div>
+      <div class="section">
+        <div class="hdr"><h3>Quick Actions</h3></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-sec" onclick="switchPane('inventory')">Add <span id="qaInvItem">Bus</span></button>
+          <button class="btn-sec" onclick="switchPane('pricing')">Manage Pricing</button>
+          <button class="btn-sec" onclick="switchPane('schedule')">Manage Schedule</button>
+          <button class="btn-sec" onclick="switchPane('bookings')">View Bookings</button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="hdr"><h3>Recent Activity</h3></div>
+        <div id="recentActivity"><p style="color:var(--text2);font-size:.85rem">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- PANE: INVENTORY -->
+    <div class="pane" id="pane-inventory">
+      <div class="section">
+        <div class="hdr"><h3 id="invTitle">Manage Buses</h3>
+          <div class="actions">
+            <button class="btn-sec btn-sm" onclick="showAddItemModal()">Add <span id="addInvLabel">Bus</span></button>
+            <button class="btn-sec btn-sm" onclick="loadInventory()">Refresh</button>
+          </div>
+        </div>
+        <div class="grid-cards" id="inventoryList"><p style="color:var(--text2)">Loading...</p></div>
+      </div>
+      <!-- SEAT/ROOM/TABLE LAYOUT -->
+      <div class="section" id="layoutSection">
+        <div class="hdr"><h3 id="layoutTitle">Seat Layout</h3>
+          <div class="actions">
+            <select id="layoutSelector" onchange="loadLayout()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
+              <option value="">— Select item —</option>
+            </select>
+          </div>
+        </div>
+        <div id="layoutContainer">
+          <!-- Summary Counts KPI Bar -->
+          <div class="kpi-bar" id="seatKpiContainer" style="display:none;"></div>
+
+          <!-- Filters Chips Bar -->
+          <div class="filter-bar" id="seatFilterContainer" style="display:none;"></div>
+
+          <!-- Dynamic Seat Map Grid Container -->
+          <div id="seatMapContainer" style="position:relative;">
+            <div class="seat-layout">
+              <p style="color:var(--text2)">Select an item above to view layout</p>
+            </div>
+          </div>
+
+          <!-- Visual Legend -->
+          <div class="seat-legend" id="layoutLegend" style="margin-top:1.5rem;">
+            <span><span style="width:14px;height:14px;background:#ffffff;border:1.5px solid #10b981;border-radius:4px;display:inline-block"></span> Available</span>
+            <span><span style="width:14px;height:14px;background:#3b82f6;border:1.5px solid #3b82f6;border-radius:4px;display:inline-block"></span> Booked (Male)</span>
+            <span><span style="width:14px;height:14px;background:#ec4899;border:1.5px solid #ec4899;border-radius:4px;display:inline-block"></span> Booked (Female)</span>
+            <span><span style="width:14px;height:14px;background:#475569;border:1.5px solid #475569;border-radius:4px;display:inline-block"></span> Blocked / Unavailable</span>
+          </div>
+
+          <!-- Bulk action menu (used for legacy and cabs/hotels/cafes) -->
+          <div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap" id="layoutActions">
+            <button class="btn-sec btn-sm" onclick="markSeats('available')">Mark Available</button>
+            <button class="btn-sec btn-sm" onclick="markSeats('reserved')">Mark Reserved</button>
+            <button class="btn-sec btn-sm" onclick="markSeats('blocked')">Block Selected</button>
+            <button class="btn-sec btn-sm" onclick="markSeats('maintenance')">Maintenance</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Action Menu Popover (hidden by default, positioned absolutely in JS) -->
+      <div id="seatActionPopover" class="seat-popover" style="display:none;">
+        <button class="popover-btn male" onclick="handlePopoverAction('booked_male')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          Mark Male Booked
+        </button>
+        <button class="popover-btn female" onclick="handlePopoverAction('booked_female')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm3.5 6H8.5c-.83 0-1.5.67-1.5 1.5v6c0 .55.45 1 1 1h1.5v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-5H16c.55 0 1-.45 1-1v-6c0-.83-.67-1.5-1.5-1.5z"/></svg>
+          Mark Female Booked
+        </button>
+        <button class="popover-btn block" onclick="handlePopoverAction('blocked')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          Block Seat
+        </button>
+        <button class="popover-btn reset" onclick="handlePopoverAction('available')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>
+          Reset to Available
+        </button>
+      </div>
+    </div>
+
+    <!-- PANE: BOOKINGS -->
+    <div class="pane" id="pane-bookings">
+      <div class="section">
+        <div class="hdr"><h3>All Bookings</h3>
+          <div class="actions">
+            <button class="btn-sec btn-sm" onclick="loadBookings()">Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap" id="bookingsContainer"><p style="color:var(--text2)">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- PANE: PRICING -->
+    <div class="pane" id="pane-pricing">
+      <div class="section">
+        <div class="hdr"><h3>Pricing Management</h3></div>
+        <div id="pricingContent">
+          <div class="grid-cards" id="pricingItems"><p style="color:var(--text2)">Loading...</p></div>
+        </div>
+      </div>
+      <div class="section" id="dynamicPricingSection" style="display:none">
+        <div class="hdr"><h3>Dynamic Pricing Rules</h3>
+          <div class="actions"><button class="btn-sec btn-sm" onclick="showAddPriceRule()">Add Rule</button></div>
+        </div>
+        <div id="priceRulesList"><p style="color:var(--text2)">No pricing rules configured</p></div>
+      </div>
+    </div>
+
+    <!-- PANE: SCHEDULE -->
+    <div class="pane" id="pane-schedule">
+      <div class="section">
+        <div class="hdr"><h3>Schedule & Running Days</h3>
+          <div class="actions">
+            <select id="scheduleSelector" onchange="loadSchedule()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
+              <option value="">— Select item —</option>
+            </select>
+          </div>
+        </div>
+        <div id="scheduleContent"><p style="color:var(--text2)">Select an item to view schedule</p></div>
+      </div>
+    </div>
+
+    <!-- PANE: ANALYTICS -->
+    <div class="pane" id="pane-analytics">
+      <div class="stats">
+        <div class="stat gold"><div class="num" id="anRevenue">₹0</div><div class="lbl">This Month</div></div>
+        <div class="stat green"><div class="num" id="anBookings">0</div><div class="lbl">Monthly Bookings</div></div>
+        <div class="stat blue"><div class="num" id="anGrowth">0%</div><div class="lbl">Growth Rate</div></div>
+      </div>
+      <div class="section">
+        <div class="hdr"><h3>Revenue Trend</h3></div>
+        <div id="revenueChart" style="height:200px;display:flex;align-items:flex-end;gap:8px;padding:1rem 0">
+          <div style="flex:1;text-align:center;color:var(--text2);font-size:.78rem">Loading chart...</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="hdr"><h3>Top Performing Items</h3></div>
+        <div id="topItems"><p style="color:var(--text2)">Loading...</p></div>
+      </div>
+    </div>
+
+    <!-- PANE: PROFILE -->
+    <div class="pane" id="pane-profile">
+      <div class="section">
+        <div class="hdr"><h3>Business Profile</h3>
+          <div class="actions"><button class="btn-sec btn-sm" onclick="saveProfile()">Save</button></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+          <div class="form-group"><label>Business Name</label><input type="text" id="profBusiness"></div>
+          <div class="form-group"><label>Owner Name</label><input type="text" id="profName"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="profEmail"></div>
+          <div class="form-group"><label>Phone</label><input type="tel" id="profPhone"></div>
+          <div class="form-group"><label>City</label><input type="text" id="profCity"></div>
+          <div class="form-group"><label>State</label><input type="text" id="profState"></div>
+          <div class="form-group"><label>UPI ID</label><input type="text" id="profUpi"></div>
+          <div class="form-group"><label>Description</label><textarea id="profDesc" rows="3"></textarea></div>
+          <div class="form-group" id="profServices">
+            <label>Services</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="profServiceTags"></div>
+          </div>
+        </div>
+        <!-- Category-specific fields (shown based on service type) -->
+        <div id="profHotelFields" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <h4 style="margin-bottom:.8rem;font-size:.85rem;color:var(--gold);font-weight:700">🏨 Hotel Address</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="form-group" style="grid-column:1/-1"><label>Full Address</label><textarea id="profAddress" rows="2" placeholder="Street, building, area..."></textarea></div>
+            <div class="form-group"><label>City</label><input type="text" id="profHotelCity"></div>
+            <div class="form-group"><label>State</label><input type="text" id="profHotelState"></div>
+            <div class="form-group"><label>Landmark</label><input type="text" id="profLandmark"></div>
+            <div class="form-group"><label>Pin Code</label><input type="text" id="profPincode" maxlength="6"></div>
+          </div>
+        </div>
+        <div id="profCafeFields" style="display:none;margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem">
+          <h4 style="margin-bottom:.8rem;font-size:.85rem;color:var(--gold);font-weight:700">☕ Cafe Address</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="form-group" style="grid-column:1/-1"><label>Full Address</label><textarea id="profCafeAddress" rows="2" placeholder="Street, building, area..."></textarea></div>
+            <div class="form-group"><label>City</label><input type="text" id="profCafeCity"></div>
+            <div class="form-group"><label>State</label><input type="text" id="profCafeState"></div>
+            <div class="form-group"><label>Landmark</label><input type="text" id="profCafeLandmark"></div>
+            <div class="form-group"><label>Pin Code</label><input type="text" id="profCafePincode" maxlength="6"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="hdr"><h3>Account</h3></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <span class="verified-badge" id="profVerifiedBadge" style="display:none">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg> Verified Partner
+          </span>
+          <span class="chip amber" id="profStatusChip">⏳ Pending Verification</span>
+          <button class="btn-sec btn-sm" onclick="logout()">🚪 Logout</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ════════════ MODAL ════════════ -->
+<div class="modal" id="itemModal">
+  <div class="modal-box">
+    <button class="close" onclick="closeModal('itemModal')">✕</button>
+    <h2 id="modalTitle">Add Item</h2>
+    <form id="itemForm" onsubmit="saveItem(event)">
+      <div id="modalFields"></div>
+      <div style="margin-top:1rem;display:flex;gap:.5rem">
+        <button class="btn-primary" type="submit">💾 Save</button>
+        <button class="btn-sec" type="button" onclick="closeModal('itemModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   YATRI POINT – BUSINESS MANAGEMENT SYSTEM
+   ═══════════════════════════════════════════ */
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:3001' 
+    : window.location.origin;
+let TOKEN = sessionStorage.getItem('yp_token');
+let COLLAB = null;
+let INVENTORY = [];
+let BOOKINGS = [];
+let SELECTED_ITEM = null;
+let SELECTED_SEATS = new Set();
+let phoneVerified = false;
+
+/* ─── Auth ─── */
+function switchAuth(tab) {
+  document.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(tab)));
+  ['loginForm','registerForm'].forEach(id => document.getElementById(id).classList.toggle('active', id.includes(tab)));
+}
+// Enter key submits naturally via form onsubmit; no extra dispatch needed
+
+function togglePassword(inputId, el) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    el.textContent = 'Hide';
+  } else {
+    input.type = 'password';
+    el.textContent = 'Show';
+  }
+}
+
+let currentLoginMethod = 'pass';
+let _registerPhoneVerified = false;
+
+function toggleLoginMethod(method) {
+  currentLoginMethod = method;
+  document.getElementById('btnLoginPass').classList.toggle('active', method === 'pass');
+  document.getElementById('btnLoginPhone').classList.toggle('active', method === 'phone');
+  document.getElementById('loginPassFields').style.display = method === 'pass' ? 'block' : 'none';
+  document.getElementById('loginPhoneFields').style.display = method === 'phone' ? 'block' : 'none';
+  document.getElementById('loginError').style.display = 'none';
+  
+  // Set required attributes accordingly
+  document.getElementById('loginEmail').required = method === 'pass';
+  document.getElementById('loginPassword').required = method === 'pass';
+  document.getElementById('loginPhone').required = method === 'phone';
+}
+
+async function sendLoginPhoneOtp() {
+  const phone = document.getElementById('loginPhone').value.trim();
+  const err = document.getElementById('loginError');
+  const btn = document.getElementById('sendLoginOtpBtn');
+  err.style.display = 'none';
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    err.textContent = 'Enter a valid 10-digit phone number.';
+    err.style.display = 'block';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const r = await fetch(API + '/api/collaborator/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('loginPhoneOtpGroup').style.display = 'block';
+      document.getElementById('loginPhoneOtpInput').required = true;
+      btn.textContent = 'Resend OTP';
+    } else {
+      err.textContent = d.message || 'Failed to send OTP';
+      err.style.display = 'block';
+    }
+  } catch (e) {
+    err.textContent = 'Network error';
+    err.style.display = 'block';
+  }
+  btn.disabled = false;
+}
+
+async function handleLogin(e) { e.preventDefault();
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  
+  if (currentLoginMethod === 'pass') {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPassword').value;
+    const otp = document.getElementById('loginOtpInput').value.trim();
+    
+    try {
+      const payload = { email, password: pass };
+      if (otp) payload.otp = otp;
+      
+      const r = await fetch(API + '/api/collaborator/login', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify(payload) 
+      });
+      const d = await r.json();
+      
+      if (d.success) { 
+        setToken(d); 
+        return; 
+      }
+      
+      if (d.otpRequired) {
+        document.getElementById('loginOtpGroup').style.display = 'block';
+        document.getElementById('loginOtpInput').required = true;
+        err.textContent = d.message;
+        err.style.display = 'block';
+        return;
+      }
+      
+      // If login failed, check application status
+      const sr = await fetch(API + '/api/collab-applications/status?email=' + encodeURIComponent(email));
+      const sd = await sr.json();
+      if (sd.hasApplication) {
+        if (sd.application.status === 'pending') {
+          err.textContent = 'Your collaborator request is under review. Please wait for admin approval.'; err.style.display = 'block'; return;
+        }
+        if (sd.application.status === 'rejected') {
+          err.textContent = 'You are not eligible for this.'; err.style.display = 'block'; return;
+        }
+      }
+      err.textContent = d.message || 'Invalid credentials'; err.style.display = 'block';
+    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
+  } else {
+    // Phone OTP Login
+    const phone = document.getElementById('loginPhone').value.trim();
+    const otp = document.getElementById('loginPhoneOtpInput').value.trim();
+    if (!phone || !otp) {
+      err.textContent = 'Phone and OTP code are required';
+      err.style.display = 'block';
+      return;
+    }
+    try {
+      const r = await fetch(API + '/api/collaborator/login-with-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp })
+      });
+      const d = await r.json();
+      if (d.success) {
+        setToken(d);
+        return;
+      }
+      
+      // Check application status for phone too if login fails
+      const sr = await fetch(API + '/api/collab-applications/status?email=' + encodeURIComponent(phone));
+      const sd = await sr.json();
+      if (sd.hasApplication) {
+        if (sd.application.status === 'pending') {
+          err.textContent = 'Your collaborator request is under review. Please wait for admin approval.'; err.style.display = 'block'; return;
+        }
+        if (sd.application.status === 'rejected') {
+          err.textContent = 'You are not eligible for this.'; err.style.display = 'block'; return;
+        }
+      }
+      err.textContent = d.message || 'Invalid verification code'; err.style.display = 'block';
+    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
+  }
+}
+
+/* ─── Collaborator Apply Form OTP ─── */
+async function sendRegisterPhoneOtp() {
+  const phone = document.getElementById('appPhone').value.trim();
+  const status = document.getElementById('otpStatus');
+  const btn = document.getElementById('sendOtpBtn');
+  status.textContent = '';
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Enter a valid 10-digit phone number.';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const r = await fetch(API + '/api/collaborator/send-otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('otpSection').style.display = 'block';
+      document.getElementById('appOtp').required = true;
+      status.style.color = '#86efac';
+      status.textContent = 'OTP sent to your phone.';
+      btn.textContent = 'Resend OTP';
+    } else {
+      status.style.color = '#fca5a5';
+      status.textContent = d.message || 'Failed to send OTP';
+    }
+  } catch {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Network error';
+  }
+  btn.disabled = false;
+}
+
+async function verifyRegisterPhoneOtp() {
+  const phone = document.getElementById('appPhone').value.trim();
+  const otp = document.getElementById('appOtp').value.trim();
+  const status = document.getElementById('otpStatus');
+  const btn = document.getElementById('verifyOtpBtn');
+  if (!otp || otp.length < 4) {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Enter valid OTP.';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+  try {
+    const r = await fetch(API + '/api/collaborator/verify-otp', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
+    });
+    const d = await r.json();
+    if (d.success) {
+      _registerPhoneVerified = true;
+      status.style.color = '#86efac';
+      status.textContent = '✅ Phone verified!';
+      document.getElementById('appPhone').readOnly = true;
+      document.getElementById('appOtp').readOnly = true;
+      document.getElementById('sendOtpBtn').style.display = 'none';
+      document.getElementById('verifyOtpBtn').style.display = 'none';
+    } else {
+      status.style.color = '#fca5a5';
+      status.textContent = d.message || 'Invalid OTP';
+    }
+  } catch {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Network error';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Verify';
+}
+
+/* ─── Visual Route Builder & Category Form Toggle ─── */
+function onDashboardCategoryChange() {
+  const cat = document.getElementById('appServiceCat').value;
+  document.querySelectorAll('.dashboard-cat-section').forEach(s => s.style.display = 'none');
+  
+  // Reset requirements
+  document.getElementById('dashboardCabCity').required = false;
+  document.getElementById('dashboardHotelAddress').required = false;
+  document.getElementById('dashboardHotelCity').required = false;
+  document.getElementById('dashboardHotelState').required = false;
+  document.getElementById('dashboardHotelPincode').required = false;
+  document.getElementById('dashboardCafeAddress').required = false;
+  document.getElementById('dashboardCafeCity').required = false;
+  document.getElementById('dashboardCafeState').required = false;
+  document.getElementById('dashboardCafePincode').required = false;
+  
+  // Toggle displays and requirements
+  if (cat === 'bus') {
+    document.getElementById('section-bus-dashboard').style.display = 'block';
+  } else if (cat === 'cab') {
+    document.getElementById('section-cab-dashboard').style.display = 'block';
+    document.getElementById('dashboardCabCity').required = true;
+  } else if (cat === 'hotel') {
+    document.getElementById('section-hotel-dashboard').style.display = 'block';
+    document.getElementById('dashboardHotelAddress').required = true;
+    document.getElementById('dashboardHotelCity').required = true;
+    document.getElementById('dashboardHotelState').required = true;
+    document.getElementById('dashboardHotelPincode').required = true;
+  } else if (cat === 'cafe') {
+    document.getElementById('section-cafe-dashboard').style.display = 'block';
+    document.getElementById('dashboardCafeAddress').required = true;
+    document.getElementById('dashboardCafeCity').required = true;
+    document.getElementById('dashboardCafeState').required = true;
+    document.getElementById('dashboardCafePincode').required = true;
+  }
+}
+
+function addDashboardRouteCity() {
+  const container = document.getElementById('dashboardRouteCities');
+  const div = document.createElement('div');
+  div.className = 'route-station';
+  div.style.display = 'flex';
+  div.style.gap = '8px';
+  div.style.alignItems = 'center';
+  div.style.marginTop = '4px';
+  div.innerHTML = `
+    <input type="text" class="dashboard-route-city-input" placeholder="Next stop" style="flex:1;padding:.8rem 1rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:12px;font-size:.9rem;color:#fff;outline:none;" oninput="updateDashboardRoutePreview()" required>
+    <button type="button" class="btn-icon btn-reject remove-city" style="width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px;" onclick="removeDashboardRouteCity(this)">✕</button>
+  `;
+  container.appendChild(div);
+  updateDashboardRouteCityButtons();
+  updateDashboardRoutePreview();
+}
+
+function removeDashboardRouteCity(btn) {
+  btn.parentElement.remove();
+  updateDashboardRouteCityButtons();
+  updateDashboardRoutePreview();
+}
+
+function updateDashboardRouteCityButtons() {
+  const container = document.getElementById('dashboardRouteCities');
+  const stations = container.querySelectorAll('.route-station');
+  stations.forEach((station, idx) => {
+    const btn = station.querySelector('.remove-city');
+    if (stations.length <= 2) {
+      btn.style.display = 'none';
+    } else {
+      btn.style.display = idx >= 1 ? 'inline-flex' : 'none';
+    }
+  });
+}
+
+function getDashboardRouteCities() {
+  const inputs = document.querySelectorAll('.dashboard-route-city-input');
+  return Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+}
+
+function updateDashboardRoutePreview() {
+  const inputs = document.querySelectorAll('.dashboard-route-city-input');
+  const stations = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+  const preview = document.getElementById('dashboardRoutePreview');
+  const display = document.getElementById('dashboardRoutePathDisplay');
+  
+  if (stations.length < 2) {
+    preview.style.display = 'none';
+    return;
+  }
+  
+  preview.style.display = 'block';
+  let html = '';
+  stations.forEach((station, idx) => {
+    let chipStyle = 'background:rgba(255,255,255,0.06); color:var(--text); padding:4px 10px; border-radius:20px; border:1px solid var(--border); font-size: 0.8rem;';
+    if (idx === 0) {
+      chipStyle = 'background:var(--gold); color:var(--navy); padding:4px 10px; border-radius:20px; font-weight:700; font-size: 0.8rem;';
+    } else if (idx === stations.length - 1) {
+      chipStyle = 'background:var(--green); color:#fff; padding:4px 10px; border-radius:20px; font-weight:700; font-size: 0.8rem;';
+    }
+    html += `<span style="${chipStyle}">${station}</span>`;
+    if (idx < stations.length - 1) {
+      html += '<span style="color:var(--text2); margin:0 4px; font-weight:bold;">→</span>';
+    }
+  });
+  display.innerHTML = html;
+}
+
+async function handleRegister(e) { e.preventDefault();
+  const err = document.getElementById('regError'); err.style.display = 'none';
+  const success = document.getElementById('appSuccess'); success.style.display = 'none';
+  const btn = document.getElementById('registerBtn');
+  const name = document.getElementById('appName').value.trim();
+  const email = document.getElementById('appEmail').value.trim();
+  const phone = document.getElementById('appPhone').value.trim();
+  const password = document.getElementById('appPassword').value;
+  const upiId = document.getElementById('appUpiId').value.trim();
+  const aadhaarId = document.getElementById('appAadhaar').value.trim();
+  const experience = document.getElementById('appExperience').value.trim();
+  const serviceCat = document.getElementById('appServiceCat').value;
+  const documents = document.getElementById('appDocuments').value.trim();
+
+  if (!name || name.length < 2) { err.textContent = 'Full name is required (min 2 characters)'; err.style.display = 'block'; return; }
+  if (!email || !email.includes('@')) { err.textContent = 'Valid email is required'; err.style.display = 'block'; return; }
+  if (!phone || phone.length < 10) { err.textContent = 'Valid 10-digit phone is required'; err.style.display = 'block'; return; }
+  if (!password || password.length < 6) { err.textContent = 'Password must be at least 6 characters'; err.style.display = 'block'; return; }
+  if (!upiId || !upiId.includes('@')) { err.textContent = 'Valid UPI ID is required'; err.style.display = 'block'; return; }
+  if (!aadhaarId || !/^\d{12}$/.test(aadhaarId)) { err.textContent = 'Valid 12-digit Aadhaar ID is required'; err.style.display = 'block'; return; }
+  if (!serviceCat) { err.textContent = 'Please select a service category'; err.style.display = 'block'; return; }
+  if (!_registerPhoneVerified) { err.textContent = 'Please verify your phone number with OTP first.'; err.style.display = 'block'; return; }
+
+  // Category-specific validation and payload construction
+  let routeCities = [];
+  let operatingCity = '';
+  let serviceAddress = '';
+  let serviceCity = '';
+  let serviceState = '';
+  let serviceLandmark = '';
+  let servicePincode = '';
+
+  if (serviceCat === 'bus') {
+    const inputs = document.querySelectorAll('.dashboard-route-city-input');
+    const hasEmpty = Array.from(inputs).some(i => !i.value.trim());
+    if (hasEmpty) {
+      err.textContent = 'Empty route stops are not allowed. Please fill all fields or remove the stop.';
+      err.style.display = 'block';
+      return;
+    }
+    routeCities = getDashboardRouteCities();
+    if (routeCities.length < 2) {
+      err.textContent = 'Bus route must have at least 2 cities (start and destination).';
+      err.style.display = 'block';
+      return;
+    }
+    const hasDuplicates = new Set(routeCities.map(c => c.toLowerCase())).size !== routeCities.length;
+    if (hasDuplicates) {
+      err.textContent = 'Duplicate city names are not allowed in the route.';
+      err.style.display = 'block';
+      return;
+    }
+  } else if (serviceCat === 'cab') {
+    operatingCity = document.getElementById('dashboardCabCity').value.trim();
+    if (!operatingCity) {
+      err.textContent = 'Please enter operating city for cab service.';
+      err.style.display = 'block';
+      return;
+    }
+  } else if (serviceCat === 'hotel') {
+    serviceAddress = document.getElementById('dashboardHotelAddress').value.trim();
+    serviceCity = document.getElementById('dashboardHotelCity').value.trim();
+    serviceState = document.getElementById('dashboardHotelState').value.trim();
+    serviceLandmark = document.getElementById('dashboardHotelLandmark').value.trim();
+    servicePincode = document.getElementById('dashboardHotelPincode').value.trim();
+    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode) {
+      err.textContent = 'Please fill all hotel address fields (address, city, state, pin code).';
+      err.style.display = 'block';
+      return;
+    }
+  } else if (serviceCat === 'cafe') {
+    serviceAddress = document.getElementById('dashboardCafeAddress').value.trim();
+    serviceCity = document.getElementById('dashboardCafeCity').value.trim();
+    serviceState = document.getElementById('dashboardCafeState').value.trim();
+    serviceLandmark = document.getElementById('dashboardCafeLandmark').value.trim();
+    servicePincode = document.getElementById('dashboardCafePincode').value.trim();
+    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode) {
+      err.textContent = 'Please fill all cafe address fields (address, city, state, pin code).';
+      err.style.display = 'block';
+      return;
+    }
+  }
+
+  const payload = {
+    name, email, phone, password,
+    upiId, aadhaarId, yearsOfExperience: experience,
+    serviceCategory: serviceCat, documents,
+    routeCities, operatingCity,
+    serviceAddress, serviceCity, serviceState, serviceLandmark, servicePincode
+  };
+
+  btn.disabled = true; btn.textContent = 'Submitting...';
+  try {
+    const r = await fetch(API + '/api/collab-applications', { 
+      method:'POST', 
+      headers:{'Content-Type':'application/json'}, 
+      body: JSON.stringify(payload) 
+    });
+    const d = await r.json();
+    if (d.success) {
+      document.getElementById('registerForm').reset();
+      document.getElementById('dashboardRouteCities').innerHTML = `
+        <div class="route-station" style="display:flex; gap:8px; align-items:center;">
+          <input type="text" class="dashboard-route-city-input" placeholder="Starting city" oninput="updateDashboardRoutePreview()" style="flex:1;padding:.8rem 1rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:12px;font-size:.9rem;color:#fff;outline:none;" required>
+          <button type="button" class="btn-icon btn-reject remove-city" style="display:none; width:36px; height:36px;" onclick="removeDashboardRouteCity(this)">✕</button>
+        </div>
+        <div class="route-station" style="display:flex; gap:8px; align-items:center;">
+          <input type="text" class="dashboard-route-city-input" placeholder="Destination city" oninput="updateDashboardRoutePreview()" style="flex:1;padding:.8rem 1rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:12px;font-size:.9rem;color:#fff;outline:none;" required>
+          <button type="button" class="btn-icon btn-reject remove-city" style="display:none; width:36px; height:36px;" onclick="removeDashboardRouteCity(this)">✕</button>
+        </div>
+      `;
+      document.getElementById('dashboardRoutePreview').style.display = 'none';
+      document.querySelectorAll('.dashboard-cat-section').forEach(s => s.style.display = 'none');
+      _registerPhoneVerified = false;
+      document.getElementById('appPhone').readOnly = false;
+      document.getElementById('appOtp').readOnly = false;
+      document.getElementById('sendOtpBtn').style.display = 'inline-flex';
+      document.getElementById('verifyOtpBtn').style.display = 'inline-flex';
+      document.getElementById('otpSection').style.display = 'none';
+      
+      success.innerHTML = '✅ ' + d.message;
+      success.style.display = 'block';
+      err.style.display = 'none';
+      btn.textContent = 'Submit Another Application';
+      btn.disabled = false;
+    } else {
+      err.textContent = Array.isArray(d.errors) ? d.errors.join(' • ') : (d.message || 'Submission failed');
+      err.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Submit Application';
+    }
+  } catch(e) { 
+    console.error('[Application] Network error:', e); 
+    err.textContent = 'Network error'; 
+    err.style.display = 'block'; 
+    btn.disabled = false; 
+    btn.textContent = 'Submit Application'; 
+  }
+}
+
+function setToken(d) {
+  TOKEN = d.token; sessionStorage.setItem('yp_token', TOKEN);
+  COLLAB = d.collaborator || d.user || d; initDashboard();
+}
+
+function logout() { TOKEN = null; COLLAB = null; sessionStorage.removeItem('yp_token'); document.getElementById('dboard').style.display = 'none'; document.getElementById('authScreen').style.display = 'flex'; }
+
+/* ─── Init ─── */
+async function initDashboard() {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('dboard').style.display = 'block';
+  if (COLLAB) {
+    document.getElementById('sbName').textContent = COLLAB.name || COLLAB.businessName || 'Partner';
+    document.getElementById('sbAvatar').textContent = (COLLAB.name||'P')[0].toUpperCase();
+    document.getElementById('sbType').textContent = (COLLAB.serviceCategories||['business']).join(', ');
+    document.getElementById('bizBadge').textContent = '🏢 ' + (COLLAB.serviceCategories?.[0]||'Business').charAt(0).toUpperCase() + (COLLAB.serviceCategories?.[0]||'Business').slice(1);
+    if (COLLAB.verification_status === 'verified') {
+      document.getElementById('verifiedBadge').style.display = 'inline-flex';
+      document.getElementById('profVerifiedBadge').style.display = 'inline-flex';
+      document.getElementById('profStatusChip').style.display = 'none';
+    }
+    updateBusinessUI();
+  }
+  await Promise.all([loadOverview(), loadInventory(), loadBookings(), loadPricing(), loadSchedule(), loadAnalytics(), loadProfile()]);
+}
+
+function updateBusinessUI() {
+  const types = COLLAB?.serviceCategories || ['bus'];
+  const primary = types[0];
+  const icons = { bus:'🚌', cab:'🚗', hotel:'🏨', cafe:'☕' };
+
+  const labels = { bus:'Buses', cab:'Cabs', hotel:'Hotels', cafe:'Cafes' };
+  document.getElementById('invLabel').textContent = labels[primary] || 'Items';
+  document.getElementById('invIcon').textContent = icons[primary] || '📦';
+  document.getElementById('qaInvItem').textContent = labels[primary]||'Item';
+  document.getElementById('addInvLabel').textContent = labels[primary]||'Item';
+  document.getElementById('ovInvLabel').textContent = 'Active ' + labels[primary];
+  document.getElementById('invTitle').innerHTML = (icons[primary]||'📦') + ' Manage ' + labels[primary];
+  document.getElementById('ovInvIcon').textContent = icons[primary] || '📦';
+  document.getElementById('ovInvLabel').textContent = 'Active ' + labels[primary];
+  document.getElementById('sbBizType').textContent = (labels[primary]||'Business') + ' Dashboard';
+}
+
+/* ─── Pane Switching ─── */
+function switchPane(name) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
+  const btn = [...document.querySelectorAll('.sb-link')].find(b => b.textContent.trim().toLowerCase().includes(name));
+  if (btn) btn.classList.add('active');
+  const titles = { overview:'Dashboard', inventory:'Inventory', bookings:'Bookings', pricing:'Pricing', schedule:'Schedule', analytics:'Analytics', profile:'Profile' };
+  document.getElementById('pageTitle').innerHTML = 'Welcome, <span>' + (COLLAB?.name||'Partner') + '</span>';
+  document.getElementById('pageSub').textContent = titles[name] + ' — ' + (COLLAB?.businessName||'Business') + ' Management';
+}
+
+/* ─── Overview ─── */
+async function loadOverview() {
+  try {
+    const r = await fetch(API + '/api/collaborator/dashboard/overview', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    if (!d.success) return;
+    document.getElementById('ovEarnings').textContent = '₹' + (d.totalEarnings || 0).toLocaleString();
+    document.getElementById('ovBookings').textContent = d.totalBookings || 0;
+    document.getElementById('ovInventory').textContent = d.activeServices || 0;
+    document.getElementById('ovOccupancy').textContent = (d.occupancyRate || 0) + '%';
+    document.getElementById('recentActivity').innerHTML = (d.recentActivity?.length ? d.recentActivity.map(a => 
+      '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span>' + a.text + '</span><span style="color:var(--text2);font-size:.72rem">' + a.time + '</span></div>'
+    ).join('') : '<p style="color:var(--text2);font-size:.85rem">No recent activity</p>');
+    if (d.pendingBookings) document.getElementById('bookingBadge').textContent = d.pendingBookings;
+  } catch(e) { console.error(e); }
+}
+
+/* ─── Inventory ─── */
+async function loadInventory() {
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    INVENTORY = d.buses || d.services || d.listings || [];
+    renderInventory();
+    populateSelectors();
+  } catch(e) { console.error(e); }
+}
+
+function renderInventory() {
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  if (!INVENTORY.length) { document.getElementById('inventoryList').innerHTML = '<p style="color:var(--text2);grid-column:1/-1;text-align:center;padding:2rem">No items yet. Click "Add" to create one.</p>'; return; }
+  document.getElementById('inventoryList').innerHTML = INVENTORY.map(item => {
+    const status = item.status || 'pending_approval';
+    const chipCls = status === 'active' ? 'green' : status === 'pending_approval' ? 'amber' : 'red';
+    return `<div class="item-card">
+      <div class="top">
+        <div><div class="name">${item.busName || item.name || item.title || 'Unnamed'}</div><div class="sub">${item.busType || item.type || primary}</div></div>
+        <span class="chip ${chipCls}">${status.replace('_',' ')}</span>
+      </div>
+      <div class="body">
+        <div class="fld"><div class="l">Route</div><div class="v">${item.routeCities?.join(' → ') || item.source + '→' + item.destination || 'N/A'}</div></div>
+        <div class="fld"><div class="l">Price</div><div class="v">₹${item.pricePerKm || item.price || 0}</div></div>
+        <div class="fld"><div class="l">Capacity</div><div class="v">${item.totalSeats || item.capacity || 'N/A'}</div></div>
+        <div class="fld"><div class="l">Bookings</div><div class="v">${item.bookingCount || 0}</div></div>
+      </div>
+      <div class="foot">
+        <button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✏️</button>
+
+        <button class="btn-icon" onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function populateSelectors() {
+  const s1 = document.getElementById('layoutSelector');
+  const s2 = document.getElementById('scheduleSelector');
+  s1.innerHTML = '<option value="">— Select item —</option>';
+  s2.innerHTML = '<option value="">— Select item —</option>';
+  INVENTORY.forEach(item => {
+    const name = item.busName || item.name || item.title || item.id;
+    s1.innerHTML += `<option value="${item.id}">${name}</option>`;
+    s2.innerHTML += `<option value="${item.id}">${name}</option>`;
+  });
+}
+
+function showAddItemModal() {
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const isHotel = primary === 'hotel';
+  const isCafe = primary === 'cafe';
+  const isCab = primary === 'cab';
+  const isBus = primary === 'bus';
+  document.getElementById('modalTitle').textContent = '➕ Add New ' + (isHotel ? 'Room' : isCafe ? 'Table' : primary.charAt(0).toUpperCase() + primary.slice(1));
+  const fields = isHotel ? `
+    <div class="form-group"><label>Room Name/Number</label><input type="text" id="f_name" placeholder="e.g. Deluxe Room 101" required></div>
+    <div class="form-group"><label>Room Type</label><select id="f_type"><option>Standard</option><option>Deluxe</option><option>Suite</option><option>Penthouse</option></select></div>
+    <div class="form-group"><label>Floor</label><input type="number" id="f_floor" placeholder="1"></div>
+    <div class="form-group"><label>Capacity (guests)</label><input type="number" id="f_capacity" placeholder="2" required></div>
+    <div class="form-group"><label>Price per Night (₹)</label><input type="number" id="f_price" placeholder="1999" required></div>
+    <div class="form-group"><label>Amenities</label><input type="text" id="f_amenities" placeholder="AC, TV, WiFi, ..."></div>
+  ` : isCafe ? `
+    <div class="form-group"><label>Table Name/Number</label><input type="text" id="f_name" placeholder="e.g. Table A1" required></div>
+    <div class="form-group"><label>Seating Capacity</label><input type="number" id="f_capacity" placeholder="4" required></div>
+    <div class="form-group"><label>Location (Indoor/Outdoor)</label><select id="f_type"><option>Indoor</option><option>Outdoor</option><option>Rooftop</option></select></div>
+    <div class="form-group"><label>Price per Person (₹)</label><input type="number" id="f_price" placeholder="499" required></div>
+  ` : isCab ? `
+    <div class="form-group"><label>Cab Name</label><input type="text" id="f_name" placeholder="e.g. Swift Dzire" required></div>
+    <div class="form-group"><label>Vehicle Type</label><select id="f_type"><option>Sedan</option><option>SUV</option><option>Hatchback</option><option>Premium</option></select></div>
+    <div class="form-group"><label>Number Plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
+    <div class="form-group"><label>Total Seats</label><input type="number" id="f_seats" placeholder="4" required></div>
+    <div class="form-group"><label>Operating City *</label><input type="text" id="f_cabCity" placeholder="e.g. Patna, Ranchi, Delhi"></div>
+    <div class="form-group"><label>Price per Km (₹)</label><input type="number" id="f_price" placeholder="12" required></div>
+  ` : `
+    <div class="form-group"><label>Bus Name</label><input type="text" id="f_name" placeholder="e.g. Volvo AC Sleeper" required></div>
+    <div class="form-group"><label>Bus Type</label><select id="f_type"><option>AC Sleeper</option><option>Semi Sleeper</option><option>Seater</option><option>Non-AC</option></select></div>
+    <div class="form-group"><label>Number Plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
+    <div class="form-group"><label>Total Seats</label><input type="number" id="f_seats" placeholder="40" required></div>
+    <div class="form-group"><label>Bus Route *</label>
+      <div id="dashRouteCities">
+        <div class="dash-route-station">
+          <input type="text" class="dash-route-city-input" placeholder="Starting city" style="flex:1;padding:.7rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;color:#fff;outline:none;font-family:inherit">
+          <button type="button" class="dash-remove-city" style="width:36px;height:36px;border-radius:8px;border:none;background:rgba(239,68,68,.15);color:#fca5a5;cursor:pointer;font-size:1.2rem;display:none">✕</button>
+        </div>
+      </div>
+      <button type="button" onclick="dashAddRouteCity()" style="margin-top:.5rem;padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:600;font-family:inherit">+ Add Stop</button>
+      <small style="color:var(--text2);font-size:.7rem;display:block;margin-top:4px;">Enter cities in order from start to end. No duplicates.</small>
+    </div>
+    <div class="form-group"><label>Price per Km (₹)</label><input type="number" id="f_price" placeholder="3" required></div>
+  `;
+  document.getElementById('modalFields').innerHTML = fields;
+  document.getElementById('itemModal').classList.add('active');
+}
+
+async function saveItem(e) { e.preventDefault();
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const data = { collaboratorId: COLLAB.id, type: primary };
+  if (primary === 'hotel') {
+    data.roomName = document.getElementById('f_name').value.trim();
+    data.roomType = document.getElementById('f_type').value;
+    data.floor = parseInt(document.getElementById('f_floor').value) || 1;
+    data.capacity = parseInt(document.getElementById('f_capacity').value) || 2;
+    data.price = parseInt(document.getElementById('f_price').value) || 0;
+    data.amenities = document.getElementById('f_amenities').value.split(',').map(s=>s.trim()).filter(Boolean);
+    data.name = data.roomName;
+  } else if (primary === 'cafe') {
+    data.tableName = document.getElementById('f_name').value.trim();
+    data.capacity = parseInt(document.getElementById('f_capacity').value) || 4;
+    data.location = document.getElementById('f_type').value;
+    data.price = parseInt(document.getElementById('f_price').value) || 0;
+    data.name = data.tableName;
+  } else if (primary === 'cab') {
+    data.busName = document.getElementById('f_name').value.trim();
+    data.busType = document.getElementById('f_type').value;
+    data.numberPlate = document.getElementById('f_plate').value.trim();
+    data.totalSeats = parseInt(document.getElementById('f_seats').value) || 4;
+    data.operatingCity = document.getElementById('f_cabCity').value.trim();
+    data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
+    data.name = data.busName;
+  } else {
+    data.busName = document.getElementById('f_name').value.trim();
+    data.busType = document.getElementById('f_type').value;
+    data.numberPlate = document.getElementById('f_plate').value.trim();
+    data.totalSeats = parseInt(document.getElementById('f_seats').value) || 40;
+    data.routeCities = dashGetRouteCities();
+    data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
+    data.name = data.busName;
+  }
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN}, body: JSON.stringify(data) });
+    const d = await r.json();
+    if (d.success) { closeModal('itemModal'); loadInventory(); }
+    else alert(d.message || 'Failed to save');
+  } catch(e) { alert('Error saving item'); }
+}
+
+async function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/' + id, { method:'DELETE', headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    const d = await r.json();
+    if (d.success) loadInventory();
+    else alert(d.message || 'Delete failed');
+  } catch(e) { alert('Error deleting'); }
+}
+
+function editItem(id) {
+  const item = INVENTORY.find(i => i.id === id);
+  if (!item) return;
+  alert('Edit functionality: ' + (item.busName || item.name || item.id) + '\nNew edit modal can be implemented here.');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ─── Layout (Seat/Room/Table) ─── */
+function viewLayout(id) {
+  document.getElementById('layoutSelector').value = id;
+  loadLayout();
+  switchPane('inventory');
+}
+
+/* ─── Layout (Seat/Room/Table) JS Controllers ─── */
+function viewLayout(id) {
+  document.getElementById('layoutSelector').value = id;
+  loadLayout();
+  switchPane('inventory');
+}
+
+let SEATS_DATA = [];
+let FILTER_STATE = 'all';
+let ACTIVE_SEAT_ID = null;
+
+async function loadLayout() {
+  const id = document.getElementById('layoutSelector').value;
+  if (!id) { document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Select an item to view layout</p>'; return; }
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  try {
+    SELECTED_ITEM = id;
+    SELECTED_SEATS.clear();
+    closePopover();
+    
+    const r = await fetch(API + '/api/collaborator/bus/' + id + '/seats?date=' + new Date().toISOString().split('T')[0], { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const seats = d.seats || [];
+    const item = INVENTORY.find(i => i.id === id);
+    const capacity = item?.totalSeats || item?.capacity || seats.length || 20;
+    
+    // Store in global JS state
+    SEATS_DATA = seats;
+    FILTER_STATE = 'all';
+    
+    // Show/hide containers based on type
+    if (primary === 'bus') {
+      document.getElementById('seatKpiContainer').style.display = 'grid';
+      document.getElementById('seatFilterContainer').style.display = 'flex';
+      updateKpiCounts();
+      renderFilterChips();
+    } else {
+      document.getElementById('seatKpiContainer').style.display = 'none';
+      document.getElementById('seatFilterContainer').style.display = 'none';
+    }
+    
+    renderSeatMap(seats, capacity, primary, item);
+  } catch(e) { console.error(e); document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Error loading layout</p>'; }
+}
+
+function updateKpiCounts() {
+  if (!SEATS_DATA || !SEATS_DATA.length) return;
+  
+  const counts = {
+    available: SEATS_DATA.filter(s => s.status === 'available').length,
+    booked_male: SEATS_DATA.filter(s => s.status === 'booked_male' || s.status === 'booked').length,
+    booked_female: SEATS_DATA.filter(s => s.status === 'booked_female').length,
+    blocked: SEATS_DATA.filter(s => s.status === 'blocked').length
+  };
+  
+  const container = document.getElementById('seatKpiContainer');
+  if (container) {
+    container.innerHTML = `
+      <div class="kpi-card">
+        <span class="kpi-val" style="color:#10b981;">${counts.available}</span>
+        <span class="kpi-lbl">Available</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-val" style="color:#3b82f6;">${counts.booked_male}</span>
+        <span class="kpi-lbl">Male Booked</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-val" style="color:#ec4899;">${counts.booked_female}</span>
+        <span class="kpi-lbl">Female Booked</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-val" style="color:#94a3b8;">${counts.blocked}</span>
+        <span class="kpi-lbl">Blocked</span>
+      </div>
+    `;
+  }
+}
+
+function renderFilterChips() {
+  const container = document.getElementById('seatFilterContainer');
+  if (!container) return;
+  
+  const chips = [
+    { id: 'all', label: 'All' },
+    { id: 'available', label: 'Available' },
+    { id: 'booked_male', label: 'Male Booked' },
+    { id: 'booked_female', label: 'Female Booked' },
+    { id: 'blocked', label: 'Blocked' }
+  ];
+  
+  container.innerHTML = chips.map(c => `
+    <button class="filter-chip${FILTER_STATE === c.id ? ' active' : ''}" onclick="applySeatFilter('${c.id}')">${c.label}</button>
+  `).join('');
+}
+
+function applySeatFilter(state) {
+  FILTER_STATE = state;
+  renderFilterChips();
+  
+  // Loop through seat items and apply dimmed class
+  SEATS_DATA.forEach(seat => {
+    const seatItem = document.getElementById(`seat-item-${seat.id}`);
+    if (!seatItem) return;
+    
+    let isMatched = true;
+    if (state !== 'all') {
+      if (state === 'available' && seat.status !== 'available') isMatched = false;
+      else if (state === 'booked_male' && seat.status !== 'booked_male' && seat.status !== 'booked') isMatched = false;
+      else if (state === 'booked_female' && seat.status !== 'booked_female') isMatched = false;
+      else if (state === 'blocked' && seat.status !== 'blocked') isMatched = false;
+    }
+    
+    if (isMatched) {
+      seatItem.classList.remove('dimmed');
+    } else {
+      seatItem.classList.add('dimmed');
+    }
+  });
+}
+
+function renderSeatMap(seats, capacity, type, item) {
+  const isHotel = type === 'hotel';
+  const isCafe = type === 'cafe';
+  
+  if (isHotel || isCafe) {
+    document.getElementById('layoutTitle').textContent = isHotel ? 'Room Layout' : 'Table Layout';
+    document.getElementById('layoutActions').style.display = 'flex';
+    document.getElementById('layoutLegend').style.display = 'flex';
+    const cnt = Math.min(seats.length || capacity, 30);
+    const gridSize = Math.ceil(Math.sqrt(cnt));
+    let html = '<div style="display:grid;grid-template-columns:repeat(' + gridSize + ',1fr);gap:10px;max-width:400px;margin:0 auto">';
+    for (let i = 0; i < cnt; i++) {
+      const s = seats[i] || { id: (type==='hotel'?'RM':'TB')+(i+1), status:'available', number: (type==='hotel'?'Room ':'Table ')+(i+1) };
+      const cls = s.status || 'available';
+      const label = isHotel ? '🛏️' : '🍽️';
+      html += `<div class="seat ${cls}" onclick="toggleSeat('${s.id}')" title="${s.number||s.id}: ${s.status}" style="width:auto;height:auto;padding:.8rem .4rem;flex-direction:column;gap:4px;font-size:.65rem;border-radius:12px">
+        <span style="font-size:1.2rem">${label}</span>
+        <span>${s.number||s.id}</span>
+      </div>`;
+    }
+    html += '</div>';
+    document.getElementById('seatMapContainer').innerHTML = html;
+    return;
+  }
+  
+  if (type === 'bus') {
+    document.getElementById('layoutTitle').textContent = 'Bus Seat Management';
+    document.getElementById('layoutActions').style.display = 'none'; // Using popover actions
+    document.getElementById('layoutLegend').style.display = 'flex';
+    
+    const rows = 11;
+    const cols = 6;
+    let html = '<div class="bus-chassis">';
+    html += '<div class="bus-cabin-header"><span>🎛️ Dashboard</span><span>🛞 Driver</span></div>';
+    html += '<div class="bus-grid">';
+    
+    let seatIdx = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (r < 10) {
+          if (c === 2) {
+            html += '<div class="aisle-spacer"></div>';
+            continue;
+          }
+          if ((r === 2 || r === 3) && c < 2) {
+            html += '<div class="empty-spacer"></div>';
+            continue;
+          }
+        }
+        
+        const seatObj = seats[seatIdx];
+        if (!seatObj) {
+          html += '<div class="empty-spacer"></div>';
+          continue;
+        }
+        
+        const seatId = seatObj.id;
+        const status = seatObj.status || 'available';
+        const label = seatObj.seatLabel || ('S' + String(seatObj.seatNumber).padStart(2, '0'));
+        const price = seatObj.price || 841;
+        
+        let dimmedClass = '';
+        if (FILTER_STATE !== 'all') {
+          if (FILTER_STATE === 'available' && status !== 'available') dimmedClass = ' dimmed';
+          else if (FILTER_STATE === 'booked_male' && status !== 'booked_male' && status !== 'booked') dimmedClass = ' dimmed';
+          else if (FILTER_STATE === 'booked_female' && status !== 'booked_female') dimmedClass = ' dimmed';
+          else if (FILTER_STATE === 'blocked' && status !== 'blocked') dimmedClass = ' dimmed';
+        }
+        
+        let seatSvg = `
+          <svg class="seat-icon-svg" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 8C10 5.79086 11.7909 4 14 4H26C28.2091 4 30 5.79086 30 8V32C30 34.2091 28.2091 36 26 36H14C11.7909 36 10 34.2091 10 32V8Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" />
+            <path d="M14 14C14 10.6863 16.6863 8 20 8C23.3137 8 26 10.6863 26 14V32C26 33.1046 25.1046 34 24 34H16C14.8954 34 14 33.1046 14 32V14Z" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" />
+          </svg>
+        `;
+        let overlayIcon = '';
+        
+        if (status === 'booked_male' || status === 'booked') {
+          overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+        } else if (status === 'booked_female') {
+          overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm3.5 6H8.5c-.83 0-1.5.67-1.5 1.5v6c0 .55.45 1 1 1h1.5v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-5H16c.55 0 1-.45 1-1v-6c0-.83-.67-1.5-1.5-1.5z"/></svg>`;
+        } else if (status === 'blocked') {
+          overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>`;
+        }
+        
+        const finalStatusClass = (status === 'booked') ? 'booked_male' : status;
+        
+        html += `
+          <div class="seat-item${dimmedClass}" id="seat-item-${seatId}">
+            <div class="seat-wrapper ${finalStatusClass}" onclick="openSeatActions(event, '${seatId}')" id="seat-wrapper-${seatId}">
+              ${seatSvg}
+              ${overlayIcon}
+              <div class="seat-spinner" id="spinner-${seatId}" style="display:none;"></div>
+            </div>
+            <span class="seat-label-text">${label}</span>
+            <span class="seat-fare-text">₹${price}</span>
+          </div>
+        `;
+        seatIdx++;
+      }
+    }
+    
+    html += '</div></div>';
+    document.getElementById('seatMapContainer').innerHTML = html;
+    return;
+  }
+  
+  // Cab seat layout fallback
+  document.getElementById('layoutTitle').textContent = 'Seat Layout';
+  document.getElementById('layoutActions').style.display = 'flex';
+  document.getElementById('layoutLegend').style.display = 'flex';
+  const cols = (type === 'cab') ? 2 : (item?.seatLayout?.includes('2x2') ? 4 : 3);
+  const totalSeats = seats.length || capacity;
+  const pairs = cols === 2 ? 1 : 2;
+  let html = '';
+  const rows = Math.ceil(totalSeats / cols);
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    html += '<div class="seat-row">';
+    for (let c = 0; c < cols; c++) {
+      if (idx >= totalSeats) break;
+      if (c === pairs) html += '<div class="seat gap"></div>';
+      const s = seats[idx] || { id: 'S'+(idx+1), status:'available', number: (idx+1).toString() };
+      const cls = s.status || 'available';
+      const selected = SELECTED_SEATS.has(s.id) ? ';border-color:var(--gold);transform:scale(1.1)' : '';
+      html += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div class="seat ${cls}" onclick="toggleSeat('${s.id}')" style="${selected}" title="${s.number||s.id}">${s.number||idx+1}</div>
+      </div>`;
+      idx++;
+    }
+    html += '</div>';
+  }
+  document.getElementById('seatMapContainer').innerHTML = html;
+}
+
+function toggleSeat(id) {
+  if (SELECTED_SEATS.has(id)) SELECTED_SEATS.delete(id);
+  else SELECTED_SEATS.add(id);
+  loadLayout();
+}
+
+async function markSeats(status) {
+  if (!SELECTED_ITEM || !SELECTED_SEATS.size) { alert('Select seats first by clicking on them'); return; }
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/' + SELECTED_ITEM + '/seats/bulk', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+      body: JSON.stringify({ seatIds: [...SELECTED_SEATS], action: (status==='available'?'available':status==='reserved'?'reserve':'block'), travelDate: new Date().toISOString().split('T')[0] }) });
+    const d = await r.json();
+    if (d.success) { SELECTED_SEATS.clear(); loadLayout(); }
+    else alert(d.message || 'Update failed');
+  } catch(e) { alert('Error updating seats'); }
+}
+
+/* Floating Action popover controller logic */
+function openSeatActions(event, seatId) {
+  event.stopPropagation();
+  closePopover();
+  
+  ACTIVE_SEAT_ID = seatId;
+  
+  const popover = document.getElementById('seatActionPopover');
+  const seatWrapper = document.getElementById(`seat-wrapper-${seatId}`);
+  if (!popover || !seatWrapper) return;
+  
+  popover.style.display = 'flex';
+  
+  const rect = seatWrapper.getBoundingClientRect();
+  const containerRect = document.getElementById('seatMapContainer').getBoundingClientRect();
+  
+  const top = rect.bottom - containerRect.top + 8;
+  const left = rect.left - containerRect.left + (rect.width / 2) - 90;
+  
+  popover.style.top = `${top}px`;
+  popover.style.left = `${left}px`;
+  
+  document.addEventListener('click', onDocumentClickClosePopover);
+}
+
+function closePopover() {
+  const popover = document.getElementById('seatActionPopover');
+  if (popover) popover.style.display = 'none';
+  ACTIVE_SEAT_ID = null;
+  document.removeEventListener('click', onDocumentClickClosePopover);
+}
+
+function onDocumentClickClosePopover(event) {
+  const popover = document.getElementById('seatActionPopover');
+  if (popover && !popover.contains(event.target)) {
+    closePopover();
+  }
+}
+
+async function handlePopoverAction(newStatus) {
+  const seatId = ACTIVE_SEAT_ID;
+  if (!seatId) return;
+  
+  const busId = SELECTED_ITEM;
+  closePopover();
+  
+  const seatObj = SEATS_DATA.find(s => s.id === seatId);
+  if (!seatObj) return;
+  
+  const oldStatus = seatObj.status;
+  
+  // Optimistic state change
+  seatObj.status = newStatus;
+  
+  const seatWrapper = document.getElementById(`seat-wrapper-${seatId}`);
+  const spinner = document.getElementById(`spinner-${seatId}`);
+  
+  // Instantly apply UI modifications
+  if (seatWrapper) {
+    const finalStatusClass = (newStatus === 'booked') ? 'booked_male' : newStatus;
+    seatWrapper.className = `seat-wrapper ${finalStatusClass}`;
+    
+    // Dynamic overlay icons
+    let overlayIcon = '';
+    if (newStatus === 'booked_male' || newStatus === 'booked') {
+      overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+    } else if (newStatus === 'booked_female') {
+      overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm3.5 6H8.5c-.83 0-1.5.67-1.5 1.5v6c0 .55.45 1 1 1h1.5v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-5H16c.55 0 1-.45 1-1v-6c0-.83-.67-1.5-1.5-1.5z"/></svg>`;
+    } else if (newStatus === 'blocked') {
+      overlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>`;
+    }
+    
+    const existingIcon = seatWrapper.querySelector('.seat-overlay-icon');
+    if (existingIcon) existingIcon.remove();
+    if (overlayIcon) {
+      seatWrapper.insertAdjacentHTML('beforeend', overlayIcon);
+    }
+  }
+  
+  if (spinner) spinner.style.display = 'block';
+  
+  // Recalculate counts optimistically
+  updateKpiCounts();
+  applySeatFilter(FILTER_STATE);
+  
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/' + busId + '/seats', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + TOKEN
+      },
+      body: JSON.stringify({ seatId, status: newStatus })
+    });
+    
+    const d = await r.json();
+    if (spinner) spinner.style.display = 'none';
+    
+    if (d.success) {
+      showToast(`Seat marked as ${newStatus.replace('_', ' ')}`, 'success');
+    } else {
+      throw new Error(d.message || 'API error');
+    }
+  } catch (err) {
+    console.error('Seat update failed:', err);
+    if (spinner) spinner.style.display = 'none';
+    showToast('Failed to save status. Rolling back changes...', 'error');
+    
+    // ROLLBACK STATE
+    seatObj.status = oldStatus;
+    
+    // Reset visual indicators
+    if (seatWrapper) {
+      const rollbackStatusClass = (oldStatus === 'booked') ? 'booked_male' : oldStatus;
+      seatWrapper.className = `seat-wrapper ${rollbackStatusClass}`;
+      
+      const iconToReset = seatWrapper.querySelector('.seat-overlay-icon');
+      if (iconToReset) iconToReset.remove();
+      
+      let oldOverlayIcon = '';
+      if (oldStatus === 'booked_male' || oldStatus === 'booked') {
+        oldOverlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
+      } else if (oldStatus === 'booked_female') {
+        oldOverlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm3.5 6H8.5c-.83 0-1.5.67-1.5 1.5v6c0 .55.45 1 1 1h1.5v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-5H16c.55 0 1-.45 1-1v-6c0-.83-.67-1.5-1.5-1.5z"/></svg>`;
+      } else if (oldStatus === 'blocked') {
+        oldOverlayIcon = `<svg class="seat-overlay-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>`;
+      }
+      if (oldOverlayIcon) {
+        seatWrapper.insertAdjacentHTML('beforeend', oldOverlayIcon);
+      }
+    }
+    
+    // Re-verify KPI states
+    updateKpiCounts();
+    applySeatFilter(FILTER_STATE);
+  }
+}
+
+/* ─── Bookings ─── */
+async function loadBookings() {
+  try {
+    const r = await fetch(API + '/api/collaborator/dashboard/bookings', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    BOOKINGS = d.bookings || d.orders || [];
+    if (!BOOKINGS.length) { document.getElementById('bookingsContainer').innerHTML = '<p style="color:var(--text2);text-align:center;padding:2rem">No bookings yet</p>'; return; }
+    document.getElementById('bookingsContainer').innerHTML = `<table>
+      <thead><tr><th>Booking ID</th><th>Customer</th><th>Item</th><th>Amount</th><th>Date</th><th>Status</th><th></th></tr></thead>
+      <tbody>${BOOKINGS.map(b => `<tr>
+        <td style="font-weight:600">${b.orderId || b.id || 'N/A'}</td>
+        <td>${b.userName || b.passenger_name || b.customerName || 'N/A'}<br><small style="color:var(--text2)">${b.userPhone || ''}</small></td>
+        <td>${b.itemName || b.busName || b.serviceType || 'N/A'}</td>
+        <td>₹${b.amount || b.payNow || b.totalAmount || 0}</td>
+        <td>${new Date(b.createdAt||Date.now()).toLocaleDateString()}</td>
+        <td><span class="chip ${b.status==='confirmed'?'green':b.status==='payment_pending'?'amber':'red'}">${(b.status||'pending').replace('_',' ')}</span></td>
+        <td>${b.status === 'payment_pending' ? `<button class="btn-sec btn-sm" onclick="confirmBooking('${b.orderId||b.id}')">✅ Confirm</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e) { console.error(e); }
+}
+
+async function confirmBooking(id) {
+  if (!confirm('Confirm this booking?')) return;
+  try {
+    const r = await fetch(API + '/api/admin/verify-payment', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN}, body: JSON.stringify({ orderId: id, action: 'approve' }) });
+    const d = await r.json();
+    if (d.success) loadBookings();
+    else alert(d.message || 'Failed');
+  } catch(e) { alert('Error'); }
+}
+
+/* ─── Pricing ─── */
+async function loadPricing() {
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  if (!INVENTORY.length) { document.getElementById('pricingItems').innerHTML = '<p style="color:var(--text2);grid-column:1/-1;text-align:center;padding:2rem">No items to manage pricing</p>'; return; }
+  document.getElementById('pricingItems').innerHTML = INVENTORY.map(item => `
+    <div class="item-card">
+      <div class="top"><div><div class="name">${item.busName || item.name || 'Item'}</div><div class="sub">Current: ₹${item.pricePerKm || item.price || 0}</div></div></div>
+      <div class="body" style="grid-template-columns:1fr">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="price_${item.id}" value="${item.pricePerKm || item.price || 0}" style="flex:1;padding:.5rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.85rem;outline:none;font-family:inherit">
+          <button class="btn-sec btn-sm" onclick="updatePrice('${item.id}')">💾 Update</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function updatePrice(id) {
+  const val = document.getElementById('price_' + id)?.value;
+  if (!val) return;
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/' + id, { method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+      body: JSON.stringify({ pricePerKm: parseFloat(val) }) });
+    const d = await r.json();
+    if (d.success) { loadInventory(); alert('✅ Price updated'); }
+    else alert(d.message || 'Update failed');
+  } catch(e) { alert('Error updating price'); }
+}
+
+function showAddPriceRule() { alert('Dynamic pricing rule form can be implemented here.'); }
+
+/* ─── Schedule ─── */
+async function loadSchedule() {
+  const id = document.getElementById('scheduleSelector').value;
+  if (!id) { document.getElementById('scheduleContent').innerHTML = '<p style="color:var(--text2)">Select an item to view schedule</p>'; return; }
+  const item = INVENTORY.find(i => i.id === id);
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const runningDays = item?.schedules?.[0]?.runningDays || [true,true,true,true,true,true,true];
+  document.getElementById('scheduleContent').innerHTML = `
+    <div style="margin-bottom:1rem">
+      <h4 style="font-size:.9rem;color:#fff;margin-bottom:.8rem">Running Days</h4>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${days.map((d,i) => `
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:${runningDays[i]?'var(--gold-dim)':'var(--card)'};border-radius:8px;border:1px solid ${runningDays[i]?'rgba(245,197,24,.2)':'var(--border)'};cursor:pointer;font-size:.8rem;color:${runningDays[i]?'var(--gold)':'var(--text2)'}">
+          <input type="checkbox" ${runningDays[i]?'checked':''} onchange="saveRunningDays('${id}')" style="accent-color:var(--gold)"> ${d.substring(0,3)}
+        </label>`).join('')}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="form-group"><label>Departure Time</label><input type="time" id="schedDepart" value="${item?.schedules?.[0]?.departureTime || '06:00'}" onchange="saveScheduleTime('${id}')"></div>
+      <div class="form-group"><label>Arrival Time</label><input type="time" id="schedArrive" value="${item?.schedules?.[0]?.arrivalTime || '10:30'}" onchange="saveScheduleTime('${id}')"></div>
+    </div>
+    <div style="margin-top:1rem"><button class="btn-sec btn-sm" onclick="saveScheduleTime('${id}')">💾 Save Schedule</button></div>`;
+}
+
+async function saveRunningDays(id) {
+  const checks = [...document.querySelectorAll('#scheduleContent input[type=checkbox]')].map(c => c.checked);
+  try {
+    await fetch(API + '/api/collaborator/bus/' + id + '/schedule', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+      body: JSON.stringify({ runningDays: checks }) });
+  } catch(e) {}
+}
+
+async function saveScheduleTime(id) {
+  const dep = document.getElementById('schedDepart')?.value;
+  const arr = document.getElementById('schedArrive')?.value;
+  try {
+    const r = await fetch(API + '/api/collaborator/bus/' + id + '/schedule', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+      body: JSON.stringify({ departureTime: dep, arrivalTime: arr }) });
+    const d = await r.json();
+    if (d.success) alert('✅ Schedule saved');
+  } catch(e) { alert('Error saving schedule'); }
+}
+
+/* ─── Analytics ─── */
+async function loadAnalytics() {
+  try {
+    const r = await fetch(API + '/api/collaborator/dashboard/earnings', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const monthly = d.monthly || [];
+    const total = monthly.reduce((s,m) => s + (m.amount || 0), 0);
+    document.getElementById('anRevenue').textContent = '₹' + total.toLocaleString();
+    document.getElementById('anBookings').textContent = d.totalBookings || 0;
+    document.getElementById('anGrowth').textContent = (d.growthRate || 0) + '%';
+    // Simple bar chart
+    if (monthly.length) {
+      const max = Math.max(...monthly.map(m => m.amount || 0), 1);
+      document.getElementById('revenueChart').innerHTML = monthly.map(m =>
+        `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="width:100%;max-width:40px;height:${(m.amount/max)*180}px;background:linear-gradient(180deg,var(--gold),var(--gold2));border-radius:6px 6px 0 0;transition:.3s;min-height:4px"></div>
+          <span style="font-size:.55rem;color:var(--text2);transform:rotate(-45deg);white-space:nowrap">${m.month||''}</span>
+        </div>`
+      ).join('');
+    }
+    document.getElementById('topItems').innerHTML = (d.topItems?.length ? d.topItems.map(t =>
+      '<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border);font-size:.82rem"><span>' + t.name + '</span><span style="color:var(--gold);font-weight:700">₹' + (t.amount||0) + '</span></div>'
+    ).join('') : '<p style="color:var(--text2)">No data yet</p>');
+  } catch(e) { console.error(e); }
+}
+
+/* ─── Route Builder (Dashboard) ─── */
+function dashAddRouteCity() {
+  const container = document.getElementById('dashRouteCities');
+  const div = document.createElement('div');
+  div.className = 'dash-route-station';
+  div.style.cssText = 'display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem';
+  div.innerHTML = `<input type="text" class="dash-route-city-input" placeholder="Next city" style="flex:1;padding:.7rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;color:#fff;outline:none;font-family:inherit"><button type="button" class="dash-remove-city" onclick="dashRemoveRouteCity(this)" style="width:36px;height:36px;border-radius:8px;border:none;background:rgba(239,68,68,.15);color:#fca5a5;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center">✕</button>`;
+  container.appendChild(div);
+}
+function dashRemoveRouteCity(btn) {
+  const container = document.getElementById('dashRouteCities');
+  if (container.children.length <= 2) return;
+  btn.parentElement.remove();
+}
+function dashGetRouteCities() {
+  const inputs = document.querySelectorAll('.dash-route-city-input');
+  return Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+}
+
+/* ─── Profile ─── */
+async function loadProfile() {
+  try {
+    const r = await fetch(API + '/api/collaborator/profile', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    if (r.status === 401) return;
+    const d = await r.json();
+    if (!d.success || !d.collaborator) return;
+    const c = d.collaborator;
+    COLLAB = { ...COLLAB, ...c };
+    document.getElementById('profBusiness').value = c.businessName || '';
+    document.getElementById('profName').value = c.name || '';
+    document.getElementById('profEmail').value = c.email || '';
+    document.getElementById('profPhone').value = c.phone || '';
+    document.getElementById('profCity').value = c.city || '';
+    document.getElementById('profState').value = c.state || '';
+    document.getElementById('profUpi').value = c.upiId || '';
+    document.getElementById('profDesc').value = c.description || '';
+    // Hotel-specific fields
+    document.getElementById('profAddress').value = c.address || '';
+    document.getElementById('profHotelCity').value = c.city || '';
+    document.getElementById('profHotelState').value = c.state || '';
+    document.getElementById('profLandmark').value = c.landmark || '';
+    document.getElementById('profPincode').value = c.pinCode || '';
+    // Cafe-specific fields
+    document.getElementById('profCafeAddress').value = c.address || '';
+    document.getElementById('profCafeCity').value = c.city || '';
+    document.getElementById('profCafeState').value = c.state || '';
+    document.getElementById('profCafeLandmark').value = c.landmark || '';
+    document.getElementById('profCafePincode').value = c.pinCode || '';
+    // Show/hide category-specific profile sections
+    const primary = (c.serviceCategories || ['bus'])[0];
+    document.getElementById('profHotelFields').style.display = primary === 'hotel' ? 'block' : 'none';
+    document.getElementById('profCafeFields').style.display = primary === 'cafe' ? 'block' : 'none';
+    const tags = document.getElementById('profServiceTags');
+    tags.innerHTML = (c.serviceCategories || []).map(s => `<span class="chip gold">${s}</span>`).join('') || '<span style="color:var(--text2);font-size:.82rem">No services selected</span>';
+    // Update sidebar and UI
+    document.getElementById('sbName').textContent = c.name || c.businessName || 'Partner';
+    document.getElementById('sbAvatar').textContent = (c.name||'P')[0].toUpperCase();
+    document.getElementById('sbType').textContent = (c.serviceCategories||['business']).join(', ');
+    document.getElementById('bizBadge').textContent = '🏢 ' + (c.serviceCategories?.[0]||'Business').charAt(0).toUpperCase() + (c.serviceCategories?.[0]||'Business').slice(1);
+    if (c.verification_status === 'verified') {
+      document.getElementById('verifiedBadge').style.display = 'inline-flex';
+      document.getElementById('profVerifiedBadge').style.display = 'inline-flex';
+      document.getElementById('profStatusChip').style.display = 'none';
+    }
+    updateBusinessUI();
+  } catch(e) { console.error(e); }
+}
+
+async function saveProfile() {
+  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const data = {
+    businessName: document.getElementById('profBusiness').value.trim(),
+    name: document.getElementById('profName').value.trim(),
+    city: document.getElementById('profCity').value.trim(),
+    state: document.getElementById('profState').value.trim(),
+    upiId: document.getElementById('profUpi').value.trim(),
+    description: document.getElementById('profDesc').value.trim(),
+    address: primary === 'hotel' ? document.getElementById('profAddress').value.trim() : primary === 'cafe' ? document.getElementById('profCafeAddress').value.trim() : '',
+    landmark: primary === 'hotel' ? document.getElementById('profLandmark').value.trim() : primary === 'cafe' ? document.getElementById('profCafeLandmark').value.trim() : '',
+    pinCode: primary === 'hotel' ? document.getElementById('profPincode').value.trim() : primary === 'cafe' ? document.getElementById('profCafePincode').value.trim() : ''
+  };
+  try {
+    const r = await fetch(API + '/api/collaborator/profile', { method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN}, body: JSON.stringify(data) });
+    const d = await r.json();
+    if (d.success) { COLLAB = { ...COLLAB, ...data }; alert('✅ Profile updated'); }
+    else alert(d.message || 'Update failed');
+  } catch(e) { alert('Error saving profile'); }
+}
+
+/* ─── Init ─── */
+if (TOKEN) {
+  try {
+    const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+    COLLAB = payload;
+    initDashboard();
+  } catch(e) { logout(); }
+}
+</script>
+</body>
+</html>

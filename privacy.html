@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Yatri Point">
+    <meta name="description" content="Privacy Policy - Yatri Point (Yatri Point) — We protect your personal data.">
+    <meta name="keywords" content="privacy policy, Yatri Point, Yatri Point, data protection, privacy">
+    <meta name="author" content="Yatri Point — Yatri Point">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mithilasafar.in/privacy.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Privacy Policy - Yatri Point">
+    <meta property="og:description" content="Privacy Policy for Yatri Point booking services. Your data is secure with us.">
+    <meta property="og:url" content="https://mithilasafar.in/privacy.html">
+    <meta property="og:image" content="https://mithilasafar.in/icons/og-image.png">
+    <meta property="og:site_name" content="Yatri Point">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Privacy Policy - Yatri Point">
+    <meta name="twitter:description" content="Privacy Policy for Yatri Point booking services. Your data is secure with us.">
+    <meta name="twitter:image" content="https://mithilasafar.in/icons/og-image.png">
+
+    <meta name="theme-color" content="#d84e55">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Privacy Policy | Yatri Point — Yatri Point</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Poppins:wght@400;600;700;800&display=swap">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'">
+            <h1><img src="/yatri-logo.png" alt="Yatri Point Logo" class="brand-logo" style="height: 100px; width: auto; max-width: 350px; object-fit: contain; vertical-align: middle; background: #ffffff; padding: 4px 12px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.25); margin: 0;"></h1>
+            
+        </div>
+        <div class="header-right">
+            <ul class="nav-links" id="navLinksDesktop">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#help">Help</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="collab.html">Collab</a></li>
+                <li><a href="terms.html">T&C</a></li>
+            </ul>
+
+            <div class="auth-btns" id="authBtns">
+                <button class="btn-login" onclick="openModal('loginModal')">Login</button>
+                <button class="btn-signup" onclick="openModal('signupModal')">Sign Up</button>
+            </div>
+
+            <div id="userSection" class="user-menu" style="display:none" onclick="toggleDropdown()">
+                <div class="user-avatar" id="userAvatar"><span id="userInitial">U</span></div>
+                <span class="user-name" id="userNameDisplay">User</span>
+                <span class="dropdown-arrow">▼</span>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+                    <a href="#" onclick="openProfile();return false">👤 Profile</a>
+                    <a href="#" onclick="logout();return false">🚪 Logout</a>
+                </div>
+            </div>
+
+            <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="index.html">🏠 Home</a>
+        <a href="index.html#cafes">☕ Café</a>
+        <a href="index.html#help">❓ Help</a>
+        <a href="index.html#about">ℹ️ About</a>
+        <a href="collab.html">🤝 Collab</a>
+        <a href="terms.html">📜 T&C</a>
+        <a href="privacy.html" class="active">🔒 Privacy</a>
+        <a href="#" onclick="openBookings();closeMobileMenu();return false">📅 My Bookings</a>
+        <div class="mobile-auth" id="mobileAuth">
+            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();">🔑 Login</button>
+            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();">📝 Sign Up</button>
+        </div>
+    </div>
+
+    <!-- ===== PRIVACY SECTION ===== -->
+    <main class="page-section active" style="padding-top: 80px; padding-bottom: 2rem;">
+        <div class="page-view active" style="max-width: 700px; margin: 0 auto; padding: 1rem;">
+            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Home</button>
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">🔒 Privacy Policy</h2>
+            
+            <p style="margin-bottom: 1.5rem; color: var(--gray);">At Yatri Point, we value your privacy and are committed to protecting your personal data. This Privacy Policy explains how we collect, use, and safeguard your information.</p>
+            
+            <div class="policy-card"><strong>1. Information We Collect:</strong><br>
+            • Personal information (name, email, phone number)<br>
+            • Booking details (travel dates, destination, seat selection)<br>
+            • Payment information (UPI ID, transaction details)<br>
+            • Location data for delivery/pickup services</div>
+            
+            <div class="policy-card"><strong>2. How We Use Your Information:</strong><br>
+            • To process and manage your bookings<br>
+            • To communicate with you about your orders<br>
+            • To provide customer support<br>
+            • To improve our services and user experience<br>
+            • To comply with legal obligations</div>
+            
+            <div class="policy-card"><strong>3. Data Protection:</strong><br>
+            • Your personal data is encrypted and stored securely<br>
+            • We use industry-standard security measures<br>
+            • Access to your data is restricted to authorized personnel only<br>
+            • We never share your data with third parties without your consent</div>
+            
+            <div class="policy-card"><strong>4. Payment Security:</strong><br>
+            • All UPI and payment transactions are processed through secure gateways<br>
+            • We do not store your complete payment credentials<br>
+            • Transaction history is encrypted for your protection</div>
+            
+            <div class="policy-card"><strong>5. User Rights:</strong><br>
+            • You can access and update your personal information anytime<br>
+            • You can request deletion of your account and data<br>
+            • You have the right to opt-out of promotional communications<br>
+            • Contact us to exercise these rights</div>
+            
+            <div class="policy-card"><strong>6. Third-Party Services:</strong><br>
+            • We may share data with service collaborators (bus operators, hotels, cab drivers) as necessary for booking fulfillment<br>
+            • Payment processors comply with their own privacy policies<br>
+            • We are not responsible for third-party data practices</div>
+            
+            <div class="policy-card"><strong>7. Children's Privacy:</strong><br>
+            • Our services are not intended for children under 18 years of age<br>
+            • We do not knowingly collect data from children</div>
+            
+            <div class="policy-card"><strong>8. Changes to Policy:</strong><br>
+            • We may update this privacy policy from time to time<br>
+            • Any changes will be posted on this page<br>
+            • Continued use of our services after changes constitutes acceptance</div>
+            
+            <div class="policy-card"><strong>9. Contact Information:</strong><br>
+            • Email: support@mithilasafar.in<br>
+            • Phone: +91-72502 76840<br>
+            • Address: Madhubani, Bihar, India</div>
+
+            <p style="text-align: center; margin-top: 2rem; color: var(--gray); font-size: 0.9rem;">
+                By using Yatri Point services, you agree to this Privacy Policy.<br>
+                Last updated: March 2026<br>
+                🙏 JAI MATA DI
+            </p>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>Yatri Point</h4>
+                <p>Travel & Stay</p>
+                <p>Your trusted travel partner across Mithila Region.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <a href="index.html">Home</a>
+                <a href="index.html#about">About Us</a>
+                <a href="index.html#help">Help & Support</a>
+                <a href="terms.html">Terms & Conditions</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+            <div class="footer-col">
+                <h4>Services</h4>
+                <a href="index.html#bus">Bus Booking</a>
+                <a href="index.html#hotel">Hotel Booking</a>
+                <a href="index.html#car">Rapid Car</a>
+                <a href="index.html#cafes">Café Guide</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p>📞 +91-72502 76840</p>
+                <p>📍 Madhubani, Bihar</p>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 Yatri Point (Yatri Point). All rights reserved. 🙏 JAI MATA DI</div>
+    </footer>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>

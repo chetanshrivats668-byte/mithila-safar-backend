@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Yatri Point — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0a0f2e;--navy2:#0d1540;--navy3:#111b52;
+  --gold:#f5c518;--gold2:#e8b400;--gold-dim:rgba(245,197,24,.12);
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;
+  --text:#e8eaf6;--text2:#9fa8da;
+  --border:rgba(255,255,255,.08);--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.07)
+}
+body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── LOGIN ── */
+.lp{display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:radial-gradient(ellipse at 20% 50%,rgba(79,142,247,.15) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 20%,rgba(245,197,24,.1) 0%,transparent 50%),
+             var(--navy)}
+.lb{background:rgba(13,21,64,.85);backdrop-filter:blur(30px);
+  border:1px solid rgba(245,197,24,.25);padding:2.8rem 2.5rem;border-radius:28px;
+  width:100%;max-width:420px;
+  box-shadow:0 40px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)}
+.lb-top{text-align:center;margin-bottom:2rem}
+.lb-icon{width:72px;height:72px;background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border-radius:20px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:2rem;box-shadow:0 8px 32px rgba(245,197,24,.35);margin-bottom:1rem}
+.lb-top h2{font-size:1.7rem;font-weight:900;color:#fff;margin-bottom:.3rem}
+.lb-top p{color:var(--text2);font-size:.85rem}
+.inp-grp{margin-bottom:1rem}
+.inp-grp label{display:block;font-size:.72rem;font-weight:700;color:var(--text2);
+  text-transform:uppercase;letter-spacing:.09em;margin-bottom:.45rem}
+.inp-grp input{width:100%;padding:.85rem 1rem;background:rgba(255,255,255,.06);
+  border:1.5px solid rgba(255,255,255,.1);border-radius:14px;font-size:.95rem;
+  color:#fff;outline:none;font-family:inherit;transition:.2s}
+.inp-grp input:focus{border-color:var(--gold);background:rgba(245,197,24,.06);
+  box-shadow:0 0 0 4px rgba(245,197,24,.1)}
+.inp-grp input::placeholder{color:rgba(255,255,255,.3)}
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{flex:1;padding-right:3rem}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;
+  font-size:1.1rem;padding:4px;line-height:1;transition:.2s;z-index:1}
+.pw-eye:hover{color:var(--gold)}
+.login-btn{width:100%;padding:1rem;background:linear-gradient(135deg,var(--gold),var(--gold2));
+  color:#0a0f2e;border:none;border-radius:14px;font-size:1rem;font-weight:900;
+  cursor:pointer;margin-top:.5rem;letter-spacing:.02em;transition:.2s;
+  box-shadow:0 8px 24px rgba(245,197,24,.3);font-family:inherit}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(245,197,24,.4)}
+.login-btn:active{transform:translateY(0)}
+.lerr{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);
+  color:#fca5a5;font-size:.83rem;padding:.65rem 1rem;border-radius:10px;
+  margin-bottom:1rem;display:none;text-align:center}
+
+/* ── DASHBOARD LAYOUT ── */
+.db{display:none;min-height:100vh}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:240px;
+  background:var(--navy2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:50}
+.sb-brand{padding:1.5rem 1.2rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:.75rem}
+.sb-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0}
+.sb-title{font-size:1rem;font-weight:800;color:#fff}
+.sb-title span{color:var(--gold)}
+.sb-nav{flex:1;padding:1rem .8rem;display:flex;flex-direction:column;gap:.3rem}
+.sb-link{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;
+  border-radius:12px;cursor:pointer;font-size:.9rem;font-weight:600;
+  color:var(--text2);border:none;background:transparent;width:100%;
+  text-align:left;transition:.2s;font-family:inherit}
+.sb-link:hover{background:var(--card2);color:#fff}
+.sb-link.active{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(245,197,24,.2)}
+.sb-ico{font-size:1.1rem;width:22px;text-align:center}
+.sb-badge{margin-left:auto;background:var(--gold);color:#0a0f2e;
+  font-size:.65rem;font-weight:900;padding:.15rem .5rem;border-radius:99px;min-width:20px;text-align:center}
+.sb-footer{padding:1rem .8rem;border-top:1px solid var(--border)}
+.logout-btn{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;
+  border-radius:12px;cursor:pointer;font-size:.9rem;font-weight:600;
+  color:#fca5a5;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.05);
+  width:100%;text-align:left;transition:.2s;font-family:inherit}
+.logout-btn:hover{background:rgba(239,68,68,.15);color:#fff}
+
+/* ── MAIN AREA ── */
+.main{margin-left:240px;padding:2rem;min-height:100vh}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
+.topbar h1{font-size:1.5rem;font-weight:800;color:#fff}
+.topbar h1 span{color:var(--gold)}
+.topbar-r{display:flex;align-items:center;gap:.75rem}
+.refresh-btn{display:flex;align-items:center;gap:.5rem;padding:.55rem 1.1rem;
+  background:var(--card2);border:1px solid var(--border);color:var(--text);
+  border-radius:10px;cursor:pointer;font-size:.85rem;font-weight:600;
+  font-family:inherit;transition:.2s}
+.refresh-btn:hover{background:rgba(245,197,24,.1);border-color:rgba(245,197,24,.3);color:var(--gold)}
+.live-dot{width:8px;height:8px;background:var(--green);border-radius:50%;
+  box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── STAT CARDS ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:1.5rem;position:relative;overflow:hidden;transition:.2s;cursor:default}
+.stat:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.14)}
+.stat::after{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;
+  border-radius:50%;filter:blur(35px);opacity:.35;pointer-events:none}
+.stat.pending::after{background:var(--amber)}
+.stat.confirmed::after{background:var(--green)}
+.stat.failed::after{background:var(--red)}
+.stat-ico{font-size:1.6rem;margin-bottom:.75rem}
+.stat-n{font-size:2.5rem;font-weight:900;line-height:1;margin-bottom:.3rem;font-variant-numeric:tabular-nums}
+.stat.pending .stat-n{color:var(--amber)}
+.stat.confirmed .stat-n{color:var(--green)}
+.stat.failed .stat-n{color:var(--red)}
+.stat-l{font-size:.75rem;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{font-size:.78rem;font-weight:700;color:var(--text2);text-transform:uppercase;
+  letter-spacing:.09em;margin-bottom:1rem;padding-bottom:.6rem;
+  border-bottom:1px solid var(--border)}
+
+/* ── ORDER / COLLAB CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:1.4rem;margin-bottom:.75rem;transition:.2s}
+.card:hover{border-color:rgba(255,255,255,.14);background:var(--card2)}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:1rem;gap:1rem}
+.card-id{font-weight:800;font-size:.95rem;color:#fff;margin-bottom:.2rem}
+.card-name{font-size:.8rem;color:var(--text2)}
+.badge{padding:.28rem .8rem;border-radius:99px;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;flex-shrink:0}
+.badge.pending{background:rgba(245,158,11,.12);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+.badge.confirmed,.badge.approved{background:rgba(34,197,94,.1);color:#86efac;border:1px solid rgba(34,197,94,.25)}
+.badge.failed,.badge.rejected{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem .8rem}
+.info .lbl{font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.15rem}
+.info .val{font-size:.88rem;color:#fff;font-weight:500}
+.card-actions{display:flex;gap:.6rem;margin-top:1.1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.act{flex:1;padding:.65rem;border:none;border-radius:10px;font-weight:700;
+  cursor:pointer;font-size:.83rem;font-family:inherit;transition:.2s;
+  display:flex;align-items:center;justify-content:center;gap:.4rem}
+.act.approve{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.28)}
+.act.approve:hover{background:rgba(34,197,94,.28);color:#fff}
+.act.reject{background:rgba(239,68,68,.1);color:#fca5a5;border:1px solid rgba(239,68,68,.22)}
+.act.reject:hover{background:rgba(239,68,68,.28);color:#fff}
+
+/* ── TAB PANES ── */
+.pane{display:none}.pane.active{display:block}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:4rem 2rem;color:var(--text2)}
+.empty-ico{font-size:3rem;margin-bottom:1rem;opacity:.35}
+
+/* ── SEARCH BAR ── */
+.search-bar{display:flex;gap:.6rem;margin-bottom:1rem}
+.search-bar input{flex:1;padding:.75rem 1rem;background:var(--card2);border:1px solid var(--border);
+  border-radius:12px;font-size:.9rem;color:#fff;outline:none;font-family:inherit;transition:.2s}
+.search-bar input:focus{border-color:var(--gold);background:rgba(245,197,24,.06)}
+.search-bar input::placeholder{color:rgba(255,255,255,.3)}
+.search-bar button{padding:.7rem 1.2rem;border:none;border-radius:10px;font-weight:700;
+  font-size:.85rem;cursor:pointer;font-family:inherit;transition:.2s;
+  background:var(--gold);color:#0a0f2e}
+.search-bar button:hover{background:var(--gold2);transform:translateY(-1px)}
+.search-bar button.sec{background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.search-bar button.sec:hover{background:var(--border);color:#fff}
+.search-result-highlight{border-color:rgba(245,197,24,.4)!important;
+  background:rgba(245,197,24,.08)!important}
+
+/* ── DETAIL MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:999;padding:1rem}
+.modal-overlay.show{display:flex}
+.modal-box{background:var(--navy2);border:1px solid var(--border);border-radius:24px;
+  width:100%;max-width:640px;max-height:90vh;overflow-y:auto;padding:2rem;
+  box-shadow:0 40px 80px rgba(0,0,0,.6)}
+.modal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem}
+.modal-hdr h2{font-size:1.3rem;font-weight:800;color:#fff}
+.modal-close{background:var(--card2);border:1px solid var(--border);color:var(--text2);
+  width:36px;height:36px;border-radius:10px;font-size:1.1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:.2s;font-family:inherit}
+.modal-close:hover{background:rgba(239,68,68,.15);color:var(--red);border-color:rgba(239,68,68,.3)}
+.modal-body{display:grid;grid-template-columns:1fr 1fr;gap:.75rem 1.2rem}
+.modal-field .lbl{font-size:.68rem;color:var(--text2);font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:.2rem}
+.modal-field .val{font-size:.9rem;color:#fff;font-weight:500;word-break:break-all}
+.modal-field.full{grid-column:1/-1}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;padding-top:1.2rem;
+  border-top:1px solid var(--border)}
+.modal-actions .act{flex:1;padding:.7rem;border:none;border-radius:12px;font-weight:700;
+  font-size:.88rem;cursor:pointer;font-family:inherit;transition:.2s;
+  display:flex;align-items:center;justify-content:center;gap:.4rem}
+.act.danger{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+.act.danger:hover{background:rgba(239,68,68,.3);color:#fff}
+.act.secondary{background:var(--card2);color:var(--text2);border:1px solid var(--border)}
+.act.secondary:hover{background:var(--border);color:#fff}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:99px}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:sticky;top:0;flex-direction:row;
+    border-right:none;border-bottom:1px solid var(--border);overflow-x:auto}
+  .sb-brand{padding:.8rem 1rem;border-bottom:none;flex-shrink:0}
+  .sb-nav{flex-direction:row;padding:.5rem;gap:.3rem;align-items:center;overflow-x:auto}
+  .sb-footer{padding:.5rem;border-top:none;border-left:1px solid var(--border);flex-shrink:0}
+  .logout-btn{padding:.6rem .8rem;font-size:.78rem}
+  .main{margin-left:0;padding:1rem}
+  .stats{grid-template-columns:1fr 1fr}
+  .topbar{flex-direction:column;align-items:flex-start;gap:.75rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div class="lp" id="lp">
+  <div class="lb">
+    <div class="lb-top">
+      <div class="lb-icon">🛡️</div>
+      <h2>Admin Portal</h2>
+      <p>Yatri Point · Secure Access Only</p>
+    </div>
+    <div class="lerr" id="le"></div>
+    <div class="inp-grp">
+      <label>Login ID</label>
+      <input type="text" id="au" placeholder="Enter your Login ID" autocomplete="username">
+    </div>
+    <div class="inp-grp">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="ap" placeholder="Enter your password" autocomplete="current-password">
+        <button type="button" class="pw-eye" id="pvBtn" onclick="togglePw()">Show</button>
+      </div>
+    </div>
+    <button class="login-btn" onclick="login()">🔐 Sign In</button>
+  </div>
+</div>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="db" id="db">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-icon">🛡️</div>
+      <div class="sb-title">Yatri <span>Admin</span></div>
+    </div>
+    <nav class="sb-nav">
+      <button class="sb-link active" id="btn-stats" onclick="switchTab('stats')"><span class="sb-ico">📊</span>Dashboard</button>
+      <button class="sb-link" id="btn-orders" onclick="switchTab('orders')"><span class="sb-ico">📦</span>Orders</button>
+      <button class="sb-link" id="btn-users" onclick="switchTab('users')"><span class="sb-ico">👤</span>Users</button>
+      <button class="sb-link" id="btn-bookings" onclick="switchTab('bookings')"><span class="sb-ico">🎫</span>Bookings</button>
+      <button class="sb-link" id="btn-services" onclick="switchTab('services')"><span class="sb-ico">🏪</span>Services</button>
+      <button class="sb-link" id="btn-collaborators" onclick="switchTab('collaborators')"><span class="sb-ico">🤝</span>Partners</button>
+      <button class="sb-link" id="btn-applications" onclick="switchTab('applications')"><span class="sb-ico">📝</span>Applications</button>
+    </nav>
+    <div class="sb-footer">
+      <button class="logout-btn" onclick="out()">🚪 Logout</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <h1>Welcome, <span>Admin</span></h1>
+      <div class="topbar-r">
+        <div class="live-dot"></div>
+        <button class="refresh-btn" onclick="loadAllData()">Refresh</button>
+      </div>
+    </div>
+
+    <!-- Stats Pane -->
+    <div class="pane active" id="pane-stats">
+      <div class="stats" id="stats">
+        <div class="stat pending"><div class="stat-ico">👤</div><div class="stat-n" id="s-users">—</div><div class="stat-l">Users</div></div>
+        <div class="stat confirmed"><div class="stat-ico">📦</div><div class="stat-n" id="s-orders">—</div><div class="stat-l">Orders (7w)</div></div>
+        <div class="stat pending"><div class="stat-ico">⏳</div><div class="stat-n" id="s-pending">—</div><div class="stat-l">Pending</div></div>
+        <div class="stat confirmed"><div class="stat-ico">✅</div><div class="stat-n" id="s-confirmed">—</div><div class="stat-l">Confirmed</div></div>
+        <div class="stat confirmed" style="cursor:pointer" onclick="switchTab('collaborators')" title="Click to view all collaborators"><div class="stat-ico">🤝</div><div class="stat-n" id="s-collaborators">—</div><div class="stat-l">Collaborators ↗</div></div>
+        <div class="stat failed" style="cursor:pointer" onclick="switchTab('services')" title="Click to view all services"><div class="stat-ico">🏪</div><div class="stat-n" id="s-services">—</div><div class="stat-l">Services ↗</div></div>
+        <div class="stat confirmed"><div class="stat-ico">💰</div><div class="stat-n" id="s-revenue">—</div><div class="stat-l">Revenue</div></div>
+      </div>
+    </div>
+
+    <!-- Orders Pane -->
+    <div class="pane" id="pane-orders">
+      <div class="sec-hdr">All Orders</div>
+      <div class="search-bar">
+        <input type="text" id="orderSearchInput" placeholder="🔍 Search by Booking ID..." onkeydown="if(event.key==='Enter')searchOrder()">
+        <button onclick="searchOrder()">Search</button>
+        <button class="sec" onclick="clearSearch()">Clear</button>
+      </div>
+      <div id="orders-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+
+    <!-- Users Pane -->
+    <div class="pane" id="pane-users">
+      <div class="sec-hdr">All Registered Users</div>
+      <div id="users-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+
+    <!-- Bookings Pane -->
+    <div class="pane" id="pane-bookings">
+      <div class="sec-hdr">All Bookings & Tickets</div>
+      <div id="bookings-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+
+    <!-- Services Pane -->
+    <div class="pane" id="pane-services">
+      <div class="sec-hdr">All Services (Bus · Cab · Hotel · Cafe)</div>
+      <div id="services-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+
+    <!-- Collaborators Pane -->
+    <div class="pane" id="pane-collaborators">
+      <div class="sec-hdr">Business Partner Accounts</div>
+      <div class="search-bar">
+        <input type="text" id="collabSearchInput" placeholder="🔍 Search by partner name..." onkeydown="if(event.key==='Enter')searchCollaborator()">
+        <button onclick="searchCollaborator()">Search</button>
+        <button class="sec" onclick="clearCollabSearch()">Clear</button>
+      </div>
+      <div id="collaborators-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+    
+    <!-- Applications Pane -->
+    <div class="pane" id="pane-applications">
+      <div class="sec-hdr">Partner Onboarding Requests (collab.html)</div>
+      <div id="applications-list"><div class="empty"><p>Loading…</p></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- ══════════ COLLABORATOR DETAIL MODAL ══════════ -->
+<div class="modal-overlay" id="collabModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2 id="modalTitle">Collaborator Details</h2>
+      <button class="modal-close" onclick="closeCollabModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="act danger" id="deleteCollabBtn" onclick="deleteCollab()">🗑️ Delete Collaborator</button>
+      <button class="act secondary" onclick="closeCollabModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ COLLAPSED: ORDER MODAL (placeholder) ══════════ -->
+
+<script>
+let T = sessionStorage.getItem('at');
+if (T) showDB();
+
+/* -- Auth -- */
+function togglePw() {
+  const i = document.getElementById('ap'), b = document.getElementById('pvBtn');
+  i.type = i.type === 'password' ? 'text' : 'password';
+  b.textContent = i.type === 'password' ? 'Show' : 'Hide';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && document.getElementById('lp').style.display !== 'none') login(); });
+
+async function login() {
+  const u = document.getElementById('au').value.trim();
+  const p = document.getElementById('ap').value;
+  const err = document.getElementById('le');
+  err.style.display = 'none';
+  if (!u || !p) { err.textContent = '⚠️ Enter both Login ID and Password'; err.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+    const d = await r.json();
+    if (d.success) { T = d.token; sessionStorage.setItem('at', T); showDB(); }
+    else { err.textContent = '❌ ' + d.message; err.style.display = 'block'; }
+  } catch { err.textContent = '🔌 Network error'; err.style.display = 'block'; }
+}
+
+function out() { T = null; sessionStorage.removeItem('at'); document.getElementById('db').style.display = 'none'; document.getElementById('lp').style.display = 'flex'; }
+function showDB() { document.getElementById('lp').style.display = 'none'; document.getElementById('db').style.display = 'block'; loadAllData(); }
+
+/* -- Navigation -- */
+function switchTab(t) {
+  ['stats','orders','users','bookings','services','collaborators','applications'].forEach(x => {
+    document.getElementById('pane-' + x).classList.toggle('active', x === t);
+    document.getElementById('btn-' + x).classList.toggle('active', x === t);
+  });
+  if (t === 'stats') loadStats();
+  if (t === 'orders') loadOrders();
+  if (t === 'users') loadUsers();
+  if (t === 'bookings') loadBookings();
+  if (t === 'services') loadServices();
+  if (t === 'collaborators') loadCollaborators();
+  if (t === 'applications') loadApplications();
+}
+
+/* -- Helpers -- */
+  function typeIcon(t) { const m = { bus:'🚌', cab:'🚗', car:'🚗', hotel:'🏨', cafe:'☕' }; return m[t] || '📦'; }
+function badge(s) {
+  const map = { payment_pending:'pending', confirmed:'confirmed', payment_failed:'failed', approved:'approved', rejected:'rejected', pending:'pending', active:'confirmed', suspended:'failed' };
+  const cls = map[s] || 'failed';
+  const lbl = s==='payment_pending'?'⏳ Pending':s==='confirmed'?'✅ Confirmed':s==='payment_failed'?'❌ Failed':s==='approved'?'✅ Approved':s==='rejected'?'❌ Rejected':s==='active'?'✅ Active':s==='suspended'?'⛔ Suspended':s==='pending'?'⏳ Pending':'⏳ '+s;
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+function fmt(d) { return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'N/A'; }
+function fmtDateTime(d) { return d ? new Date(d).toLocaleString('en-IN') : 'N/A'; }
+
+/* -- Load All Data -- */
+async function loadAllData() {
+  await loadStats();
+}
+
+/* -- Load Stats -- */
+async function loadStats() {
+  try {
+    const r = await fetch('/api/admin/stats', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.success) return;
+    const s = d.stats;
+    document.getElementById('s-users').textContent = s.totalUsers || 0;
+    document.getElementById('s-orders').textContent = s.totalOrders || 0;
+    document.getElementById('s-pending').textContent = s.pendingOrders || 0;
+    document.getElementById('s-confirmed').textContent = s.confirmedOrders || 0;
+    document.getElementById('s-collaborators').textContent = s.totalCollaborators || 0;
+    document.getElementById('s-services').textContent = s.totalServices || 0;
+    document.getElementById('s-revenue').textContent = '₹' + (s.totalRevenue || 0).toLocaleString('en-IN');
+  } catch(e) { console.error(e); }
+}
+
+/* -- Load Orders (last 30/31 days only) -- */
+async function loadOrders() {
+  try {
+    const r = await fetch('/api/admin/orders', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.success) return;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const o = (d.orders || []).filter(x => { const t = new Date(x.createdAt || 0).getTime(); return t >= thirtyDaysAgo; });
+    if (!o.length) { document.getElementById('orders-list').innerHTML = '<div class="empty"><p>No orders in the last 30/31 days</p></div>'; return; }
+    document.getElementById('orders-list').innerHTML = o.map(x => renderOrderCard(x)).join('');
+  } catch(e) { console.error(e); }
+}
+
+/* -- Search Order by Booking ID -- */
+let allOrders = [];
+async function searchOrder() {
+  const q = document.getElementById('orderSearchInput').value.trim();
+  if (!q) { loadOrders(); return; }
+  try {
+    const r = await fetch('/api/admin/search-order/' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (d.success && d.order) {
+      document.getElementById('orders-list').innerHTML = renderOrderCard(d.order);
+      document.querySelector('#orders-list .card')?.classList.add('search-result-highlight');
+    } else {
+      document.getElementById('orders-list').innerHTML = '<div class="empty"><p>No order found with ID: ' + q + '</p></div>';
+    }
+  } catch(e) { console.error(e); }
+}
+function clearSearch() {
+  document.getElementById('orderSearchInput').value = '';
+  loadOrders();
+}
+function renderOrderCard(x) {
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-id">${typeIcon(x.type)} ${x.orderId}</div>
+          <div class="card-name">${x.itemName}</div>
+        </div>
+        ${badge(x.status)}
+      </div>
+      <div class="card-grid">
+        <div class="info"><div class="lbl">Amount</div><div class="val">₹${x.amount}</div></div>
+        <div class="info"><div class="lbl">Paid</div><div class="val">₹${x.payNow}</div></div>
+        <div class="info"><div class="lbl">Customer</div><div class="val">${x.userName||'N/A'}</div></div>
+        <div class="info"><div class="lbl">Phone</div><div class="val">${x.userPhone||'N/A'}</div></div>
+        <div class="info"><div class="lbl">Date</div><div class="val">${fmtDateTime(x.createdAt)}</div></div>
+        <div class="info"><div class="lbl">Payment</div><div class="val">${x.payMethod||'N/A'} · ${x.transactionId||'N/A'}</div></div>
+      </div>
+      ${x.status === 'payment_pending' ? `<div class="card-actions">
+        <button class="act approve" onclick="vfy('${x.orderId}','approve')">✅ Approve</button>
+        <button class="act reject" onclick="vfy('${x.orderId}','reject')">❌ Reject</button>
+      </div>` : ''}
+    </div>`;
+}
+
+/* -- Load Users -- */
+async function loadUsers() {
+  try {
+    const r = await fetch('/api/admin/users', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.users?.length) { document.getElementById('users-list').innerHTML = '<div class="empty"><p>No users yet</p></div>'; return; }
+    document.getElementById('users-list').innerHTML = d.users.map(u => `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-id">👤 ${u.name || 'Unknown'}</div>
+            <div class="card-name">${u.email || 'No email'}</div>
+          </div>
+          ${u.isVerifiedPartner ? badge('approved') : badge('pending')}
+        </div>
+        <div class="card-grid">
+          <div class="info"><div class="lbl">Phone</div><div class="val">${u.phone || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Joined</div><div class="val">${fmt(u.createdAt)}</div></div>
+          <div class="info"><div class="lbl">Partner</div><div class="val">${u.isVerifiedPartner ? '✅ Yes' : '❌ No'}</div></div>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+/* -- Load Bookings -- */
+async function loadBookings() {
+  try {
+    const r = await fetch('/api/admin/all-bookings', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.bookings?.length) { document.getElementById('bookings-list').innerHTML = '<div class="empty"><p>No bookings yet</p></div>'; return; }
+    document.getElementById('bookings-list').innerHTML = d.bookings.map(b => `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-id">${typeIcon(b.type)} ${b.orderId || b.id}</div>
+            <div class="card-name">${b.itemName || b.busName || 'Booking'}</div>
+          </div>
+          ${badge(b.status || 'pending')}
+        </div>
+        <div class="card-grid">
+          <div class="info"><div class="lbl">Amount</div><div class="val">₹${b.amount || b.totalAmount || 0}</div></div>
+          <div class="info"><div class="lbl">Customer</div><div class="val">${b.userName || b.passenger_name || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Phone</div><div class="val">${b.userPhone || b.passenger_phone || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Source</div><div class="val">${b.source || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Date</div><div class="val">${fmtDateTime(b.createdAt)}</div></div>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+/* -- Load Services -- */
+async function loadServices() {
+  try {
+    const r = await fetch('/api/admin/services', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.services?.length) { 
+      document.getElementById('services-list').innerHTML = '<div class="empty"><p>No services registered yet</p></div>'; 
+      return; 
+    }
+    document.getElementById('services-list').innerHTML = d.services.map(s => renderServiceCard(s)).join('');
+  } catch(e) { 
+    console.error('Load services error:', e); 
+    document.getElementById('services-list').innerHTML = '<div class="empty"><p>Error loading services</p></div>';
+  }
+}
+
+        function approveService(id, type, action) {
+  if (!confirm(action === 'approve' ? `Approve this ${type} service?` : `Reject this ${type} service?`)) return;
+  fetch(`/api/admin/service/${type}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T },
+    body: JSON.stringify({ serviceId: id, action })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) loadServices();
+    else alert(d.message || 'Action failed');
+  })
+  .catch(e => alert('Error: ' + e.message));
+}
+
+function renderServiceCard(b) {
+  const typeLabel = (b.type || 'bus').toUpperCase();
+  const icon = typeLabel === 'BUS' ? '🚌' : typeLabel === 'HOTEL' ? '🏨' : typeLabel === 'CAFE' ? '☕' : '🚗';
+  const statusKey = b.status || 'pending';
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-id">${icon} ${b.name || b.businessName || 'Unnamed'}</div>
+          <div class="card-name">${b.number_plate || b.address || b.city || ''} · ${b.type || 'N/A'}</div>
+        </div>
+        ${badge(statusKey)}
+      </div>
+      <div class="card-grid">
+        <div class="info"><div class="lbl">Type</div><div class="val">${typeLabel}</div></div>
+        <div class="info"><div class="lbl">Owner</div><div class="val">${b.collaboratorId || b.ownerName || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">City</div><div class="val">${b.city || b.source || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">Created</div><div class="val">${fmt(b.createdAt)}</div></div>
+      </div>
+      ${['pending_approval','pending','rejected'].includes(statusKey) ? `<div class="card-actions">
+        <button class="act approve" onclick="approveService('${b.id}','${b.type || 'bus'}','approve')">✅ Approve</button>
+        <button class="act reject" onclick="approveService('${b.id}','${b.type || 'bus'}','reject')">❌ Reject</button>
+      </div>` : ''}
+      ${statusKey === 'active' && b.type === 'hotel' ? `<div class="card-actions">
+        <button class="act secondary" onclick="manageHotelRooms('${b.id}')">🛏️ Manage Rooms</button>
+      </div>` : ''}
+      ${statusKey === 'active' && b.type === 'cafe' ? `<div class="card-actions">
+        <button class="act secondary" onclick="manageCafeTables('${b.id}')">🪑 Manage Tables</button>
+      </div>` : ''}
+    </div>`;
+}
+
+function manageHotelRooms(hotelId) {
+  window.open(`/api/collaborator/hotel/rooms?hotelId=${hotelId}`, '_blank');
+}
+
+function manageCafeTables(cafeId) {
+  window.open(`/api/collaborator/cafe/tables?cafeId=${cafeId}`, '_blank');
+}
+
+/* -- Load Collabs -- */
+async function loadCollabs() {
+  try {
+    const r = await fetch('/api/admin/collabs', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.collabs?.length) { document.getElementById('collabs-list').innerHTML = '<div class="empty"><p>No partner applications yet</p></div>'; return; }
+    document.getElementById('collabs-list').innerHTML = d.collabs.map(c => `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-id">${typeIcon(c.type)} ${c.type.toUpperCase()}</div>
+            <div class="card-name">${c.name}</div>
+          </div>
+          ${badge(c.status)}
+        </div>
+        <div class="card-grid">
+          <div class="info"><div class="lbl">Phone</div><div class="val">${c.phone}</div></div>
+          <div class="info"><div class="lbl">City</div><div class="val">${c.city||'N/A'}</div></div>
+          <div class="info"><div class="lbl">UPI ID</div><div class="val">${c.upiId||'N/A'}</div></div>
+          <div class="info"><div class="lbl">Applied</div><div class="val">${fmt(c.submittedAt||Date.now())}</div></div>
+        </div>
+        ${c.status === 'pending' ? `<div class="card-actions">
+          <button class="act approve" onclick="rc('${c.id}','approve')">✅ Approve Partner</button>
+          <button class="act reject" onclick="rc('${c.id}','reject')">❌ Reject</button>
+        </div>` : ''}
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+/* -- Actions -- */
+async function vfy(id, a) {
+  if (!confirm(a==='approve'?'Approve this order?':'Reject this order?')) return;
+  await fetch('/api/admin/verify-payment', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+T}, body: JSON.stringify({orderId:id,action:a}) });
+  loadOrders();
+}
+async function rc(id, a) {
+  if (!confirm(a==='approve'?'Approve this partner?':'Reject this application?')) return;
+  await fetch('/api/admin/review-collab', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+T}, body: JSON.stringify({collabId:id,action:a}) });
+  loadCollabs();
+}
+
+/* -- Load Collaborators -- */
+async function loadCollaborators() {
+  try {
+    const r = await fetch('/api/admin/collaborators', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    renderCollaboratorsList(d.collaborators || []);
+  } catch(e) { console.error(e); }
+}
+
+/* -- Search Collaborator by Name -- */
+let allCollaborators = [];
+async function searchCollaborator() {
+  const q = document.getElementById('collabSearchInput').value.trim().toLowerCase();
+  if (!q) { loadCollaborators(); return; }
+  try {
+    const r = await fetch('/api/admin/search-collaborator/' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (d.success && d.collaborators?.length) {
+      renderCollaboratorsList(d.collaborators);
+    } else {
+      document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No partner found with name: ' + q + '</p></div>';
+    }
+  } catch(e) { console.error(e); }
+}
+function clearCollabSearch() {
+  document.getElementById('collabSearchInput').value = '';
+  loadCollaborators();
+}
+function renderCollaboratorsList(arr) {
+  if (!arr.length) { document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No collaborators</p></div>'; return; }
+  window._collabMap = {};
+  arr.forEach(c => window._collabMap[c.id] = c);
+  document.getElementById('collaborators-list').innerHTML = arr.map(c => renderCollabCard(c)).join('');
+}
+function renderCollabCard(c) {
+  return `
+    <div class="card" style="cursor:pointer" onclick="showCollabDetail('${c.id}')">
+      <div class="card-head">
+        <div>
+          <div class="card-id">${c.name}</div>
+          <div class="card-name">${c.businessName || 'N/A'} · ${c.city || 'N/A'}</div>
+        </div>
+        ${badge(c.verification_status)}
+      </div>
+      <div class="card-grid">
+        <div class="info"><div class="lbl">Email</div><div class="val">${c.email || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">Phone</div><div class="val">${c.phone || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">Services</div><div class="val">${(c.serviceCategories || []).join(', ') || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">UPI ID</div><div class="val">${c.upiId || 'N/A'}</div></div>
+        <div class="info"><div class="lbl">Joined</div><div class="val">${fmt(c.createdAt || Date.now())}</div></div>
+        <div class="info"><div class="lbl">Status</div><div class="val">${c.status || 'pending'}</div></div>
+      </div>
+      ${c.verification_status === 'pending' ? `<div class="card-actions">
+        <button class="act approve" onclick="event.stopPropagation();verifyCollaborator('${c.id}','verify')">✅ Accept Registration</button>
+        <button class="act reject" onclick="event.stopPropagation();verifyCollaborator('${c.id}','reject')">❌ Reject</button>
+      </div>` : c.verification_status !== 'verified' ? `<div class="card-actions">
+        <button class="act approve" onclick="event.stopPropagation();verifyCollaborator('${c.id}','verify')">✅ Verify Account</button>
+        <button class="act reject" onclick="event.stopPropagation();verifyCollaborator('${c.id}','reject')">❌ Reject</button>
+        ${c.verification_status !== 'suspended' ? `<button class="act reject" onclick="event.stopPropagation();suspendCollaborator('${c.id}')">⛔ Suspend</button>` : `<button class="act approve" onclick="event.stopPropagation();unsuspendCollaborator('${c.id}')">🔄 Unsuspend</button>`}
+      </div>` : `<div class="card-actions">
+        ${c.verification_status !== 'suspended' ? `<button class="act reject" onclick="event.stopPropagation();suspendCollaborator('${c.id}')">⛔ Suspend Account</button>` : `<button class="act approve" onclick="event.stopPropagation();unsuspendCollaborator('${c.id}')">🔄 Unsuspend Account</button>`}
+      </div>`}
+    </div>`;
+}
+
+/* -- Collaborator Actions -- */
+async function verifyCollaborator(id, status) {
+  const action = status === 'verify' ? 'verify' : 'reject';
+  if (!confirm(action === 'verify' ? 'Verify this collaborator?' : 'Reject this collaborator?')) return;
+  try {
+    const r = await fetch('/api/collaborator/verification/admin-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T },
+      body: JSON.stringify({ collaboratorId: id, action })
+    });
+    const d = await r.json();
+    if (d.success) loadCollaborators();
+    else alert(d.message || 'Action failed');
+  } catch(e) { console.error(e); alert('Error: ' + e.message); }
+}
+
+async function suspendCollaborator(id) {
+  if (!confirm('Suspend this collaborator?')) return;
+  try {
+    const r = await fetch('/api/collaborator/verification/admin-suspend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T },
+      body: JSON.stringify({ collaboratorId: id })
+    });
+    const d = await r.json();
+    if (d.success) loadCollaborators();
+    else alert(d.message || 'Action failed');
+  } catch(e) { console.error(e); alert('Error: ' + e.message); }
+}
+
+async function unsuspendCollaborator(id) {
+  if (!confirm('Unsuspend this collaborator?')) return;
+  try {
+    const r = await fetch('/api/collaborator/verification/admin-unsuspend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T },
+      body: JSON.stringify({ collaboratorId: id })
+    });
+    const d = await r.json();
+    if (d.success) loadCollaborators();
+    else alert(d.message || 'Action failed');
+  } catch(e) { console.error(e); alert('Error: ' + e.message); }
+}
+
+/* -- Collaborator Detail Modal -- */
+let _selectedCollabId = null;
+
+function showCollabDetail(id) {
+  const c = window._collabMap && window._collabMap[id];
+  if (!c) return;
+  _selectedCollabId = id;
+  document.getElementById('modalTitle').textContent = c.name + ' — Details';
+  const fields = [
+    { label: 'ID', val: c.id, full: true },
+    { label: 'Name', val: c.name },
+    { label: 'Email', val: c.email },
+    { label: 'Phone', val: c.phone },
+    { label: 'Phone Verified', val: c.phoneVerified !== undefined ? (c.phoneVerified ? '✅ Yes' : '❌ No') : 'N/A' },
+    { label: 'Business Name', val: c.businessName || 'N/A' },
+    { label: 'Business Type', val: c.businessType || 'N/A' },
+    { label: 'Business Description', val: c.businessDescription || 'N/A', full: true },
+    { label: 'Service Categories', val: (c.serviceCategories || []).join(', ') || 'N/A' },
+    { label: 'City', val: c.city || 'N/A' },
+    { label: 'State', val: c.state || 'N/A' },
+    { label: 'Address', val: c.address || 'N/A', full: true },
+    { label: 'UPI ID', val: c.upiId || 'N/A' },
+    { label: 'Status', val: c.status || 'N/A' },
+    { label: 'Verification Status', val: c.verification_status || 'N/A' },
+    { label: 'Rating', val: c.rating !== undefined ? c.rating : 'N/A' },
+    { label: 'Total Bookings', val: c.totalBookings !== undefined ? c.totalBookings : 'N/A' },
+    { label: 'Total Earnings', val: c.totalEarnings !== undefined ? '₹' + Number(c.totalEarnings).toLocaleString('en-IN') : 'N/A' },
+    { label: 'Bank Details', val: c.bankDetails ? (typeof c.bankDetails === 'object' ? Object.entries(c.bankDetails).map(([k,v]) => k + ': ' + v).join(', ') : c.bankDetails) : 'N/A', full: true },
+    { label: 'Aadhaar URL', val: c.aadhaarUrl ? `<a href="${c.aadhaarUrl}" target="_blank" style="color:#f5c518">View</a>` : 'N/A', full: true },
+    { label: 'PAN URL', val: c.panUrl ? `<a href="${c.panUrl}" target="_blank" style="color:#f5c518">View</a>` : 'N/A', full: true },
+    { label: 'Created At', val: fmtDateTime(c.createdAt) },
+    { label: 'Updated At', val: fmtDateTime(c.updatedAt) },
+    { label: 'Verified At', val: fmtDateTime(c.verifiedAt) },
+    { label: 'Verified By', val: c.verifiedBy || 'N/A' }
+  ];
+  document.getElementById('modalBody').innerHTML = fields.map(f =>
+    `<div class="modal-field${f.full ? ' full' : ''}">
+      <div class="lbl">${f.label}</div>
+      <div class="val">${f.val}</div>
+    </div>`
+  ).join('');
+  document.getElementById('collabModal').classList.add('show');
+}
+
+function closeCollabModal() {
+  document.getElementById('collabModal').classList.remove('show');
+  _selectedCollabId = null;
+}
+
+async function deleteCollab() {
+  if (!_selectedCollabId) return;
+  if (!confirm('Permanently delete this collaborator? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/admin/collaborators/' + _selectedCollabId, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + T }
+    });
+    const d = await r.json();
+    if (d.success) {
+      closeCollabModal();
+      loadCollaborators();
+    } else {
+      alert(d.message || 'Delete failed');
+    }
+  } catch(e) { console.error(e); alert('Error: ' + e.message); }
+}
+
+/* -- Load Applications -- */
+async function loadApplications() {
+  try {
+    const r = await fetch('/api/admin/collab-applications', { headers: { 'Authorization': 'Bearer ' + T } });
+    if (r.status === 401) return out();
+    const d = await r.json();
+    if (!d.applications?.length) { 
+      document.getElementById('applications-list').innerHTML = '<div class="empty"><p>No partner applications yet</p></div>'; 
+      return; 
+    }
+    document.getElementById('applications-list').innerHTML = d.applications.map(a => `
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-id">📝 ${a.name}</div>
+            <div class="card-name">${a.email} · ${(a.serviceCategory || '').toUpperCase()}</div>
+          </div>
+          ${badge(a.status)}
+        </div>
+        <div class="card-grid">
+          <div class="info"><div class="lbl">Phone</div><div class="val">${a.phone}</div></div>
+          <div class="info"><div class="lbl">UPI ID</div><div class="val">${a.upiId || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Aadhaar ID</div><div class="val">${a.aadhaarId || 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Experience</div><div class="val">${a.yearsOfExperience ? a.yearsOfExperience + ' years' : 'N/A'}</div></div>
+          <div class="info"><div class="lbl">Applied Date</div><div class="val">${fmtDateTime(a.createdAt)}</div></div>
+          <div class="info"><div class="lbl">Operating City</div><div class="val">${a.operatingCity || a.serviceCity || 'N/A'}</div></div>
+        </div>
+        ${a.status === 'pending' ? `<div class="card-actions">
+          <button class="act approve" onclick="approveApp('${a.id}')">✅ Approve Request</button>
+          <button class="act reject" onclick="rejectApp('${a.id}')">❌ Reject</button>
+        </div>` : ''}
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function approveApp(id) {
+  if (!confirm('Approve this partner request and create their collaborator account?')) return;
+  try {
+    const r = await fetch('/api/admin/collab-applications/' + id + '/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T }
+    });
+    const d = await r.json();
+    if (d.success) {
+      alert('✅ Approved successfully!');
+      loadApplications();
+    } else {
+      alert('❌ ' + d.message);
+    }
+  } catch(e) { console.error(e); alert('Error approving request'); }
+}
+
+async function rejectApp(id) {
+  const reason = prompt('Enter rejection reason (optional):');
+  if (reason === null) return; // user cancelled
+  try {
+    const r = await fetch('/api/admin/collab-applications/' + id + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + T },
+      body: JSON.stringify({ reason })
+    });
+    const d = await r.json();
+    if (d.success) {
+      alert('✅ Rejected successfully.');
+      loadApplications();
+    } else {
+      alert('❌ ' + d.message);
+    }
+  } catch(e) { console.error(e); alert('Error rejecting request'); }
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+  const m = document.getElementById('collabModal');
+  if (m && m.classList.contains('show') && e.target === m) closeCollabModal();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Yatri Point">
+    <meta name="description" content="Terms and Conditions - Yatri Point (Yatri Point) — Bihar's #1 travel booking platform.">
+    <meta name="keywords" content="terms and conditions, Yatri Point, Yatri Point, bus booking, hotel booking">
+    <meta name="author" content="Yatri Point — Yatri Point">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://mithilasafar.in/terms.html">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Terms & Conditions - Yatri Point">
+    <meta property="og:description" content="Terms and Conditions for using Yatri Point booking services.">
+    <meta property="og:url" content="https://mithilasafar.in/terms.html">
+    <meta property="og:image" content="https://mithilasafar.in/icons/og-image.png">
+    <meta property="og:site_name" content="Yatri Point">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Terms & Conditions - Yatri Point">
+    <meta name="twitter:description" content="Terms and Conditions for using Yatri Point booking services.">
+    <meta name="twitter:image" content="https://mithilasafar.in/icons/og-image.png">
+
+    <meta name="theme-color" content="#d84e55">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Terms & Conditions | Yatri Point — Yatri Point</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Poppins:wght@400;600;700;800&display=swap">
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'">
+            <h1><img src="/yatri-logo.png" alt="Yatri Point Logo" class="brand-logo" style="height: 100px; width: auto; max-width: 350px; object-fit: contain; vertical-align: middle; background: #ffffff; padding: 4px 12px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.25); margin: 0;"></h1>
+            
+        </div>
+        <div class="header-right">
+            <ul class="nav-links" id="navLinksDesktop">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#help">Help</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="collab.html">Collab</a></li>
+                <li><a href="terms.html" class="active">T&C</a></li>
+            </ul>
+
+            <div class="auth-btns" id="authBtns">
+                <button class="btn-login" onclick="openModal('loginModal')">Login</button>
+                <button class="btn-signup" onclick="openModal('signupModal')">Sign Up</button>
+            </div>
+
+            <div id="userSection" class="user-menu" style="display:none" onclick="toggleDropdown()">
+                <div class="user-avatar" id="userAvatar"><span id="userInitial">U</span></div>
+                <span class="user-name" id="userNameDisplay">User</span>
+                <span class="dropdown-arrow">▼</span>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+                    <a href="#" onclick="openProfile();return false">👤 Profile</a>
+                    <a href="#" onclick="logout();return false">🚪 Logout</a>
+                </div>
+            </div>
+
+            <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="index.html">🏠 Home</a>
+        <a href="index.html#cafes">☕ Café</a>
+        <a href="index.html#help">❓ Help</a>
+        <a href="index.html#about">ℹ️ About</a>
+        <a href="collab.html">🤝 Collab</a>
+        <a href="terms.html" class="active">📜 T&C</a>
+        <a href="#" onclick="openBookings();closeMobileMenu();return false">📅 My Bookings</a>
+        <div class="mobile-auth" id="mobileAuth">
+            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();">🔑 Login</button>
+            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();">📝 Sign Up</button>
+        </div>
+    </div>
+
+    <!-- ===== TERMS SECTION ===== -->
+    <main class="page-section active" style="padding-top: 80px; padding-bottom: 2rem;">
+        <div class="page-view active" style="max-width: 700px; margin: 0 auto; padding: 1rem;">
+            <button class="back-btn" onclick="window.location.href='index.html'">← Back to Home</button>
+            <h2 style="text-align: center; margin-bottom: 1.5rem;">📜 Terms & Conditions</h2>
+            
+            <div class="policy-card"><strong>1. Booking Policy:</strong> All bookings are subject to availability. Confirmation is only valid after successful payment.</div>
+            
+            <div class="policy-card"><strong>2. Payment:</strong> We accept UPI, Cards, and QR payments. 90% goes to the service collaborator, 10% platform fee.</div>
+            
+            <div class="policy-card"><strong>3. Cancellation:</strong> Free cancellation 24 hours before. 50% refund within 24 hours. No refund for no-shows.</div>
+            
+            <div class="policy-card"><strong>4. Hotel Check-In:</strong> Check-in: 3:00 PM, Check-out: 12:00 PM. Valid government ID required. Max occupancy per room must be followed.</div>
+            
+            <div class="policy-card"><strong>5. Hotel Rules:</strong> No smoking in rooms. Pets not allowed unless specified. Visitors allowed 9AM–9PM only.</div>
+            
+            <div class="policy-card"><strong>6. Bus Policy:</strong> Arrive 15 minutes before departure. Seat selected is final. Carry valid ID proof.</div>
+            
+            <div class="policy-card"><strong>7. Rapid Car:</strong> Pricing is auto-calculated based on distance. Extra charges for night travel (10PM–6AM). Waiting charges apply after 15 minutes.</div>
+            
+            <div class="policy-card"><strong>8. Privacy:</strong> Your personal data is encrypted and never shared with third parties without consent.</div>
+            
+            <div class="policy-card"><strong>9. Liability:</strong> Yatri Point acts as an aggregator. Service quality is the responsibility of the collaborator/operator.</div>
+            
+            <div class="policy-card"><strong>10. Disputes:</strong> All disputes subject to Madhubani jurisdiction. Contact support within 48 hours of the issue.</div>
+
+            <p style="text-align: center; margin-top: 2rem; color: var(--gray); font-size: 0.9rem;">
+                By using Yatri Point services, you agree to these terms and conditions.<br>
+                🙏 JAI MATA DI
+            </p>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>Yatri Point</h4>
+                <p>Travel & Stay</p>
+                <p>Your trusted travel partner across Mithila Region.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <a href="index.html">Home</a>
+                <a href="index.html#about">About Us</a>
+                <a href="index.html#help">Help & Support</a>
+                <a href="terms.html">Terms & Conditions</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+            <div class="footer-col">
+                <h4>Services</h4>
+                <a href="index.html#bus">Bus Booking</a>
+                <a href="index.html#hotel">Hotel Booking</a>
+                <a href="index.html#car">Rapid Car</a>
+                <a href="index.html#cafes">Café Guide</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p>📞 +91-72502 76840</p>
+                <p>📍 Madhubani, Bihar</p>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 Yatri Point (Yatri Point). All rights reserved. 🙏 JAI MATA DI</div>
+    </footer>
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>

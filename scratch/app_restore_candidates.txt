@@ -1,0 +1,75 @@
+Line 19 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '200', 'StartLine': '1', 'toolAction': '"Viewing client app init"', 'toolSummary': '"Client app.js init"'}
+
+Line 183 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '620', 'StartLine': '480', 'toolAction': '"Viewing auth handlers in app.js"', 'toolSummary': '"View auth handlers in app.js"'}
+
+Line 184 (Type: content):
+4114
+
+Line 187 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '1900', 'StartLine': '1870', 'toolAction': '"Viewing modal helpers in app.js"', 'toolSummary': '"View modal helpers in app.js"'}
+
+Line 191 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '110', 'StartLine': '90', 'toolAction': '"Viewing global variable area"', 'toolSummary': '"View global variable area"'}
+
+Line 196 (Type: content):
+3672
+
+Line 197 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '580', 'StartLine': '475', 'toolAction': '"Verifying auth handlers in app.js"', 'toolSummary': '"Verify auth handlers in app.js"'}
+
+Line 198 (Type: content):
+4120
+
+Line 206 (Type: content):
+4116
+
+Line 207 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '660', 'StartLine': '610', 'toolAction': '"Locating logout function in app.js"', 'toolSummary': '"Locate logout function in app.js"'}
+
+Line 208 (Type: content):
+3007
+
+Line 267 (Type: content):
+268
+
+Line 268 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '570', 'StartLine': '485', 'toolAction': '"Viewing handleLogin and handleSignup in app.js"', 'toolSummary': '"App.js auth handlers snippet view"'}
+
+Line 269 (Type: content):
+4116
+
+Line 270 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '670', 'StartLine': '580', 'toolAction': '"Viewing email OTP handlers in app.js"', 'toolSummary': '"App.js OTP handlers snippet view"'}
+
+Line 272 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '710', 'StartLine': '671', 'toolAction': '"Viewing remaining OTP handlers in app.js"', 'toolSummary': '"App.js OTP handlers snippet view part 2"'}
+
+Line 324 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '2000', 'StartLine': '1970', 'toolAction': '"Viewing collaborator submission in app.js"', 'toolSummary': '"App.js collaborator submission snippet view"'}
+
+Line 328 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '492', 'StartLine': '465', 'toolAction': '"Viewing login modal triggers in app.js"', 'toolSummary': '"App.js login trigger snippet view"'}
+
+Line 332 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '770', 'StartLine': '755', 'toolAction': '"Viewing requireAuth calls in app.js"', 'toolSummary': '"App.js requireAuth snippet view"'}
+
+Line 375 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '250', 'StartLine': '1', 'toolAction': '"Viewing app.js top section"', 'toolSummary': '"File view"'}
+
+Line 378 (Type: content):
+310
+
+Line 379 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '770', 'StartLine': '480', 'toolAction': '"Viewing app.js authentication logic"', 'toolSummary': '"File view"'}
+
+Line 380 (Type: content):
+4121
+
+Line 381 (Type: tool_call_args):
+{'AbsolutePath': '"c:\\\\Users\\\\jigar\\\\OneDrive\\\\Documents\\\\BookNow\\\\app.js"', 'EndLine': '135', 'StartLine': '95', 'toolAction': '"Viewing app.js state variables"', 'toolSummary': '"File view"'}
+
+Line 384 (Type: content):
+4121
+
