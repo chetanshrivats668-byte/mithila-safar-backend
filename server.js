@@ -134,7 +134,7 @@ function requireAdmin(req, res, next) {
 }
 
 // ========== MIDDLEWARE ==========
-const allowedOrigins = ['http://localhost:3001','http://127.0.0.1:3001','http://localhost:5500','http://127.0.0.1:5500','https://yatripoint.com','https://www.yatripoint.com','https://yatri-point.onrender.com'];
+const allowedOrigins = ['http://localhost:3001','http://127.0.0.1:3001','http://localhost:5500','http://127.0.0.1:5500','https://yatripoint.com','https://www.yatripoint.com','https://yatri-point.onrender.com','https://yatripoint.onrender.com'];
 app.use(cors({ origin: (origin, cb) => { if (!origin || origin === 'null' || allowedOrigins.includes(origin) || origin.startsWith('http://192.168.')) return cb(null, true); cb(new Error('CORS: origin not allowed')); }, methods: ['GET','POST','PUT','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 app.use(express.json({ limit: '50kb' }));
 
