@@ -111,7 +111,7 @@
                 <li><a href="#" data-section="help" onclick="navigateTo('help');return false">Help</a></li>
                 <li><a href="#" data-section="about" onclick="navigateTo('about');return false">About</a></li>
                 <li><a href="collaborator-dashboard.html">Partner Portal</a></li>
-                                <li><a href="#" data-section="terms" onclick="navigateTo('terms');return false">T&C</a></li>
+                <li><a href="terms.html">T&C</a></li>
 
             </ul>
 
@@ -144,7 +144,7 @@
         <a href="#" onclick="navigateTo('help');return false">❓ Help</a>
         <a href="#" onclick="navigateTo('about');return false">ℹ️ About</a>
         <a href="collaborator-dashboard.html">📊 Partner Portal</a>
-        <a href="#" onclick="navigateTo('terms');return false">📜 T&C</a>
+        <a href="terms.html">📜 T&C</a>
                 <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
 
         <div class="mobile-auth" id="mobileAuth">
@@ -571,13 +571,26 @@
         </div>
     </div>
 
+    <!-- ===== ABOUT PAGE ===== -->
+    <div class="page-section" id="section-about">
+        <div class="page-view active">
+            <button class="back-btn" onclick="goBack()">← Back</button>
+            <h2>ℹ️ About Yatri Point</h2>
+            <div class="policy-card"><strong>Yatri Point</strong> is a travel and stay booking platform focused on simple, fast, and reliable service across Bihar and the Mithila region.</div>
+            <div class="policy-card"><strong>Our Services:</strong> Bus booking, hotel booking, rapid car rides, and café discovery in one place.</div>
+            <div class="policy-card"><strong>Our Mission:</strong> Make regional travel easier with transparent pricing, quick bookings, and local partner support.</div>
+            <div class="policy-card"><strong>Coverage:</strong> Serving travelers across Madhubani, Darbhanga, Jaynagar, Patna, and nearby cities.</div>
+            <div class="policy-card"><strong>Support Promise:</strong> We aim to provide responsive customer help and a smoother booking experience for every journey.</div>
+        </div>
+    </div>
+
     <!-- ===== HELP PAGE ===== -->
     <div class="page-section" id="section-help">
         <div class="page-view active">
             <button class="back-btn" onclick="goBack()">← Back</button>
             <h2>❓ Help & Support</h2>
             <div class="policy-card"><strong>📞 Customer Support:</strong> Call 8178030064 (9AM–9PM)</div>
-            <div class="policy-card"><strong>📧 Email:</strong> support@mithilasafar.com</div>
+            <div class="policy-card"><strong>📧 Email:</strong> support@yatripoint.onrender.com</div>
             <div class="policy-card"><strong>💬 WhatsApp:</strong> Send "HELP" to +91-8178030064</div>
             <div class="policy-card"><strong>🔄 Refunds:</strong> Cancellations 24h before — full refund. Within 24h — 50% refund.</div>
             <div class="policy-card"><strong>🎫 Booking Issues:</strong> Share your Booking ID via WhatsApp for instant support.</div>
@@ -630,7 +643,7 @@
                     <h4 style="font-size:0.9rem; font-weight:800; color:var(--dark); margin-bottom:0.8rem; text-transform:uppercase; letter-spacing:0.5px;">🏢 Operator Details</h4>
                     <p style="font-size:0.85rem; margin-bottom:0.3rem;"><strong>Operator:</strong> <span id="detailsOperatorName">XYZ Travels</span></p>
                     <p style="font-size:0.85rem; margin-bottom:0.3rem;"><strong>Contact Phone:</strong> <span id="detailsOperatorPhone">8178030064</span></p>
-                    <p style="font-size:0.85rem;"><strong>Support Email:</strong> <span id="detailsOperatorEmail">support@mithilasafar.com</span></p>
+                    <p style="font-size:0.85rem;"><strong>Support Email:</strong> <span id="detailsOperatorEmail">support@yatripoint.onrender.com</span></p>
                 </div>
 
                 <!-- Amenities -->
@@ -867,6 +880,13 @@
                 </div>
             </div>
 
+            <!-- Payment Method Tabs -->
+            <div class="payment-tabs" style="display:flex; margin-bottom:1.5rem; background:rgba(0,0,0,0.03); border-radius:12px; padding:6px; border:1px solid var(--border);">
+                <button type="button" class="pay-tab-btn active" onclick="switchPayTab('card')" style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:var(--card); color:var(--primary); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s; box-shadow:var(--shadow-sm);">💳 Card/Netbanking</button>
+                <button type="button" class="pay-tab-btn" onclick="switchPayTab('upi-id')" style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📱 Pay via UPI ID</button>
+                <button type="button" class="pay-tab-btn" onclick="switchPayTab('upi-qr')" style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📷 Scan QR Code</button>
+            </div>
+
             <!-- Razorpay Section -->
             <div id="razorpaySection" style="text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
                 <div style="font-size:3.5rem; margin-bottom:1rem;">🔐</div>
@@ -884,8 +904,28 @@
                 </div>
             </div>
 
+            <!-- UPI ID Section -->
+            <div id="upiIdSection" style="display:none; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
+                <div style="font-size:3.5rem; margin-bottom:1rem;">📱</div>
+                <h3 style="margin-bottom:0.5rem; color:var(--primary);">Pay via UPI ID</h3>
+                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:1.5rem;">Enter your UPI ID to initiate a request via Razorpay</p>
+                
+                <div style="margin-bottom: 1.5rem; text-align: left;">
+                    <label for="upiIdInput" style="display:block; margin-bottom:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text);">UPI ID (VPA)</label>
+                    <input type="text" id="upiIdInput" placeholder="example@upi"
+                        style="width:100%; padding:0.9rem; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; outline:none; transition:border-color 0.2s;">
+                    <small style="color:var(--gray); display:block; margin-top:0.4rem;">e.g., test@razorpay, yourname@okhdfcbank, etc.</small>
+                </div>
+                
+                <button class="pay-now-btn" id="upiIdPayBtn" onclick="payViaUpiId()" 
+                    style="background:var(--primary); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(216,78,85,0.35); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px; border:none; color:white; cursor:pointer;">
+                    <span>Pay ₹<span id="upiIdBtnAmount">0</span></span>
+                    <span style="font-size:1.4rem;">→</span>
+                </button>
+            </div>
+
             <!-- UPI QR Code Section -->
-            <div id="upiSection" style="margin-top:1.5rem; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
+            <div id="upiSection" style="display:none; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
                 <div style="font-size:2.5rem; margin-bottom:0.5rem;">📱</div>
                 <h3 style="margin-bottom:0.3rem; color:var(--success);">UPI QR Payment</h3>
                 <p style="font-size:0.85rem; color:var(--gray); margin-bottom:1.5rem;">Scan QR code with any UPI app (GPay, PhonePe, Paytm)</p>
@@ -915,8 +955,14 @@
                     <strong>Name:</strong> SUDHAKAR KUMAR MISHRA
                 </p>
                 
+                <div style="margin-top: 1.5rem; text-align: left; margin-bottom: 1rem;">
+                    <label for="qrUpiIdInput" style="display:block; margin-bottom:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text);">Your UPI ID / Trans Ref No (for confirmation)</label>
+                    <input type="text" id="qrUpiIdInput" placeholder="e.g., name@upi or 12-digit Ref No"
+                        style="width:100%; padding:0.9rem; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; outline:none; transition:border-color 0.2s;">
+                </div>
+                
                 <button class="pay-now-btn" onclick="confirmUpiPayment()" 
-                    style="margin-top:1.5rem; background:var(--success); font-size:1.1rem; width:100%; padding:1rem; border-radius:14px; box-shadow:0 8px 25px rgba(0,128,0,0.35); font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    style="margin-top:1rem; background:var(--success); font-size:1.1rem; width:100%; padding:1rem; border-radius:14px; box-shadow:0 8px 25px rgba(0,128,0,0.35); font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px;">
                     <span>✅ I've Completed UPI Payment</span>
                 </button>
             </div>

@@ -7,236 +7,380 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',-apple-system,sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+body{font-family:'Inter',-apple-system,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 16px}
 
-.ticket-wrapper{max-width:740px;width:100%;margin:0 auto}
+.ticket-wrapper{max-width:560px;width:100%;margin:0 auto}
 
-.ticket{border-radius:24px;overflow:hidden;box-shadow:0 25px 80px rgba(0,20,60,0.15),0 8px 24px rgba(0,20,60,0.08);background:#fff;position:relative}
+/* === ACTION BUTTONS === */
+.ticket-actions{display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.btn-action{padding:12px 22px;border-radius:50px;font-size:14px;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:all 0.2s;font-family:'Inter',sans-serif}
+.btn-print{background:linear-gradient(135deg,#fff,#f0f4ff);color:#1a56db;box-shadow:0 4px 15px rgba(255,255,255,0.3)}
+.btn-home{background:rgba(255,255,255,0.15);color:#fff;border:2px solid rgba(255,255,255,0.4);backdrop-filter:blur(10px)}
+.btn-action:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.15)}
 
-.ticket-body{padding:32px;position:relative}
+/* === TICKET CARD === */
+.ticket{background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,40,0.25);animation:fadeInUp 0.5s ease-out}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
-.ticket-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:20px;border-bottom:2px dashed #eef2f7}
-.brand-group{display:flex;align-items:center;gap:14px}
-.bus-icon{width:44px;height:44px;background:linear-gradient(135deg,#1a56db,#2563eb);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;box-shadow:0 4px 12px rgba(37,99,235,0.3)}
-.brand-text h1{font-size:20px;font-weight:800;color:#0a1628;letter-spacing:-0.3px;line-height:1.2}
-.brand-text h1 span{color:#2563eb}
-.brand-text p{font-size:11px;font-weight:600;color:#6b7a99;text-transform:uppercase;letter-spacing:2px}
-.header-right{text-align:right}
-.header-right .booking-id{font-size:11px;color:#6b7a99;font-weight:500;text-transform:uppercase;letter-spacing:0.5px}
-.header-right .booking-val{font-size:16px;font-weight:700;color:#0a1628;margin-top:2px}
-.verified-chip{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#e8f0fe,#d4e4ff);padding:5px 12px;border-radius:20px;font-size:10px;font-weight:700;color:#1a56db;margin-top:6px;border:1px solid rgba(37,99,235,0.15)}
-.verified-chip svg{width:14px;height:14px;fill:#1a56db}
+/* === HEADER === */
+.ticket-header{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);padding:24px 28px;position:relative;overflow:hidden}
+.ticket-header::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:rgba(255,255,255,0.04);border-radius:50%}
+.ticket-header::after{content:'';position:absolute;bottom:-30px;left:30%;width:120px;height:120px;background:rgba(255,255,255,0.03);border-radius:50%}
+.header-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-icon{width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 15px rgba(37,99,235,0.4)}
+.brand-text h1{font-size:21px;font-weight:900;color:#fff;letter-spacing:-0.5px;line-height:1.1}
+.brand-text h1 span{color:#60a5fa}
+.brand-text p{font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:2px;margin-top:2px}
+.booking-ref{text-align:right}
+.booking-ref .label{font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px}
+.booking-ref .value{font-size:13px;font-weight:700;color:#fff;margin-top:3px;font-family:monospace;letter-spacing:0.5px}
+.verified-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.35);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:700;color:#34d399;margin-top:8px}
 
-.journey-section{margin-bottom:24px}
-.route-display{display:flex;align-items:center;justify-content:space-between;padding:20px 16px;background:linear-gradient(135deg,#f8faff,#f0f5ff);border-radius:16px;position:relative;overflow:hidden}
-.route-city{text-align:center}
-.route-city .city-name{font-size:22px;font-weight:800;color:#0a1628}
-.route-city .city-label{font-size:11px;color:#6b7a99;font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
-.route-line{flex:1;position:relative;height:3px;background:linear-gradient(90deg,#2563eb,#2563eb 45%,#ddd 55%,#ddd);margin:0 20px;border-radius:4px}
-.route-line .bus-marker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:36px;height:36px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(37,99,235,0.2);border:2px solid #2563eb;color:#2563eb;font-size:16px}
-.route-info{display:flex;gap:20px;margin-top:16px;flex-wrap:wrap}
-.route-info-item{flex:1;min-width:100px}
-.route-info-item .label{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#6b7a99;font-weight:600;margin-bottom:4px}
-.route-info-item .value{font-size:14px;font-weight:600;color:#0a1628}
-.route-info-item .value small{font-weight:400;color:#6b7a99;font-size:12px}
+/* === STATUS BANNER === */
+.status-banner{background:linear-gradient(90deg,#059669,#10b981);padding:10px 28px;display:flex;align-items:center;justify-content:space-between}
+.status-banner .status-text{font-size:13px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.status-banner .status-id{font-size:11px;color:rgba(255,255,255,0.8);font-family:monospace}
+.pulse-dot{width:8px;height:8px;background:#fff;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(1.2)}}
 
-.timeline{display:flex;justify-content:space-between;margin:16px 0 20px;padding:0 4px}
-.timeline-item{text-align:center;flex:1}
-.timeline-item .time{font-size:16px;font-weight:700;color:#0a1628}
-.timeline-item .label{font-size:10px;color:#6b7a99;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}
-.timeline-dash{position:relative;display:flex;align-items:center;justify-content:center;padding:0 8px;flex:0 0 60px}
-.timeline-dash::before{content:'';width:100%;height:2px;background:linear-gradient(90deg,#2563eb,#2563eb 50%,#ddd 50%);border-radius:2px;position:relative}
-.timeline-dash .dash-bus{position:absolute;width:18px;height:18px;background:#2563eb;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 8px rgba(37,99,235,0.3);color:#fff;font-size:8px}
+/* === BODY === */
+.ticket-body{padding:28px}
 
-.partner-banner{display:flex;align-items:center;gap:16px;padding:16px 20px;background:linear-gradient(135deg,#0a1628,#1a2744);border-radius:14px;margin-bottom:20px;position:relative;overflow:hidden}
-.partner-banner::before{content:'';position:absolute;top:-50%;right:-20%;width:120px;height:120px;background:rgba(37,99,235,0.08);border-radius:50%}
-.partner-logo{width:48px;height:48px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800;flex-shrink:0}
-.partner-info{flex:1}
-.partner-info .name{font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:6px}
-.partner-info .name svg{width:14px;height:14px;fill:#3b82f6}
-.partner-info .tagline{font-size:11px;color:rgba(255,255,255,0.6);font-style:italic;margin-top:2px}
-.partner-stats{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
-.partner-stats span{font-size:10px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:4px}
-.partner-stats span strong{color:#fff;font-weight:600}
+/* === ROUTE === */
+.route-section{margin-bottom:24px}
+.route-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.route-city{flex:1}
+.route-city .city-name{font-size:26px;font-weight:900;color:#0f172a;letter-spacing:-0.5px;line-height:1}
+.route-city .city-sub{font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.route-city.dest{text-align:right}
+.route-arrow{display:flex;flex-direction:column;align-items:center;gap:4px;flex:0 0 auto;padding:0 8px}
+.arrow-line{width:80px;height:2px;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:2px;position:relative}
+.arrow-line::after{content:'▶';position:absolute;right:-6px;top:50%;transform:translateY(-50%);color:#7c3aed;font-size:10px}
+.arrow-bus{font-size:20px;margin-top:2px}
+.arrow-duration{font-size:10px;font-weight:700;color:#64748b}
 
-.passenger-card{background:linear-gradient(135deg,#f8faff,#f0f5ff);border-radius:14px;padding:18px 20px;margin-bottom:20px;border:1px solid rgba(37,99,235,0.08)}
-.passenger-card h3{font-size:12px;font-weight:700;color:#6b7a99;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
-.passenger-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
-.passenger-field .p-label{font-size:10px;color:#6b7a99;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px}
-.passenger-field .p-value{font-size:14px;font-weight:600;color:#0a1628}
-.seat-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:4px 14px;border-radius:8px;font-size:14px;font-weight:700;box-shadow:0 3px 10px rgba(37,99,235,0.25)}
+/* === TIME ROW === */
+.time-row{display:flex;align-items:center;margin-top:16px;background:#f8faff;border-radius:12px;padding:14px 18px;gap:0}
+.time-block{flex:1;text-align:center}
+.time-block .time-val{font-size:22px;font-weight:800;color:#0f172a}
+.time-block .time-label{font-size:10px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px}
+.time-divider{width:1px;height:40px;background:#e2e8f0;flex-shrink:0;margin:0 8px}
 
-.amenities{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
-.amenity{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#f8faff;border-radius:10px;border:1px solid #eef2f7;font-size:12px;font-weight:500;color:#3a4a62}
-.amenity .icon{font-size:16px}
+/* === TEAR LINE === */
+.tear-line{display:flex;align-items:center;margin:20px 0;position:relative}
+.tear-circle{width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);flex-shrink:0}
+.tear-circle.left{margin-left:-40px}
+.tear-circle.right{margin-right:-40px}
+.tear-dashes{flex:1;border-top:2px dashed #e2e8f0;margin:0 6px}
 
-.ticket-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #eef2f7;margin-top:8px}
-.ticket-bottom .support{font-size:11px;color:#6b7a99}
-.ticket-bottom .support strong{color:#0a1628}
-.ticket-bottom .status-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:20px;font-size:11px;font-weight:700;color:#166534}
+/* === INFO GRID === */
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.info-cell{background:#f8faff;border-radius:12px;padding:12px 14px;border:1px solid #e8f0fe}
+.info-cell .i-label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px}
+.info-cell .i-value{font-size:13px;font-weight:700;color:#0f172a}
 
-@media(max-width:640px){
-  body{padding:12px}
-  .ticket-body{padding:20px}
-  .route-city .city-name{font-size:18px}
-  .route-line{margin:0 12px}
-  .partner-stats{gap:8px}
-  .ticket-header{flex-direction:column;align-items:flex-start;gap:12px}
-  .header-right{text-align:left;width:100%}
-  .timeline-dash{flex:0 0 30px}
-}
+/* === OPERATOR BANNER === */
+.operator-banner{background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:14px;margin-bottom:20px;position:relative;overflow:hidden}
+.operator-banner::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:rgba(255,255,255,0.04);border-radius:50%}
+.op-logo{width:46px;height:46px;background:linear-gradient(135deg,#2563eb,#7c3aed);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;flex-shrink:0}
+.op-info{flex:1}
+.op-name{font-size:15px;font-weight:800;color:#fff;display:flex;align-items:center;gap:6px}
+.op-check{color:#34d399;font-size:14px}
+.op-tagline{font-size:11px;color:rgba(255,255,255,0.5);font-style:italic;margin-top:2px}
+.op-stats{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap}
+.op-stat{font-size:11px;color:rgba(255,255,255,0.65);display:flex;align-items:center;gap:4px}
+.op-stat strong{color:#fff}
+
+/* === PASSENGER SECTION === */
+.section-title{font-size:11px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-title::after{content:'';flex:1;height:1px;background:#f1f5f9}
+
+.passenger-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.passenger-field{background:#f8faff;border:1px solid #e8f0fe;border-radius:10px;padding:10px 14px}
+.passenger-field .p-label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px}
+.passenger-field .p-value{font-size:14px;font-weight:700;color:#0f172a}
+
+.seat-chip{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;padding:5px 14px;border-radius:8px;font-size:13px;font-weight:700;box-shadow:0 3px 10px rgba(37,99,235,0.25)}
+
+.payment-status{display:flex;align-items:center;gap:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:10px 14px}
+.payment-status .check{font-size:20px}
+.payment-status .method{font-size:11px;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.payment-status .amount-paid{font-size:16px;font-weight:800;color:#059669}
+
+/* === AMENITIES === */
+.amenities-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.amenity-pill{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:#475569}
+
+/* === FOOTER === */
+.ticket-footer{background:#f8faff;border-top:1px solid #e8f0fe;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.ticket-footer .support{font-size:11px;color:#94a3b8;line-height:1.5}
+.ticket-footer .support strong{color:#475569}
+.ticket-footer .qr-placeholder{width:50px;height:50px;border:2px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#cbd5e1}
+
 @media(max-width:480px){
-  .ticket-body{padding:16px}
-  .route-display{padding:14px 10px}
-  .route-info{flex-direction:column;gap:8px}
-  .route-info-item{min-width:auto}
-  .passenger-grid{grid-template-columns:1fr 1fr}
-  .amenities{gap:8px}
-  .amenity{padding:6px 10px;font-size:11px}
+  body{padding:16px 12px}
+  .route-city .city-name{font-size:20px}
+  .arrow-line{width:50px}
+  .info-grid{grid-template-columns:1fr 1fr}
+  .brand-text h1{font-size:18px}
+  .ticket-header{padding:20px}
+  .ticket-body{padding:20px}
+  .ticket-footer{padding:14px 20px}
 }
 
-@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.ticket{animation:fadeInUp 0.6s ease-out}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.live-dot{animation:pulse 1.5s infinite}
+@media print{
+  body{background:#fff;padding:0}
+  .ticket-actions{display:none!important}
+  .ticket{box-shadow:none;border-radius:0}
+}
 </style>
 </head>
 <body>
 
 <div class="ticket-wrapper">
+
+  <!-- ACTION BUTTONS -->
+  <div class="ticket-actions print-hide">
+    <button class="btn-action btn-print" onclick="window.print()">🖨️ Print / Download</button>
+    <button class="btn-action btn-home" onclick="window.location.href='index.html'">🏠 Back to Home</button>
+  </div>
+
   <div class="ticket">
 
-    <div class="ticket-body">
-
-      <div class="ticket-header">
-        <div class="brand-group">
-          <div class="bus-icon">🚌</div>
+    <!-- HEADER -->
+    <div class="ticket-header">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-icon">🚌</div>
           <div class="brand-text">
             <h1>YATRI <span>POINT</span></h1>
             <p>BOOK · TRAVEL · STAY</p>
           </div>
         </div>
-        <div class="header-right">
-          <div class="booking-id">Booking ID</div>
-          <div class="booking-val">YP-2415-8B7A</div>
-          <div class="verified-chip">
-            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-            VERIFIED PARTNER
-          </div>
+        <div class="booking-ref">
+          <div class="label">Booking ID</div>
+          <div class="value" id="bookingId">YP-XXXXXX</div>
+          <div class="verified-badge">✓ VERIFIED &amp; CONFIRMED</div>
         </div>
       </div>
+    </div>
 
-      <div class="journey-section">
-        <div class="route-display">
+    <!-- STATUS BANNER -->
+    <div class="status-banner">
+      <div class="status-text"><span class="pulse-dot"></span> ✅ BOOKING CONFIRMED</div>
+      <div class="status-id" id="statusId">—</div>
+    </div>
+
+    <!-- BODY -->
+    <div class="ticket-body">
+
+      <!-- ROUTE -->
+      <div class="route-section">
+        <div class="route-bar">
           <div class="route-city">
-            <div class="city-name">Darbhanga</div>
-            <div class="city-label">Boarding Point</div>
+            <div class="city-name" id="cityFrom">—</div>
+            <div class="city-sub">Boarding Point</div>
           </div>
-          <div class="route-line">
-            <div class="bus-marker">🚌</div>
+          <div class="route-arrow">
+            <div class="arrow-line"></div>
+            <div class="arrow-bus">🚌</div>
+            <div class="arrow-duration" id="duration">—</div>
           </div>
-          <div class="route-city">
-            <div class="city-name">Patna</div>
-            <div class="city-label">Dropping Point</div>
-          </div>
-        </div>
-
-        <div class="timeline">
-          <div class="timeline-item">
-            <div class="time">06:00</div>
-            <div class="label">Departure</div>
-          </div>
-          <div class="timeline-dash">
-            <div class="dash-bus">🚌</div>
-          </div>
-          <div class="timeline-item">
-            <div class="time">10:30</div>
-            <div class="label">Arrival</div>
+          <div class="route-city dest">
+            <div class="city-name" id="cityTo">—</div>
+            <div class="city-sub">Dropping Point</div>
           </div>
         </div>
 
-        <div class="route-info">
-          <div class="route-info-item">
-            <div class="label">📅 Date</div>
-            <div class="value">20 May 2026</div>
+        <div class="time-row">
+          <div class="time-block">
+            <div class="time-val" id="depTime">—</div>
+            <div class="time-label">Departure</div>
           </div>
-          <div class="route-info-item">
-            <div class="label">📏 Distance</div>
-            <div class="value">140 km <small>(~4h 30m)</small></div>
+          <div class="time-divider"></div>
+          <div class="time-block">
+            <div class="time-val" id="travelDate">—</div>
+            <div class="time-label">Travel Date</div>
           </div>
-          <div class="route-info-item">
-            <div class="label">🚌 Bus Type</div>
-            <div class="value">AC Sleeper · 2+1</div>
+          <div class="time-divider"></div>
+          <div class="time-block">
+            <div class="time-val" id="arrTime">—</div>
+            <div class="time-label">Arrival</div>
           </div>
         </div>
       </div>
 
-      <div class="partner-banner">
-        <div class="partner-logo">MT</div>
-        <div class="partner-info">
-          <div class="name">
-            MITHILA TRAVELS
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-          </div>
-          <div class="tagline">“ Safe Journey, Happy Journey ”</div>
-          <div class="partner-stats">
-            <span>⭐ <strong>4.8</strong> Rating</span>
-            <span>🎂 <strong>12+</strong> Years</span>
-            <span class="live-dot" style="display:inline-flex;align-items:center;gap:4px">🟢 <strong>Live</strong> Status</span>
-            <span>🏢 Private Operator</span>
+      <!-- INFO GRID -->
+      <div class="info-grid">
+        <div class="info-cell">
+          <div class="i-label">🚌 Bus Type</div>
+          <div class="i-value" id="busType">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="i-label">👥 Passengers</div>
+          <div class="i-value" id="passengerCount">1</div>
+        </div>
+        <div class="info-cell">
+          <div class="i-label">💺 Seat(s)</div>
+          <div class="i-value" id="seatLabel">—</div>
+        </div>
+      </div>
+
+      <!-- TEAR LINE -->
+      <div class="tear-line">
+        <div class="tear-circle left"></div>
+        <div class="tear-dashes"></div>
+        <div class="tear-circle right"></div>
+      </div>
+
+      <!-- OPERATOR -->
+      <div class="operator-banner">
+        <div class="op-logo" id="opLogoText">MT</div>
+        <div class="op-info">
+          <div class="op-name" id="opName">Mithila Travels <span class="op-check">✓</span></div>
+          <div class="op-tagline">" Safe Journey, Happy Journey "</div>
+          <div class="op-stats">
+            <div class="op-stat">⭐ <strong>4.8</strong> Rating</div>
+            <div class="op-stat">🎂 <strong>12+</strong> Years</div>
+            <div class="op-stat">🟢 <strong>Live</strong> Status</div>
           </div>
         </div>
       </div>
 
-      <div class="passenger-card">
-        <h3>👤 Passenger Details</h3>
-        <div class="passenger-grid">
-          <div class="passenger-field">
-            <div class="p-label">Name</div>
-            <div class="p-value">Rahul Sharma</div>
-          </div>
-          <div class="passenger-field">
-            <div class="p-label">Age</div>
-            <div class="p-value">28</div>
-          </div>
-          <div class="passenger-field">
-            <div class="p-label">Gender</div>
-            <div class="p-value">Male</div>
-          </div>
-          <div class="passenger-field">
-            <div class="p-label">Seat No.</div>
-            <div class="p-value"><span class="seat-badge">💺 12B</span></div>
-          </div>
-          <div class="passenger-field">
-            <div class="p-label">Fare</div>
-            <div class="p-value">₹649</div>
-          </div>
-          <div class="passenger-field">
-            <div class="p-label">Payment</div>
-            <div class="p-value" style="color:#16a34a">✅ Confirmed</div>
-          </div>
+      <!-- PASSENGER DETAILS -->
+      <div class="section-title">👤 Passenger Details</div>
+      <div class="passenger-grid" id="passengerGrid">
+        <!-- populated by JS -->
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="section-title">💳 Payment</div>
+      <div class="payment-status" style="margin-bottom:20px">
+        <span class="check">✅</span>
+        <div>
+          <div class="method" id="payMethod">Razorpay</div>
+          <div class="amount-paid" id="payAmount">₹—</div>
         </div>
       </div>
 
-      <div class="amenities">
-        <div class="amenity"><span class="icon">💧</span>Water Bottle</div>
-        <div class="amenity"><span class="icon">🔌</span>Charging Point</div>
-        <div class="amenity"><span class="icon">🛏️</span>Blanket</div>
-        <div class="amenity"><span class="icon">📶</span>WiFi</div>
-        <div class="amenity"><span class="icon">🧳</span>Luggage</div>
-        <div class="amenity"><span class="icon">📍</span>GPS Tracking</div>
+      <!-- AMENITIES -->
+      <div class="section-title">🛎️ Amenities</div>
+      <div class="amenities-row" id="amenitiesRow">
+        <span class="amenity-pill">💧 Water Bottle</span>
+        <span class="amenity-pill">🔌 Charging Point</span>
+        <span class="amenity-pill">📶 WiFi</span>
+        <span class="amenity-pill">🧳 Luggage</span>
+        <span class="amenity-pill">📍 GPS Tracking</span>
       </div>
 
-      <div class="ticket-bottom">
-        <div class="support">
-          📞 <strong>1800-123-4567</strong> · info.msbookings@gmail.com
-        </div>
-        <div class="status-chip">✅ Active Booking</div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="ticket-footer">
+      <div class="support">
+        📞 <strong>1800-123-4567</strong><br>
+        info.msbookings@gmail.com
       </div>
+      <div class="qr-placeholder">🎟️</div>
     </div>
 
   </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        var raw = localStorage.getItem('latestTicket');
+        if (!raw) return; // show static template if no data
+
+        var data = JSON.parse(raw);
+
+        // ---- Booking ID ----
+        var oid = data.orderId || 'YP-' + Date.now().toString(36).toUpperCase();
+        document.getElementById('bookingId').textContent = oid;
+        document.getElementById('statusId').textContent = oid;
+
+        // ---- Route ----
+        var from = data.from || data.source || (data.selectedBus && data.selectedBus.source) || '—';
+        var to   = data.to   || data.destination || (data.selectedBus && data.selectedBus.destination) || '—';
+        document.getElementById('cityFrom').textContent = from;
+        document.getElementById('cityTo').textContent = to;
+
+        // ---- Times ----
+        var dep = data.time || (data.selectedBus && (data.selectedBus.departureTime || data.selectedBus.departuretime)) || '07:00 AM';
+        var arr = (data.selectedBus && (data.selectedBus.arrivalTime || data.selectedBus.arrivaltime)) || '09:00 AM';
+        var dur = (data.selectedBus && data.selectedBus.duration) || '2h 0m';
+        document.getElementById('depTime').textContent = dep;
+        document.getElementById('arrTime').textContent = arr;
+        document.getElementById('duration').textContent = dur;
+
+        // ---- Date ----
+        var tdate = data.date || data.checkin || new Date().toISOString().split('T')[0];
+        try {
+            var d = new Date(tdate);
+            tdate = d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+        } catch(e) {}
+        document.getElementById('travelDate').textContent = tdate;
+
+        // ---- Bus type ----
+        var btype = (data.selectedBus && (data.selectedBus.busType || data.selectedBus.bustype)) || data.type && data.type.toUpperCase() || 'AC Seater';
+        document.getElementById('busType').textContent = btype;
+
+        // ---- Passengers ----
+        document.getElementById('passengerCount').textContent = data.passengers || data.guests || 1;
+
+        // ---- Seats ----
+        var seatIds = data.seats || [];
+        var seatDisplay = seatIds.length > 0
+            ? seatIds.map(function(s) {
+                // Extract just the seat number, e.g. SEAT_DEMO_BUS_MDB_BNP_07 → S7
+                var match = String(s).match(/(\d+)$/);
+                return match ? 'S' + parseInt(match[1], 10) : String(s);
+              }).join(', ')
+            : '—';
+        document.getElementById('seatLabel').textContent = seatDisplay;
+
+        // ---- Operator ----
+        var opName = (data.selectedBus && (data.selectedBus.operatorName || data.selectedBus.busName || data.selectedBus.busname)) || 'Mithila Travels';
+        var opInitials = opName.split(' ').slice(0,2).map(function(w){ return w[0]; }).join('').toUpperCase();
+        document.getElementById('opName').innerHTML = opName + ' <span class="op-check">✓</span>';
+        document.getElementById('opLogoText').textContent = opInitials || 'MT';
+
+        // ---- Passenger Grid ----
+        var grid = document.getElementById('passengerGrid');
+        var gridHtml = '';
+        if (data.passengerDetails && data.passengerDetails.length > 0) {
+            data.passengerDetails.forEach(function(p, i) {
+                gridHtml += '<div class="passenger-field"><div class="p-label">Name</div><div class="p-value">' + (p.name || 'Passenger ' + (i+1)) + '</div></div>';
+                gridHtml += '<div class="passenger-field"><div class="p-label">Age</div><div class="p-value">' + (p.age || '—') + '</div></div>';
+            });
+        } else {
+            gridHtml += '<div class="passenger-field"><div class="p-label">Name</div><div class="p-value">' + (data.userName || 'Primary Guest') + '</div></div>';
+            gridHtml += '<div class="passenger-field"><div class="p-label">Passengers</div><div class="p-value">' + (data.passengers || 1) + '</div></div>';
+        }
+        grid.innerHTML = gridHtml;
+
+        // ---- Payment ----
+        document.getElementById('payMethod').textContent = (data.paymentMethod || 'Razorpay').toUpperCase();
+        document.getElementById('payAmount').textContent = '₹' + (data.amount || data.payNow || '—');
+
+        // ---- Amenities ----
+        var bus = data.selectedBus || {};
+        var amenities = bus.amenities || [];
+        if (amenities.length > 0) {
+            var icons = { 'AC':'❄️','WiFi':'📶','Water Bottle':'💧','Charging Point':'🔌','Blanket':'🛏️','Luggage':'🧳','GPS Tracking':'📍','GPS':'📍' };
+            var amenRow = document.getElementById('amenitiesRow');
+            amenRow.innerHTML = amenities.map(function(a) {
+                var icon = icons[a] || '✨';
+                return '<span class="amenity-pill">' + icon + ' ' + a + '</span>';
+            }).join('');
+        }
+
+    } catch(e) {
+        console.error('Ticket render error', e);
+    }
+});
+</script>
 </body>
 </html>

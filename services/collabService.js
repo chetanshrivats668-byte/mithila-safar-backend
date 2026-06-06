@@ -1,4 +1,4 @@
-﻿import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
+import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
 import { memoryDb } from '../utils/firestoreFallback.js';
 
 // Normalize collaborator rows from Supabase (PostgREST returns lowercase keys)
@@ -83,6 +83,7 @@ export async function createCollaborator(db, data) {
   const now = new Date().toISOString();
   const collabData = {
     id: collabId,
+    userId: data.userId || null,
     name: data.name,
     email: data.email,
     phone: data.phone,
@@ -161,4 +162,33 @@ export async function deleteCollaborator(db, collabId) {
   if (isSupabaseAvailable()) {
     await dbRemove('collaborators', collabId).catch(() => {});
   }
+}
+
+export async function getCollaboratorsByUserId(db, userId) {
+  if (!userId) return [];
+  const user = await dbGet('users', userId);
+  if (!user) return [];
+  const userEmail = user.email;
+  const userPhone = user.phone;
+  const cleanUserPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
+
+  const memoryMatches = Array.from(memoryDb.collabs.values()).filter(c => {
+    const cleanCollabPhone = c.phone ? c.phone.replace(/\D/g, '').slice(-10) : '';
+    return c.userId === userId || 
+      (userEmail && c.email === userEmail) || 
+      (cleanUserPhone && cleanCollabPhone === cleanUserPhone);
+  });
+  if (memoryMatches.length > 0 || !isSupabaseAvailable()) {
+    return normalizeList(memoryMatches);
+  }
+
+  let results = [];
+  if (userEmail) {
+    results = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: userEmail }] });
+  }
+  if (results.length === 0 && userPhone) {
+    const cleanPhone = userPhone.replace(/\D/g, '').slice(-10);
+    results = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: cleanPhone }] });
+  }
+  return normalizeList(results);
 }

@@ -801,7 +801,7 @@ app.post('/api/buses/search', async (req, res) => {
         busPhotos: b.busPhotos || b.busphotos || [],
         cancellationPolicy: 'Cancellations made 24 hours or more before departure time are eligible for a 100% refund. Cancellations within 24 hours are eligible for a 50% refund. No refunds are allowed inside 2 hours of departure.',
         refundPolicy: 'Refunds will be credited directly back to the payment UPI ID within 24-48 business hours.',
-        contactInformation: `Phone: ${collab.phone || '8178030064'} | Email: ${collab.email || 'support@mithilasafar.com'}`
+        contactInformation: `Phone: ${collab.phone || '8178030064'} | Email: ${collab.email || 'support@yatripoint.onrender.com'}`
       });
     }
 
@@ -817,21 +817,28 @@ app.get('/api/buses/:busId/seats', async (req, res) => {
   try {
     const { busId } = req.params;
     const { date } = req.query;
-    if (!busId || !date) return res.status(400).json({ success: false, message: 'Bus ID and date are required' });
+    // Default to today if no date provided
+    const travelDate = date || new Date().toISOString().split('T')[0];
+    if (!busId) return res.status(400).json({ success: false, message: 'Bus ID is required' });
 
-    const bus = await dbGet('collaborator_buses', busId);
+    // Always check memoryDb first so demo/in-memory buses work even when Supabase is available
+    let bus = memoryDb.buses.get(busId);
+    if (!bus && isSupabaseAvailable()) {
+      bus = await dbGet('collaborator_buses', busId);
+    }
+    
     if (!bus) return res.status(404).json({ success: false, message: 'Bus not found' });
 
     let seats = [];
-    if (isSupabaseAvailable()) {
+    // Always check memoryDb first so in-memory/demo seats work even when Supabase is connected
+    seats = Array.from(memoryDb.seats.values()).filter(s => s.busId === busId && s.travelDate === travelDate);
+    if (seats.length === 0 && isSupabaseAvailable()) {
       seats = await dbList('collaborator_seats', {
         filters: [
           { column: 'busId', op: 'eq', value: busId },
-          { column: 'travelDate', op: 'eq', value: date }
+          { column: 'travelDate', op: 'eq', value: travelDate }
         ]
       });
-    } else {
-      seats = Array.from(memoryDb.seats.values()).filter(s => s.busId === busId && s.travelDate === date);
     }
 
     if (seats.length === 0) {
@@ -843,8 +850,9 @@ app.get('/api/buses/:busId/seats', async (req, res) => {
         bus.totalSeats || bus.totalseats || 40,
         bus.seatLayout || bus.seatlayout || '2x2',
         pricePerSeat,
-        date
+        travelDate
       );
+      console.log(`[SEATS] Generated ${seats.length} seats for bus ${busId} on ${travelDate}`);
     }
 
     const mappedSeats = seats.map(s => {
@@ -866,8 +874,8 @@ app.get('/api/buses/:busId/seats', async (req, res) => {
 
     res.json({ success: true, seats: mappedSeats });
   } catch (err) {
-    console.error('Public seat map fetch error:', err);
-    res.status(500).json({ success: false, message: 'Failed to fetch visual seat layout' });
+    console.error('Public seat map fetch error:', err.message, err.stack);
+    res.status(500).json({ success: false, message: 'Failed to fetch visual seat layout: ' + err.message });
   }
 });
 
@@ -1261,6 +1269,75 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch' });
   }
 });
+
+// ========== DEMO SEED DATA ==========
+// A prototype bus for the Madhubani → Benipatti route for testing purposes.
+(function seedDemoData() {
+  const DEMO_COLLAB_ID = 'DEMO_MITHILA_TRAVELS';
+  const DEMO_BUS_ID    = 'DEMO_BUS_MDB_BNP';
+
+  // Only seed if not already present
+  if (!memoryDb.collabs.has(DEMO_COLLAB_ID)) {
+    memoryDb.collabs.set(DEMO_COLLAB_ID, {
+      id: DEMO_COLLAB_ID,
+      name: 'Rohan Kumar',
+      email: 'demo@mithilatravels.in',
+      phone: '9876543210',
+      businessName: 'Mithila Travels (Demo)',
+      businessType: 'bus',
+      serviceCategories: ['bus'],
+      status: 'approved',
+      verificationStatus: 'verified',
+      verification_status: 'verified',
+      rating: 4.8,
+      totalBookings: 142,
+      totalEarnings: 85000,
+      upiId: 'mithilatravels@ybl',
+      routeCities: ['Madhubani', 'Benipatti'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    console.log('[DEMO]: Seeded demo collaborator — Mithila Travels');
+  }
+
+  if (!memoryDb.buses.has(DEMO_BUS_ID)) {
+    memoryDb.buses.set(DEMO_BUS_ID, {
+      id: DEMO_BUS_ID,
+      collaboratorId: DEMO_COLLAB_ID,
+      collaboratorid: DEMO_COLLAB_ID,
+      busName: 'Mithila Express',
+      busname: 'Mithila Express',
+      busType: 'AC Seater',
+      bustype: 'AC Seater',
+      busNumber: 'BR-05-7892',
+      busnumber: 'BR-05-7892',
+      numberPlate: 'BR-05-7892',
+      source: 'Madhubani',
+      destination: 'Benipatti',
+      routeCities: ['Madhubani', 'Benipatti'],
+      routecities: ['Madhubani', 'Benipatti'],
+      departureTime: '07:00 AM',
+      departuretime: '07:00 AM',
+      arrivalTime: '09:00 AM',
+      arrivaltime: '09:00 AM',
+      fare: 80,
+      price: 80,
+      totalSeats: 40,
+      totalseats: 40,
+      seatLayout: '2x2',
+      seatlayout: '2x2',
+      status: 'active',
+      amenities: ['AC', 'Charging Point', 'Water Bottle'],
+      schedules: [{
+        departureTime: '07:00 AM',
+        arrivalTime: '09:00 AM',
+        runningDays: [true, true, true, true, true, true, true]  // all days
+      }],
+      createdAt: new Date().toISOString()
+    });
+    console.log('[DEMO]: Seeded demo bus — Mithila Express (Madhubani → Benipatti)');
+  }
+})();
 
 app.listen(PORT, () => {
   console.log('Yatri Point backend running on port ' + PORT);

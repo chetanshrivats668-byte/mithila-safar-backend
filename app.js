@@ -9,6 +9,11 @@ const GOOGLE_BUTTON_CONTAINERS = ['googleSignInBtn', 'googleSignInBtnSignup'];
 // ========== GLOBAL STATE ==========
 let currentUser = null;
 let authToken = localStorage.getItem('authToken') || null;
+let refreshToken = localStorage.getItem('refreshToken') || null;
+let collaboratorRoles = JSON.parse(localStorage.getItem('collaboratorRoles') || '[]');
+let selectedCollaboratorId = localStorage.getItem('selectedCollaboratorId') || null;
+let selectedCollaboratorRole = localStorage.getItem('selectedCollaboratorRole') || null;
+
 let currentBooking = {};
 let selectedSeats = [];
 let selectedCafeSeats = [];
@@ -217,23 +222,190 @@ function requireAuth(callback) {
     if (callback) callback();
     return true;
 }
+function getStoredCollaboratorSession() {
+    return {
+        roles: JSON.parse(localStorage.getItem('collaboratorRoles') || '[]'),
+        selectedCollaboratorId: localStorage.getItem('selectedCollaboratorId') || null,
+        selectedCollaboratorRole: localStorage.getItem('selectedCollaboratorRole') || null,
+        collabToken: localStorage.getItem('collabToken') || null,
+        collabData: JSON.parse(localStorage.getItem('collabData') || 'null')
+    };
+}
 
-function authHeaders() {
-    return authToken ? { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+function clearCollaboratorSession() {
+    collaboratorRoles = [];
+    selectedCollaboratorId = null;
+    selectedCollaboratorRole = null;
+    localStorage.removeItem('collaboratorRoles');
+    localStorage.removeItem('selectedCollaboratorId');
+    localStorage.removeItem('selectedCollaboratorRole');
+    localStorage.removeItem('collabToken');
+    localStorage.removeItem('collabData');
+}
+
+function persistCollaboratorRoles(roles) {
+    collaboratorRoles = Array.isArray(roles) ? roles : [];
+    localStorage.setItem('collaboratorRoles', JSON.stringify(collaboratorRoles));
+}
+
+async function refreshUserSession() {
+    if (!refreshToken) return false;
+    try {
+        const res = await fetch(API_URL + '/api/auth/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken })
+        });
+        const data = await res.json();
+        if (!data.success || !data.token) return false;
+        authToken = data.token;
+        refreshToken = data.refreshToken || refreshToken;
+        localStorage.setItem('authToken', authToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function fetchCurrentUserProfile() {
+    if (!authToken) return null;
+    let res = await fetch(API_URL + '/api/auth/me', { headers: authHeaders() });
+    if (res.status === 401 && refreshToken) {
+        const refreshed = await refreshUserSession();
+        if (!refreshed) return null;
+        res = await fetch(API_URL + '/api/auth/me', { headers: authHeaders() });
+    }
+    const data = await res.json();
+    if (!data.success || !data.user) return null;
+    currentUser = data.user;
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    updateUILoggedIn();
+    return currentUser;
+}
+async function loadCollaboratorRoles() {
+    if (!authToken) return [];
+    try {
+        let res = await fetch(API_URL + '/api/collaborator/my-roles', { headers: authHeaders() });
+        if (res.status === 401 && refreshToken) {
+            const refreshed = await refreshUserSession();
+            if (!refreshed) return [];
+            res = await fetch(API_URL + '/api/collaborator/my-roles', { headers: authHeaders() });
+        }
+        const data = await res.json();
+        if (!data.success) return [];
+        persistCollaboratorRoles(data.roles || []);
+        return collaboratorRoles;
+    } catch {
+        return [];
+    }
+}
+
+async function activateCollaboratorRole(collaboratorId, options) {
+    if (!authToken || !collaboratorId) return false;
+    try {
+        const res = await fetch(API_URL + '/api/collaborator/select-role', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ collaboratorId })
+        });
+        const data = await res.json();
+        if (!data.success || !data.token || !data.collaborator) {
+            notify(data.message || 'Unable to activate collaborator role', 'error');
+            return false;
+        }
+        localStorage.setItem('collabToken', data.token);
+        localStorage.setItem('collabData', JSON.stringify(data.collaborator));
+        selectedCollaboratorId = data.collaborator.id;
+        selectedCollaboratorRole = (data.collaborator.serviceCategories || [])[0] || 'business';
+        localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
+        localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+        if (!options || options.redirect !== false) {
+            window.location.href = 'collaborator-dashboard.html';
+        }
+        return true;
+    } catch {
+        notify('Failed to activate collaborator role', 'error');
+        return false;
+    }
+}
+
+function renderCollaboratorRoleSelector(roles) {
+    const validRoles = (roles || []).filter(r => r.verification_status !== 'suspended');
+    if (!validRoles.length) return;
+    const existing = document.getElementById('collaboratorRoleSelector');
+    if (existing) existing.remove();
+    const box = document.createElement('div');
+    box.id = 'collaboratorRoleSelector';
+    box.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10002;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    box.innerHTML = '<div style="background:#fff;border-radius:16px;padding:1.25rem;max-width:520px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25)"><h3 style="margin:0 0 .5rem">Choose Dashboard</h3><p style="margin:0 0 1rem;color:#555">Your account has multiple collaborator roles. Select one to continue.</p><div id="collabRoleList" style="display:grid;gap:.75rem"></div><button id="closeCollabSelector" style="margin-top:1rem;padding:.8rem 1rem;border:none;border-radius:10px;background:#eee;cursor:pointer;width:100%">Close</button></div>';
+    document.body.appendChild(box);
+    const list = document.getElementById('collabRoleList');
+    validRoles.forEach(role => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.style.cssText = 'text-align:left;padding:1rem;border:1px solid #ddd;border-radius:12px;background:#fff;cursor:pointer';
+        btn.innerHTML = '<strong>' + ((role.type || 'business').toUpperCase()) + '</strong><div style="font-size:.9rem;color:#666;margin-top:.25rem">' + (role.businessName || role.name || 'Collaborator Profile') + '</div>';
+        btn.onclick = async function() { await activateCollaboratorRole(role.id); };
+        list.appendChild(btn);
+
+    });
+    document.getElementById('closeCollabSelector').onclick = function() { box.remove(); };
+}
+
+
+async function autoOpenCollaboratorDashboard() {
+    if (!authToken) {
+        window.location.href = 'index.html#login';
+        return;
+    }
+    const roles = await loadCollaboratorRoles();
+    const validRoles = (roles || []).filter(r => r.verification_status !== 'suspended');
+    if (!validRoles.length) {
+        notify('No collaborator profile is linked to this account yet.', 'info');
+        return;
+    }
+    const preferred = validRoles.find(r => r.id === selectedCollaboratorId) || null;
+    if (preferred) {
+        await activateCollaboratorRole(preferred.id);
+        return;
+    }
+    if (validRoles.length === 1) {
+        await activateCollaboratorRole(validRoles[0].id);
+        return;
+    }
+    renderCollaboratorRoleSelector(validRoles);
+}
+
+async function bootstrapAuthenticatedExperience() {
+    if (!authToken) return;
+    const user = await fetchCurrentUserProfile();
+    if (!user) {
+        const refreshed = await refreshUserSession();
+        if (!refreshed) {
+            clearSession();
+            return;
+        }
+        const refreshedUser = await fetchCurrentUserProfile();
+        if (!refreshedUser) {
+            clearSession();
+            return;
+        }
+    }
+    await loadCollaboratorRoles();
 }
 
 function restoreSession() {
     const savedToken = localStorage.getItem('authToken');
+    const savedRefreshToken = localStorage.getItem('refreshToken');
     const savedUser = localStorage.getItem('currentUser');
-    if (savedToken && savedUser) {
-        authToken = savedToken;
+    if (savedToken) authToken = savedToken;
+    if (savedRefreshToken) refreshToken = savedRefreshToken;
+    if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
             updateUILoggedIn();
-            // Show temporary session banner if applicable
-            if (currentUser.temporarySession) {
-                showTempSessionBanner();
-            }
+            if (currentUser.temporarySession) showTempSessionBanner();
         } catch (e) {
             clearSession();
         }
@@ -243,18 +415,44 @@ function restoreSession() {
 function clearSession() {
     currentUser = null;
     authToken = null;
+    refreshToken = null;
     localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('currentUser');
+    clearCollaboratorSession();
     updateUILoggedOut();
     hideTempSessionBanner();
 }
 
-function saveSession(token, user) {
+function saveSession(token, user, newRefreshToken) {
     authToken = token;
     currentUser = user;
+    if (newRefreshToken) {
+        refreshToken = newRefreshToken;
+        localStorage.setItem('refreshToken', newRefreshToken);
+    }
     localStorage.setItem('authToken', token);
     localStorage.setItem('currentUser', JSON.stringify(user));
     updateUILoggedIn();
+}
+
+function authHeaders() {
+    return authToken ? { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+
+async function checkAndRedirectCollaborator() {
+    if (!authToken) return;
+    try {
+        const roles = await loadCollaboratorRoles();
+        const validRoles = (roles || []).filter(r => r.verification_status !== 'suspended');
+        if (validRoles.length === 1) {
+            await activateCollaboratorRole(validRoles[0].id);
+        } else if (validRoles.length > 1) {
+            renderCollaboratorRoleSelector(validRoles);
+        }
+    } catch (e) {
+        console.error('Error checking collaborator roles on login:', e);
+    }
 }
 
 // ========== TEMPORARY SESSION BANNER ==========
@@ -348,13 +546,14 @@ async function handleCredentialResponse(response) {
             return;
         }
 
-        saveSession(data.token, data.user);
+        saveSession(data.token, data.user, data.refreshToken);
 
         closeModal('loginModal');
         closeModal('signupModal');
 
         hideTempSessionBanner();
-notify('Welcome ' + (data.user.name || data.user.email || '') + '!', 'success');
+        notify('Welcome ' + (data.user.name || data.user.email || '') + '!', 'success');
+        await checkAndRedirectCollaborator();
     } catch (err) {
         if (err.name === 'AbortError' || err.message === 'Failed to fetch' || err.message === 'NetworkError') {
             notify('Network error — please check your connection', 'error');
@@ -393,9 +592,10 @@ async function handleLogin(e) {
             notify(data.message || 'Login failed', 'error');
             return;
         }
-        saveSession(data.token, data.user);
+        saveSession(data.token, data.user, data.refreshToken);
         closeModal('loginModal');
         notify('Welcome back ' + (data.user.name || '') + '!', 'success');
+        await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Login failed: ' + (err.message || 'network error'), 'error');
     } finally {
@@ -465,7 +665,8 @@ async function confirmEmailOTP() {
         }
         closeModal('emailOtpModal');
         if (data.token && data.user) {
-            saveSession(data.token, data.user);
+            saveSession(data.token, data.user, data.refreshToken);
+            await checkAndRedirectCollaborator();
         }
         notify('Email verified successfully!', 'success');
     } catch (err) {
@@ -834,7 +1035,7 @@ function openBusDetailsModal(busId) {
     document.getElementById('detailsBusType').textContent = bus.busType;
     document.getElementById('detailsOperatorName').textContent = bus.operatorName;
     document.getElementById('detailsOperatorPhone').textContent = bus.operatorPhone || '8178030064';
-    document.getElementById('detailsOperatorEmail').textContent = bus.operatorEmail || 'support@mithilasafar.com';
+    document.getElementById('detailsOperatorEmail').textContent = bus.operatorEmail || 'support@yatripoint.onrender.com';
 
     const timelineContainer = document.getElementById('detailsJourneyTimeline');
     const routeHtml = bus.routeCities.map((city, idx) => {
@@ -887,7 +1088,8 @@ async function openBusSeats(busId) {
     openModal('seatModal');
     
     try {
-        const res = await fetch(`${API_URL}/api/buses/${busId}/seats?date=${currentBooking.date}`, {
+        const travelDate = currentBooking.date || new Date().toISOString().split('T')[0];
+        const res = await fetch(`${API_URL}/api/buses/${busId}/seats?date=${travelDate}`, {
             headers: authHeaders()
         });
         const data = await res.json();
@@ -1303,8 +1505,12 @@ function openPayment(amount) {
     document.getElementById('payDiscount').textContent = '0';
     document.getElementById('payFinal').textContent = amount;
     document.getElementById('razorpayBtnAmount').textContent = amount;
+    document.getElementById('upiIdBtnAmount').textContent = amount;
     document.getElementById('upiAmount').textContent = '₹' + amount;
     advancePaymentActive = false;
+    document.getElementById('upiIdInput').value = '';
+    document.getElementById('qrUpiIdInput').value = '';
+    switchPayTab('card');
     document.getElementById('paymentPage').classList.add('active');
 }
 
@@ -1323,10 +1529,12 @@ function toggleAdvance(cb) {
         document.getElementById('dueAmt').textContent = due;
         document.getElementById('payFinal').textContent = advance;
         document.getElementById('razorpayBtnAmount').textContent = advance;
+        document.getElementById('upiIdBtnAmount').textContent = advance;
         info.style.display = 'block';
     } else {
         document.getElementById('payFinal').textContent = total;
         document.getElementById('razorpayBtnAmount').textContent = total;
+        document.getElementById('upiIdBtnAmount').textContent = total;
         info.style.display = 'none';
     }
 }
@@ -1341,6 +1549,7 @@ function applyCoupon() {
         document.getElementById('payDiscount').textContent = discount;
         document.getElementById('payFinal').textContent = advancePaymentActive ? Math.round(final * 0.3) : final;
         document.getElementById('razorpayBtnAmount').textContent = document.getElementById('payFinal').textContent;
+        document.getElementById('upiIdBtnAmount').textContent = document.getElementById('payFinal').textContent;
         notify('Coupon applied! ' + validCoupons[code] + '% off', 'success');
     } else {
         notify('Invalid coupon code', 'error');
@@ -1355,10 +1564,22 @@ async function payViaRazorpay() {
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
     try {
+        var payload = {
+            amount: amount / 100,
+            type: currentBooking.type,
+            itemName: currentBooking.type + ' booking',
+            details: currentBooking,
+            seats: currentBooking.seats,
+            roomType: currentBooking.roomType,
+            userName: currentUser?.name || '',
+            userPhone: currentUser?.phone || '',
+            userAge: '',
+            passengerCount: currentBooking.passengers || 1
+        };
         // Create order on backend
-        var res = await fetch(API_URL + '/api/payments/create-order', {
+        var res = await fetch(API_URL + '/api/razorpay/create-order', {
             method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({ amount: amount, currency: 'INR' })
+            body: JSON.stringify(payload)
         });
         var data = await res.json();
         if (!data.success) return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
@@ -1368,9 +1589,34 @@ async function payViaRazorpay() {
             currency: 'INR',
             name: 'Yatri Point',
             description: currentBooking.type + ' booking',
-            order_id: data.orderId,
-            handler: function(response) {
-                confirmBooking(response.razorpay_payment_id);
+            order_id: data.razorpayOrderId || data.orderId,
+            handler: async function(response) {
+                try {
+                    notify('Verifying payment...', 'info');
+                    var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
+                        method: 'POST', headers: authHeaders(),
+                        body: JSON.stringify({
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                            orderId: data.orderId
+                        })
+                    });
+                    var verifyData = await verifyRes.json();
+                    if (verifyData.success) {
+                        closePaymentPage();
+                        notify('Booking confirmed! ID: ' + data.orderId, 'success');
+                        
+                        // Generate ticket immediately
+                        var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'Razorpay' };
+                        localStorage.setItem('latestTicket', JSON.stringify(ticketData));
+                        window.location.href = 'e-ticket.html';
+                    } else {
+                        notify('Payment verification failed: ' + verifyData.message, 'error');
+                    }
+                } catch (err) {
+                    notify('Payment verification error', 'error');
+                }
             },
             prefill: {
                 name: currentUser?.name || '',
@@ -1381,69 +1627,180 @@ async function payViaRazorpay() {
             modal: { ondismiss: function() { notify('Payment cancelled', 'info'); } }
         };
         var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(response) {
+            notify('Payment failed: ' + response.error.description, 'error');
+        });
         rzp.open();
     } catch (err) {
-        // If backend order creation fails, try client-side only
-        if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
-            var options = {
-                key: RAZORPAY_KEY_ID,
-                amount: amount,
-                currency: 'INR',
-                name: 'Yatri Point',
-                description: currentBooking.type + ' booking',
-                handler: function(response) {
-                    confirmBooking(response.razorpay_payment_id);
-                },
-                prefill: {
-                    name: currentUser?.name || '',
-                    email: currentUser?.email || '',
-                    contact: currentUser?.phone || ''
-                },
-                theme: { color: '#d84e55' }
-            };
-            var rzp = new Razorpay(options);
-            rzp.open();
-        } else {
-            notify('Payment error: ' + err.message, 'error');
-        }
+        notify('Payment error: ' + err.message, 'error');
+    }
+}
+
+function switchPayTab(tabId) {
+    // Hide all sections
+    document.getElementById('razorpaySection').style.display = 'none';
+    document.getElementById('upiIdSection').style.display = 'none';
+    document.getElementById('upiSection').style.display = 'none';
+    
+    // Deactivate all tab buttons
+    document.querySelectorAll('.pay-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--gray)';
+    });
+    
+    // Get target button and section
+    let activeBtn;
+    if (tabId === 'card') {
+        document.getElementById('razorpaySection').style.display = 'block';
+        activeBtn = document.querySelector('[onclick="switchPayTab(\'card\')"]');
+    } else if (tabId === 'upi-id') {
+        document.getElementById('upiIdSection').style.display = 'block';
+        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-id\')"]');
+    } else if (tabId === 'upi-qr') {
+        document.getElementById('upiSection').style.display = 'block';
+        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-qr\')"]');
+    }
+    
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+        activeBtn.style.background = 'var(--card)';
+        activeBtn.style.color = 'var(--primary)';
+        activeBtn.style.boxShadow = 'var(--shadow-sm)';
+    }
+}
+
+async function payViaUpiId() {
+    var upiId = document.getElementById('upiIdInput').value.trim();
+    if (!upiId) {
+        notify('Please enter a valid UPI ID', 'warning');
+        return;
+    }
+    if (!upiId.includes('@') || upiId.split('@')[1].length < 2) {
+        notify('Invalid UPI ID format (e.g. username@bank)', 'warning');
+        return;
+    }
+    
+    if (typeof Razorpay === 'undefined') {
+        notify('Payment gateway loading...', 'info');
+        return;
+    }
+    var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
+    if (!amount || amount <= 0) return notify('Invalid amount', 'error');
+    
+    try {
+        notify('Initiating UPI payment...', 'info');
+        var payload = {
+            amount: amount / 100,
+            type: currentBooking.type,
+            itemName: currentBooking.type + ' booking',
+            details: currentBooking,
+            seats: currentBooking.seats,
+            roomType: currentBooking.roomType,
+            userName: currentUser?.name || '',
+            userPhone: currentUser?.phone || '',
+            userAge: '',
+            passengerCount: currentBooking.passengers || 1
+        };
+        
+        var res = await fetch(API_URL + '/api/razorpay/create-order', {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (!data.success) return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        
+        var options = {
+            key: RAZORPAY_KEY_ID,
+            amount: amount,
+            currency: 'INR',
+            name: 'Yatri Point',
+            description: currentBooking.type + ' booking',
+            order_id: data.razorpayOrderId || data.orderId,
+            prefill: {
+                name: currentUser?.name || '',
+                email: currentUser?.email || '',
+                contact: currentUser?.phone || '',
+                method: 'upi',
+                vpa: upiId
+            },
+            handler: async function(response) {
+                try {
+                    notify('Verifying payment...', 'info');
+                    var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
+                        method: 'POST', headers: authHeaders(),
+                        body: JSON.stringify({
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                            orderId: data.orderId
+                        })
+                    });
+                    var verifyData = await verifyRes.json();
+                    if (verifyData.success) {
+                        closePaymentPage();
+                        notify('Booking confirmed! ID: ' + data.orderId, 'success');
+                        
+                        var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'UPI (' + upiId + ')' };
+                        localStorage.setItem('latestTicket', JSON.stringify(ticketData));
+                        window.location.href = 'e-ticket.html';
+                    } else {
+                        notify('Payment verification failed: ' + verifyData.message, 'error');
+                    }
+                } catch (err) {
+                    notify('Payment verification error', 'error');
+                }
+            },
+            theme: { color: '#d84e55' },
+            modal: { ondismiss: function() { notify('Payment cancelled', 'info'); } }
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(response) {
+            notify('Payment failed: ' + response.error.description, 'error');
+        });
+        rzp.open();
+    } catch (err) {
+        notify('Payment error: ' + err.message, 'error');
     }
 }
 
 async function confirmUpiPayment() {
     if (!requireAuth()) return;
-    var amount = document.getElementById('payFinal').textContent;
-    notify('Verifying UPI payment...', 'info');
-    // For UPI, we simulate confirmation
-    confirmBooking('UPI_' + Date.now());
-}
-
-async function confirmBooking(paymentId) {
+    var amount = parseInt(document.getElementById('payFinal').textContent);
+    var qrUpiId = document.getElementById('qrUpiIdInput').value.trim();
+    if (!qrUpiId) {
+        notify('Please enter your Sender UPI ID or Transaction Ref No', 'warning');
+        return;
+    }
+    notify('Submitting UPI payment...', 'info');
     try {
-        var res = await fetch(API_URL + '/api/bookings/create', {
+        var res = await fetch(API_URL + '/api/upi/confirm-payment', {
             method: 'POST', headers: authHeaders(),
             body: JSON.stringify({
+                orderId: 'UPI_' + Date.now().toString(36).toUpperCase(),
+                amount: amount,
                 type: currentBooking.type,
-                details: currentBooking,
-                paymentId: paymentId,
-                amount: parseInt(document.getElementById('payFinal').textContent) || currentBooking.amount,
-                advancePayment: advancePaymentActive
+                itemName: currentBooking.type + ' booking',
+                userName: currentUser?.name || '',
+                userPhone: currentUser?.phone || '',
+                seats: currentBooking.seats,
+                details: { ...currentBooking, upiRef: qrUpiId }
             })
         });
         var data = await res.json();
         if (data.success) {
             closePaymentPage();
-            notify('Booking confirmed! ID: ' + (data.bookingId || data.id || ''), 'success');
-            if (typeof showTicket === 'function') showTicket(data.booking || data);
-            navigateTo('home');
+            notify(data.message || 'Payment submitted for verification.', 'success');
+            
+            var ticketData = { ...currentBooking, orderId: 'UPI_' + Date.now().toString(36).toUpperCase(), paymentMethod: 'UPI (QR - ' + qrUpiId + ')' };
+            localStorage.setItem('latestTicket', JSON.stringify(ticketData));
+            window.location.href = 'e-ticket.html';
         } else {
-            // Even if backend fails, show success to user
-            closePaymentPage();
-            notify('Booking confirmed! (offline mode)', 'success');
-            navigateTo('home');
+            notify('UPI confirmation failed: ' + data.message, 'error');
         }
     } catch (err) {
         closePaymentPage();
-        notify('Booking confirmed!', 'success');
+        notify('Payment submitted! (offline mode)', 'success');
         navigateTo('home');
     }
 }
@@ -1464,7 +1821,7 @@ async function loadBookings() {
     if (!container) return;
     container.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--gray);">Loading your bookings...</p>';
     try {
-        var res = await fetch(API_URL + '/api/bookings/user', { headers: authHeaders() });
+        var res = await fetch(API_URL + '/api/user/bookings', { method: 'POST', headers: authHeaders() });
         var data = await res.json();
         if (data.success && (data.bookings || data.data)) {
             renderBookings(data.bookings || data.data);
@@ -1748,6 +2105,7 @@ async function submitCollab(e) {
 document.addEventListener('DOMContentLoaded', function() {
     // Restore session
     restoreSession();
+    bootstrapAuthenticatedExperience();
 
     // Populate location selects
     populateLocationSelects();

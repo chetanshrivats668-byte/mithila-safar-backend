@@ -465,6 +465,14 @@ function clearSearch() {
   loadOrders();
 }
 function renderOrderCard(x) {
+  let upiRef = '';
+  if (x.details) {
+    try {
+      const detailsObj = typeof x.details === 'string' ? JSON.parse(x.details) : x.details;
+      upiRef = detailsObj.upiRef || '';
+    } catch(e) {}
+  }
+  const paymentDetails = `${x.payMethod||'N/A'}${upiRef ? ` (Ref: ${upiRef})` : ''} · ${x.transactionId||'N/A'}`;
   return `
     <div class="card">
       <div class="card-head">
@@ -480,7 +488,7 @@ function renderOrderCard(x) {
         <div class="info"><div class="lbl">Customer</div><div class="val">${x.userName||'N/A'}</div></div>
         <div class="info"><div class="lbl">Phone</div><div class="val">${x.userPhone||'N/A'}</div></div>
         <div class="info"><div class="lbl">Date</div><div class="val">${fmtDateTime(x.createdAt)}</div></div>
-        <div class="info"><div class="lbl">Payment</div><div class="val">${x.payMethod||'N/A'} · ${x.transactionId||'N/A'}</div></div>
+        <div class="info"><div class="lbl">Payment</div><div class="val">${paymentDetails}</div></div>
       </div>
       ${x.status === 'payment_pending' ? `<div class="card-actions">
         <button class="act approve" onclick="vfy('${x.orderId}','approve')">✅ Approve</button>

@@ -17,6 +17,38 @@ export async function generateSeatMap(busId, collaboratorId, totalSeats, seatLay
       seatType = i % 3 === 0 ? 'luxury' : 'standard';
     }
 
+    // --- Simulating a real platform like redBus ---
+    // Generate some random statuses for realism
+    let status = 'available';
+    
+    // Make the randomness consistent based on the seat number and bus so it doesn't flicker on refresh
+    // We use a simple pseudo-random hash logic
+    const hashStr = busId + travelDate + i;
+    let hash = 0;
+    for (let k = 0; k < hashStr.length; k++) {
+      hash = ((hash << 5) - hash) + hashStr.charCodeAt(k);
+      hash |= 0;
+    }
+    const rand = Math.abs(hash) % 100;
+
+    // ~35% seats are booked, 5% blocked, 5% reserved (women)
+    if (rand < 15) {
+      status = 'booked';
+    } else if (rand >= 15 && rand < 25) {
+      status = 'booked_male';
+    } else if (rand >= 25 && rand < 35) {
+      status = 'booked_female';
+    } else if (rand >= 35 && rand < 40) {
+      status = 'blocked';
+    } else if (rand >= 40 && rand < 45) {
+      status = 'reserved'; // reserved for ladies/seniors
+    }
+
+    // Force first few rows to often be ladies reserved for more realism
+    if (i <= 4 && status === 'available') {
+      status = rand % 2 === 0 ? 'reserved' : status;
+    }
+
     const seatId = 'SEAT_' + busId + '_' + String(i).padStart(2, '0');
     const seatData = {
       id: seatId,
@@ -26,18 +58,33 @@ export async function generateSeatMap(busId, collaboratorId, totalSeats, seatLay
       seatLabel: (isSleeper ? (berth === 'lower' ? 'L' : 'U') : '') + 'S' + i,
       seatType,
       berth,
-      status: 'available',
+      status,
       price: pricePerSeat,
-      bookingId: null,
+      bookingId: status.startsWith('booked') ? 'BKG_DEMO_' + hash : null,
       travelDate,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    if (!isSupabaseAvailable()) {
-      memoryDb.seats.set(seatId, seatData);
-    } else {
-      await dbCreate('collaborator_seats', seatId, seatData);
+    // Always store in memoryDb for runtime access (demo buses and real buses alike)
+    memoryDb.seats.set(seatId, seatData);
+    
+    if (isSupabaseAvailable() && collaboratorId && !collaboratorId.startsWith('DEMO_')) {
+      // Only persist to Supabase for real (non-demo) buses
+      // Only insert columns that exist in Supabase schema:
+      // id, busId, seatNumber, travelDate, status, price, bookedBy, collaboratorId, createdAt
+      const seatDataForDb = {
+        id: seatData.id,
+        busId: seatData.busId,
+        seatNumber: String(seatData.seatNumber),
+        travelDate: seatData.travelDate,
+        status: seatData.status,
+        price: seatData.price,
+        bookedBy: seatData.bookingId || null,
+        collaboratorId: seatData.collaboratorId,
+        createdAt: seatData.createdAt
+      };
+      await dbCreate('collaborator_seats', seatId, seatDataForDb);
     }
     seats.push(seatData);
   }

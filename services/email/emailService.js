@@ -196,7 +196,7 @@ export async function sendVerificationEmail(email, userName, otpCode) {
         <div class="support-links">
           <span>Support: <a href="tel:+918178030064">+91-8178030064</a></span>
           <span>·</span>
-          <span><a href="mailto:support@mithilasafar.com">support@mithilasafar.com</a></span>
+          <span><a href="mailto:support@yatripoint.onrender.com">support@yatripoint.onrender.com</a></span>
         </div>
       </div>
     </div>

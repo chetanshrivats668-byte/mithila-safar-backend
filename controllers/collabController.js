@@ -3,6 +3,47 @@ import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
 
+function buildCollaboratorSessionPayload(collab) {
+  return {
+    collaboratorId: collab.id,
+    userId: collab.userId || null,
+    email: collab.email,
+    name: collab.name,
+    collaborator: true,
+    serviceCategories: collab.serviceCategories || [],
+    permissions: collab.serviceCategories || []
+  };
+}
+
+function serializeCollaborator(collab) {
+  return {
+    id: collab.id,
+    userId: collab.userId || null,
+    name: collab.name,
+    email: collab.email,
+    phone: collab.phone,
+    city: collab.city,
+    state: collab.state,
+    businessName: collab.businessName,
+    serviceCategories: collab.serviceCategories || [],
+    upiId: collab.upiId,
+    description: collab.description || collab.businessDescription || '',
+    status: collab.status,
+    verification_status: collab.verification_status,
+    permissions: collab.serviceCategories || []
+  };
+}
+
+function buildCollaboratorSessionResponse(collab, token) {
+  return {
+    success: true,
+    token,
+    collaborator: serializeCollaborator(collab)
+  };
+}
+
+const otpStore = new Map();
+
 export async function registerCollaborator(req, res) {
   try {
     const data = sanitizeInput(req.body);
@@ -24,47 +65,27 @@ export async function registerCollaborator(req, res) {
     }
 
     const hashedPassword = crypto.createHash('sha256').update(data.password).digest('hex');
-
     const collab = await collabService.createCollaborator(req.app.locals.db, {
       ...data,
       password: hashedPassword
     });
 
-    const token = generateToken({
-      collaboratorId: collab.id,
-      email: collab.email,
-      name: collab.name,
-      collaborator: true,
-      serviceCategories: collab.serviceCategories || []
-    });
-
-    res.status(201).json({
+    const token = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.status(201).json({
       success: true,
       message: 'Registration successful. Awaiting admin approval.',
       token,
-      collaborator: {
-        id: collab.id,
-        name: collab.name,
-        email: collab.email,
-        phone: collab.phone,
-        city: collab.city,
-        businessName: collab.businessName,
-        serviceCategories: collab.serviceCategories,
-        upiId: collab.upiId,
-        description: collab.description,
-        status: collab.status,
-        verification_status: collab.verification_status
-      }
+      collaborator: serializeCollaborator(collab)
     });
   } catch (e) {
     console.error('Collaborator registration error:', e);
-    res.status(500).json({ success: false, message: 'Registration failed' });
+    return res.status(500).json({ success: false, message: 'Registration failed' });
   }
 }
 
 export async function loginCollaborator(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
@@ -82,50 +103,21 @@ export async function loginCollaborator(req, res) {
     if (collab.password !== hashedPassword) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const key = `login:${email}`;
-      otpStore.set(key, {
-        otp,
-        collabId: collab.id,
-        expires: Date.now() + 5 * 60 * 1000
-      });
-
+      otpStore.set(key, { otp, collabId: collab.id, expires: Date.now() + 5 * 60 * 1000 });
       console.log(`Login OTP for ${email}: ${otp}`);
-
       return res.status(401).json({
         success: false,
         otpRequired: true,
-        email: email,
+        email,
         message: 'Wrong password. A verification code has been sent to your email.'
       });
     }
 
-    const token = generateToken({
-      collaboratorId: collab.id,
-      email: collab.email,
-      name: collab.name,
-      collaborator: true,
-      serviceCategories: collab.serviceCategories || []
-    });
-
-    res.json({
-      success: true,
-      token,
-      collaborator: {
-        id: collab.id,
-        name: collab.name,
-        email: collab.email,
-        phone: collab.phone,
-        city: collab.city,
-        businessName: collab.businessName,
-        serviceCategories: collab.serviceCategories,
-        upiId: collab.upiId,
-        description: collab.description,
-        status: collab.status,
-        verification_status: collab.verification_status
-      }
-    });
+    const token = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.json(buildCollaboratorSessionResponse(collab, token));
   } catch (e) {
     console.error('Collaborator login error:', e);
-    res.status(500).json({ success: false, message: 'Login failed' });
+    return res.status(500).json({ success: false, message: 'Login failed' });
   }
 }
 
@@ -145,30 +137,8 @@ export async function loginWithOTP(req, res) {
       if (!collab) {
         return res.status(404).json({ success: false, message: 'Account not found' });
       }
-      const token = generateToken({
-        collaboratorId: collab.id,
-        email: collab.email,
-        name: collab.name,
-        collaborator: true,
-        serviceCategories: collab.serviceCategories || []
-      });
-      return res.json({
-        success: true,
-        token,
-        collaborator: {
-          id: collab.id,
-          name: collab.name,
-          email: collab.email,
-          phone: collab.phone,
-          city: collab.city,
-          businessName: collab.businessName,
-          serviceCategories: collab.serviceCategories,
-          upiId: collab.upiId,
-          description: collab.description,
-          status: collab.status,
-          verification_status: collab.verification_status
-        }
-      });
+      const token = generateToken(buildCollaboratorSessionPayload(collab));
+      return res.json(buildCollaboratorSessionResponse(collab, token));
     }
     // ═══════════════════════════════════════════════════════════════
 
@@ -195,30 +165,11 @@ export async function loginWithOTP(req, res) {
       return res.status(404).json({ success: false, message: 'Account not found' });
     }
 
-    const token = generateToken({
-      collaboratorId: collab.id,
-      email: collab.email,
-      name: collab.name,
-      collaborator: true,
-      serviceCategories: collab.serviceCategories || []
-    });
-
-    res.json({
-      success: true,
-      token,
-      collaborator: {
-        id: collab.id,
-        name: collab.name,
-        email: collab.email,
-        businessName: collab.businessName,
-        status: collab.status,
-        verification_status: collab.verification_status,
-        serviceCategories: collab.serviceCategories
-      }
-    });
+    const token = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.json(buildCollaboratorSessionResponse(collab, token));
   } catch (e) {
     console.error('Login with OTP error:', e);
-    res.status(500).json({ success: false, message: 'Login failed' });
+    return res.status(500).json({ success: false, message: 'Login failed' });
   }
 }
 
@@ -256,31 +207,81 @@ export async function loginWithPhoneOTP(req, res) {
       return res.status(401).json({ success: false, message: 'No account found with this phone number' });
     }
 
-    const token = generateToken({
-      collaboratorId: collab.id,
-      email: collab.email,
-      name: collab.name,
-      collaborator: true,
-      serviceCategories: collab.serviceCategories || []
-    });
-
-    res.json({
-      success: true,
-      token,
-      collaborator: {
-        id: collab.id,
-        name: collab.name,
-        email: collab.email,
-        phone: collab.phone,
-        businessName: collab.businessName,
-        status: collab.status,
-        verification_status: collab.verification_status,
-        serviceCategories: collab.serviceCategories
-      }
-    });
+    const token = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.json(buildCollaboratorSessionResponse(collab, token));
   } catch (e) {
     console.error('Login with phone OTP error:', e);
-    res.status(500).json({ success: false, message: 'Login failed' });
+    return res.status(500).json({ success: false, message: 'Login failed' });
+  }
+}
+
+export async function getMyCollaboratorRoles(req, res) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'Authenticated user id is required' });
+    }
+
+    const collaborators = await collabService.getCollaboratorsByUserId(req.app.locals.db, userId);
+    const roles = collaborators.map(collab => ({
+      id: collab.id,
+      userId: collab.userId || null,
+      type: (collab.serviceCategories || [])[0] || 'business',
+      serviceCategories: collab.serviceCategories || [],
+      verification_status: collab.verification_status || 'pending',
+      businessName: collab.businessName || '',
+      name: collab.name || '',
+      email: collab.email || '',
+      permissions: collab.serviceCategories || []
+    }));
+
+    return res.json({
+      success: true,
+      roles,
+      defaultRole: roles.find(r => r.verification_status === 'verified')?.type || roles[0]?.type || null
+    });
+  } catch (e) {
+    console.error('Get my collaborator roles error:', e);
+    return res.status(500).json({ success: false, message: 'Failed to load collaborator roles' });
+  }
+}
+
+export async function selectCollaboratorRole(req, res) {
+  try {
+    const userId = req.user?.userId;
+    const { collaboratorId } = req.body || {};
+    if (!userId || !collaboratorId) {
+      return res.status(400).json({ success: false, message: 'userId and collaboratorId are required' });
+    }
+
+    const collab = await collabService.getCollaboratorById(req.app.locals.db, collaboratorId);
+    if (!collab) {
+      return res.status(403).json({ success: false, message: 'This collaborator profile is not linked to your account' });
+    }
+
+    const user = await req.app.locals.db.get('users', userId);
+    const userEmail = user?.email;
+    const userPhone = user?.phone;
+    const cleanUserPhone = userPhone ? userPhone.replace(/\D/g, '').slice(-10) : '';
+    const cleanCollabPhone = collab.phone ? collab.phone.replace(/\D/g, '').slice(-10) : '';
+
+    const isOwner = collab.userId === userId ||
+                    (userEmail && collab.email === userEmail) ||
+                    (cleanUserPhone && cleanCollabPhone === cleanUserPhone);
+
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: 'This collaborator profile is not linked to your account' });
+    }
+
+    if (collab.verification_status === 'suspended') {
+      return res.status(403).json({ success: false, message: 'This collaborator profile is suspended' });
+    }
+
+    const token = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.json(buildCollaboratorSessionResponse(collab, token));
+  } catch (e) {
+    console.error('Select collaborator role error:', e);
+    return res.status(500).json({ success: false, message: 'Failed to activate collaborator role' });
   }
 }
 
@@ -331,19 +332,17 @@ export async function getListings(req, res) {
   }
 }
 
-const otpStore = new Map();
-
 export async function sendOTP(req, res) {
   try {
     const { phone, email } = req.body;
-    
+
     if (!phone && !email) {
       return res.status(400).json({ success: false, message: 'Phone or email required' });
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const key = phone || email;
-    
+
     otpStore.set(key, {
       otp: otp,
       expires: Date.now() + 5 * 60 * 1000
@@ -384,7 +383,7 @@ export async function sendOTP(req, res) {
 export async function verifyOTP(req, res) {
   try {
     const { phone, email, otp } = req.body;
-    
+
     if (!otp) {
       return res.status(400).json({ success: false, message: 'OTP required' });
     }

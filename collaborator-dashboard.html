@@ -469,10 +469,17 @@ tr:hover td{background:var(--card2)}
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
       <div class="brand">
-        <div class="icon" style="font-size:1.8rem;font-weight:900;color:var(--gold)">YP</div>
+        <img src="/yatri-logo.png" alt="Yatri Point Logo" style="height: 70px; width: auto; max-width: 280px; display: inline-block; object-fit: contain; background: #ffffff; padding: 6px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 1rem;">
         <h1>Partner Portal</h1>
         <p>YATRI POINT</p>
       </div>
+    <div id="roleSelectorContainer" style="display:none; flex-direction:column; gap:12px;">
+      <h3 style="margin-bottom: 0.5rem; text-align:center;">Choose Dashboard</h3>
+      <p style="margin-bottom: 1rem; color:var(--text2); font-size:0.82rem; text-align:center;">Your account has multiple collaborator roles. Select one to enter.</p>
+      <div id="roleList" style="display:flex; flex-direction:column; gap:10px;"></div>
+      <button class="btn-sec" type="button" onclick="logout()" style="margin-top:10px; width:100%;">Cancel & Logout</button>
+    </div>
+
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuth('login')">Login</button>
       <button class="auth-tab" onclick="switchAuth('register')">Apply</button>
@@ -639,7 +646,7 @@ tr:hover td{background:var(--card2)}
   <!-- SIDEBAR -->
   <aside class="sidebar">
       <div class="sb-head">
-        <div class="ico">🚌</div>
+        <img src="/yatri-logo.png" alt="YP Logo" style="height: 36px; width: auto; background: #ffffff; padding: 3px 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0;">
         <div><h2>Yatri <span>Partner</span></h2><div class="small" id="sbBizType">Business Dashboard</div></div>
       </div>
       <nav class="sb-nav" id="sbNav">
@@ -914,7 +921,7 @@ tr:hover td{background:var(--card2)}
 const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:3001' 
     : window.location.origin;
-let TOKEN = sessionStorage.getItem('yp_token');
+let TOKEN = localStorage.getItem('collabToken') || sessionStorage.getItem('yp_token');
 let COLLAB = null;
 let INVENTORY = [];
 let BOOKINGS = [];
@@ -1395,11 +1402,178 @@ async function handleRegister(e) { e.preventDefault();
 }
 
 function setToken(d) {
-  TOKEN = d.token; sessionStorage.setItem('yp_token', TOKEN);
-  COLLAB = d.collaborator || d.user || d; initDashboard();
+  TOKEN = d.token;
+  localStorage.setItem('collabToken', TOKEN);
+  sessionStorage.setItem('yp_token', TOKEN);
+  COLLAB = d.collaborator || d.user || d;
+  localStorage.setItem('collabData', JSON.stringify(COLLAB));
+  if (COLLAB?.id) {
+    localStorage.setItem('selectedCollaboratorId', COLLAB.id);
+  }
+  const selectedRole = (COLLAB?.serviceCategories || [])[0] || 'business';
+  localStorage.setItem('selectedCollaboratorRole', selectedRole);
+  localStorage.setItem('selectedCollaboratorPermissions', JSON.stringify(COLLAB?.serviceCategories || []));
+  initDashboard();
 }
 
-function logout() { TOKEN = null; COLLAB = null; sessionStorage.removeItem('yp_token'); document.getElementById('dboard').style.display = 'none'; document.getElementById('authScreen').style.display = 'flex'; }
+function clearCollaboratorSessionStorage() {
+  TOKEN = null;
+  COLLAB = null;
+  sessionStorage.removeItem('yp_token');
+  localStorage.removeItem('collabToken');
+  localStorage.removeItem('collabData');
+  localStorage.removeItem('selectedCollaboratorId');
+  localStorage.removeItem('selectedCollaboratorRole');
+  localStorage.removeItem('selectedCollaboratorPermissions');
+  localStorage.removeItem('collaboratorRoles');
+}
+
+function setAutoDetectLoading(isLoading, label) {
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) loginForm.style.opacity = isLoading ? '0.5' : '1';
+  const loginBtn = document.getElementById('loginBtn');
+  if (loginBtn) {
+    loginBtn.disabled = !!isLoading;
+    loginBtn.textContent = isLoading ? (label || 'Auto-detecting profile...') : 'Login';
+  }
+}
+
+async function refreshMainSessionToken() {
+  const savedRefreshToken = localStorage.getItem('refreshToken');
+  if (!savedRefreshToken) return null;
+  try {
+    const res = await fetch(API + '/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: savedRefreshToken })
+    });
+    const data = await res.json();
+    if (!data.success || !data.token) return null;
+    localStorage.setItem('authToken', data.token);
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken);
+    }
+    return data.token;
+  } catch (e) {
+    console.error('Unable to refresh main session token:', e);
+    return null;
+  }
+}
+
+async function fetchCollaboratorRolesWithMainSession() {
+  let mainToken = localStorage.getItem('authToken');
+  if (!mainToken) return null;
+
+  let res = await fetch(API + '/api/collaborator/my-roles', {
+    headers: { 'Authorization': 'Bearer ' + mainToken }
+  });
+
+  if (res.status === 401) {
+    const refreshedToken = await refreshMainSessionToken();
+    if (!refreshedToken) return null;
+    mainToken = refreshedToken;
+    res = await fetch(API + '/api/collaborator/my-roles', {
+      headers: { 'Authorization': 'Bearer ' + mainToken }
+    });
+  }
+
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.success) return null;
+
+  localStorage.setItem('collaboratorRoles', JSON.stringify(data.roles || []));
+  return { mainToken, roles: data.roles || [] };
+}
+
+function pickPreferredCollaboratorRole(roles) {
+  const validRoles = (roles || []).filter(role => role.verification_status !== 'suspended');
+  if (!validRoles.length) return null;
+
+  const selectedCollaboratorId = localStorage.getItem('selectedCollaboratorId');
+  const selectedCollaboratorRole = localStorage.getItem('selectedCollaboratorRole');
+
+  return validRoles.find(role => role.id === selectedCollaboratorId)
+    || validRoles.find(role => role.verification_status === 'verified' && role.type === selectedCollaboratorRole)
+    || validRoles.find(role => role.verification_status === 'verified')
+    || validRoles.find(role => role.type === selectedCollaboratorRole)
+    || validRoles[0];
+}
+
+async function validateCollaboratorSession(token) {
+  if (!token) return null;
+  try {
+    const res = await fetch(API + '/api/collaborator/profile', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.status === 401 || res.status === 403) return null;
+    const data = await res.json();
+    if (!data.success) return null;
+    return data.profile || data.collaborator || null;
+  } catch (e) {
+    console.error('Failed to validate collaborator session:', e);
+    return null;
+  }
+}
+
+async function restoreCollaboratorSessionFromMainAuth() {
+  const rolePayload = await fetchCollaboratorRolesWithMainSession();
+  if (!rolePayload || !rolePayload.roles?.length) return false;
+
+  const validRoles = rolePayload.roles.filter(role => role.verification_status !== 'suspended');
+  if (!validRoles.length) return false;
+
+  if (validRoles.length === 1) {
+    return await autoActivateCollabRole(validRoles[0].id, rolePayload.mainToken, { silentFailure: true });
+  }
+
+  const preferredRole = pickPreferredCollaboratorRole(validRoles);
+  if (preferredRole) {
+    const restored = await autoActivateCollabRole(preferredRole.id, rolePayload.mainToken, { redirectless: true, silentFailure: true });
+    if (restored) return true;
+  }
+
+  showCollabRoleSwitcher(validRoles, rolePayload.mainToken);
+  return false;
+}
+
+async function ensureCollaboratorSession() {
+  const savedToken = localStorage.getItem('collabToken') || sessionStorage.getItem('yp_token');
+  if (savedToken) {
+    const validatedProfile = await validateCollaboratorSession(savedToken);
+    if (validatedProfile) {
+      TOKEN = savedToken;
+      COLLAB = validatedProfile;
+      localStorage.setItem('collabData', JSON.stringify(validatedProfile));
+      return true;
+    }
+    clearCollaboratorSessionStorage();
+  }
+
+  return await restoreCollaboratorSessionFromMainAuth();
+}
+
+function logout() {
+  clearCollaboratorSessionStorage();
+  
+  // Also clear main session to ensure secure logout from all devices/roles
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('currentUser');
+
+  document.getElementById('dboard').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  
+  // Restore login display
+  const selector = document.getElementById('roleSelectorContainer');
+  if (selector) selector.style.display = 'none';
+  const tabs = document.querySelector('.auth-tabs');
+  if (tabs) tabs.style.display = 'flex';
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.style.display = 'block';
+    loginForm.classList.add('active');
+  }
+}
 
 /* ─── Init ─── */
 async function initDashboard() {
@@ -2127,6 +2301,139 @@ async function loadSchedule() {
     <div style="margin-top:1rem"><button class="btn-sec btn-sm" onclick="saveScheduleTime('${id}')">💾 Save Schedule</button></div>`;
 }
 
+async function collaboratorFetch(path, options = {}, retry = true) {
+  const requestOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
+  let res = await fetch(API + path, requestOptions);
+  if ((res.status === 401 || res.status === 403) && retry) {
+    const restored = await restoreCollaboratorSessionFromMainAuth();
+    if (!restored || !TOKEN) return res;
+    const retryOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
+    res = await fetch(API + path, retryOptions);
+  }
+  return res;
+}
+
+/* ─── Init ─── */
+document.addEventListener('DOMContentLoaded', async () => {
+  setAutoDetectLoading(true, 'Restoring session...');
+  try {
+    const restored = await ensureCollaboratorSession();
+    if (restored && COLLAB && TOKEN) {
+      initDashboard();
+      return;
+    }
+  } catch (e) {
+    console.error('Collaborator session restoration failed:', e);
+  } finally {
+    setAutoDetectLoading(false);
+  }
+
+  if (TOKEN) {
+    try {
+      const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+      COLLAB = COLLAB || payload;
+      if (COLLAB) {
+        initDashboard();
+        return;
+      }
+    } catch (e) {
+      clearCollaboratorSessionStorage();
+    }
+  }
+
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('dboard').style.display = 'none';
+});
+
+async function autoActivateCollabRole(collaboratorId, mainToken, options = {}) {
+  try {
+    let effectiveToken = mainToken || localStorage.getItem('authToken');
+    if (!effectiveToken) {
+      effectiveToken = await refreshMainSessionToken();
+    }
+    if (!effectiveToken) return false;
+
+    let res = await fetch(API + '/api/collaborator/select-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + effectiveToken
+      },
+      body: JSON.stringify({ collaboratorId })
+    });
+
+    if (res.status === 401) {
+      const refreshedToken = await refreshMainSessionToken();
+      if (!refreshedToken) return false;
+      effectiveToken = refreshedToken;
+      res = await fetch(API + '/api/collaborator/select-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + effectiveToken
+        },
+        body: JSON.stringify({ collaboratorId })
+      });
+    }
+
+    const d = await res.json();
+    if (d.success && d.token && d.collaborator) {
+      setToken(d);
+      return true;
+    }
+
+    if (!options.silentFailure) {
+      clearCollaboratorSessionStorage();
+    }
+    return false;
+  } catch (e) {
+    console.error('Error activating collaborator role:', e);
+    if (!options.silentFailure) {
+      clearCollaboratorSessionStorage();
+    }
+    return false;
+  }
+}
+
+function showCollabRoleSwitcher(roles, mainToken) {
+  const container = document.getElementById('roleSelectorContainer');
+  const list = document.getElementById('roleList');
+  if (!container || !list) return;
+
+  const tabs = document.querySelector('.auth-tabs');
+  if (tabs) tabs.style.display = 'none';
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) loginForm.style.display = 'none';
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) registerForm.style.display = 'none';
+
+  container.style.display = 'flex';
+  list.innerHTML = '';
+
+  roles.forEach(role => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-sec';
+    btn.style.cssText = 'text-align:left; padding:12px; display:flex; flex-direction:column; gap:4px; font-family:inherit; cursor:pointer; width:100%; border-radius:12px; background:rgba(255,255,255,.05); color:#fff; border:1px solid rgba(255,255,255,.1);';
+
+    const icons = { bus: '🚌', cab: '🚗', hotel: '🏨', cafe: '☕' };
+    const label = role.type.charAt(0).toUpperCase() + role.type.slice(1);
+    const icon = icons[role.type] || '🏢';
+
+    btn.innerHTML = `<span style="font-weight:700; color:var(--gold);">${icon} ${label} Collaborator</span><span style="font-size:0.78rem; color:var(--text2);">${role.businessName || role.name}</span>`;
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      const activated = await autoActivateCollabRole(role.id, mainToken, { silentFailure: true });
+      if (!activated) {
+        btn.disabled = false;
+        btn.innerHTML = `<span style="font-weight:700; color:var(--gold);">${icon} ${label} Collaborator</span><span style="font-size:0.78rem; color:var(--text2);">${role.businessName || role.name}</span>`;
+      }
+    };
+    list.appendChild(btn);
+  });
+}
+
 async function saveRunningDays(id) {
   const checks = [...document.querySelectorAll('#scheduleContent input[type=checkbox]')].map(c => c.checked);
   try {
@@ -2263,12 +2570,133 @@ async function saveProfile() {
 }
 
 /* ─── Init ─── */
-if (TOKEN) {
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Check for existing collabToken in localStorage
+  let savedToken = localStorage.getItem('collabToken');
+  let savedCollab = localStorage.getItem('collabData');
+  
+  if (savedToken && savedCollab) {
+    try {
+      TOKEN = savedToken;
+      COLLAB = JSON.parse(savedCollab);
+      initDashboard();
+      return;
+    } catch(e) {
+      console.error('Error parsing saved collaborator data:', e);
+    }
+  }
+
+  // 2. Check for existing main user authToken in localStorage
+  let mainToken = localStorage.getItem('authToken');
+  if (mainToken) {
+    try {
+      // Show loader or status
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) loginForm.style.opacity = '0.5';
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Auto-detecting profile...';
+      }
+      
+      const r = await fetch(API + '/api/collaborator/my-roles', {
+        headers: { 'Authorization': 'Bearer ' + mainToken }
+      });
+      const d = await r.json();
+      
+      if (d.success && d.roles && d.roles.length > 0) {
+        const validRoles = d.roles.filter(role => role.verification_status !== 'suspended');
+        if (validRoles.length === 1) {
+          // Auto-select and activate the role
+          await autoActivateCollabRole(validRoles[0].id, mainToken);
+          return;
+        } else if (validRoles.length > 1) {
+          // Show role switcher inside the login box
+          showCollabRoleSwitcher(validRoles, mainToken);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Error auto-detecting collaborator profile:', e);
+    } finally {
+      const loginForm = document.getElementById('loginForm');
+      if (loginForm) loginForm.style.opacity = '1';
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
+    }
+  }
+
+  // 3. Fallback: if there was a sessionStorage yp_token, try it
+  if (TOKEN) {
+    try {
+      const payload = JSON.parse(atob(TOKEN.split('.')[1]));
+      COLLAB = payload;
+      initDashboard();
+      return;
+    } catch(e) { logout(); }
+  }
+});
+
+async function autoActivateCollabRole(collaboratorId, mainToken) {
   try {
-    const payload = JSON.parse(atob(TOKEN.split('.')[1]));
-    COLLAB = payload;
-    initDashboard();
-  } catch(e) { logout(); }
+    const res = await fetch(API + '/api/collaborator/select-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + mainToken
+      },
+      body: JSON.stringify({ collaboratorId })
+    });
+    const d = await res.json();
+    if (d.success && d.token && d.collaborator) {
+      setToken(d);
+    } else {
+      logout();
+    }
+  } catch (e) {
+    console.error('Error activating collaborator role:', e);
+    logout();
+  }
+}
+
+function showCollabRoleSwitcher(roles, mainToken) {
+  const container = document.getElementById('roleSelectorContainer');
+  const list = document.getElementById('roleList');
+  if (!container || !list) return;
+
+  // Hide login forms and tabs
+  const tabs = document.querySelector('.auth-tabs');
+  if (tabs) tabs.style.display = 'none';
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) loginForm.style.display = 'none';
+  const registerForm = document.getElementById('registerForm');
+  if (registerForm) registerForm.style.display = 'none';
+  
+  // Show container
+  container.style.display = 'flex';
+  list.innerHTML = '';
+
+  roles.forEach(role => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-sec';
+    btn.style.cssText = 'text-align:left; padding:12px; display:flex; flex-direction:column; gap:4px; font-family:inherit; cursor:pointer; width:100%; border-radius:12px; background:rgba(255,255,255,.05); color:#fff; border:1px solid rgba(255,255,255,.1);';
+    
+    const icons = { bus: '🚌', cab: '🚗', hotel: '🏨', cafe: '☕' };
+    const label = role.type.charAt(0).toUpperCase() + role.type.slice(1);
+    const icon = icons[role.type] || '🏢';
+
+    btn.innerHTML = `<span style="font-weight:700; color:var(--gold);">${icon} ${label} Collaborator</span><span style="font-size:0.78rem; color:var(--text2);">${role.businessName || role.name}</span>`;
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+      await autoActivateCollabRole(role.id, mainToken);
+    };
+    list.appendChild(btn);
+  });
 }
 </script>
 </body>

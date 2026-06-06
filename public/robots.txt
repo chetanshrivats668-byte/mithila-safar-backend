@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://mithilasafar.com/sitemap.xml
+Sitemap: https://yatripoint.onrender.com/sitemap.xml
