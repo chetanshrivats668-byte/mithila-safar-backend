@@ -705,7 +705,7 @@ tr:hover td{background:var(--card2)}
       <div class="section">
         <div class="hdr"><h3>Quick Actions</h3></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn-sec" onclick="switchPane('inventory')">Add <span id="qaInvItem">Bus</span></button>
+          <button class="btn-sec" onclick="openAddInventoryFlow()">Add <span id="qaInvItem">Bus</span></button>
           <button class="btn-sec" onclick="switchPane('pricing')">Manage Pricing</button>
           <button class="btn-sec" onclick="switchPane('schedule')">Manage Schedule</button>
           <button class="btn-sec" onclick="switchPane('bookings')">View Bookings</button>
@@ -937,6 +937,8 @@ let BOOKINGS = [];
 let SELECTED_ITEM = null;
 let SELECTED_SEATS = new Set();
 let phoneVerified = false;
+let HOTEL_ROOMS_CACHE = {};
+const DEFAULT_RUNNING_DAYS = [true, true, true, true, true, true, true];
 
 /* ─── Auth ─── */
 function switchAuth(tab) {
@@ -1603,24 +1605,94 @@ async function initDashboard() {
   await Promise.all([loadOverview(), loadInventory(), loadBookings(), loadPricing(), loadSchedule(), loadAnalytics(), loadProfile()]);
 }
 
-function updateBusinessUI() {
-  const types = COLLAB?.serviceCategories || ['bus'];
-  const primary = types[0];
-  const icons = { bus:'🚌', cab:'🚗', hotel:'🏨', cafe:'☕' };
+function getPrimaryServiceType() {
+  const categories = COLLAB?.serviceCategories;
+  if (Array.isArray(categories) && categories.length) return categories[0];
+  if (typeof categories === 'string' && categories) return categories;
+  if (typeof COLLAB?.type === 'string' && COLLAB.type) return COLLAB.type;
+  return 'bus';
+}
 
-  const labels = { bus:'Buses', cab:'Cabs', hotel:'Hotels', cafe:'Cafes' };
-  document.getElementById('invLabel').textContent = labels[primary] || 'Items';
-  document.getElementById('invIcon').textContent = icons[primary] || '📦';
-  document.getElementById('qaInvItem').textContent = labels[primary]||'Item';
-  document.getElementById('addInvLabel').textContent = labels[primary]||'Item';
-  document.getElementById('ovInvLabel').textContent = 'Active ' + labels[primary];
-  document.getElementById('invTitle').innerHTML = (icons[primary]||'📦') + ' Manage ' + labels[primary];
-  document.getElementById('ovInvIcon').textContent = icons[primary] || '📦';
-  document.getElementById('ovInvLabel').textContent = 'Active ' + labels[primary];
-  document.getElementById('sbBizType').textContent = (labels[primary]||'Business') + ' Dashboard';
+function getInventoryConfig() {
+  const primary = getPrimaryServiceType();
+  const configs = {
+    bus: {
+      primary,
+      icon: '🚌',
+      label: 'Buses',
+      singular: 'Bus',
+      endpoint: '/api/collaborator/bus',
+      listKey: 'buses',
+      itemName: item => item.busName || item.name || item.title || 'Unnamed Bus',
+      itemType: item => item.busType || item.type || 'bus',
+      itemRoute: item => item.routeCities?.join(' → ') || (item.source && item.destination ? `${item.source} → ${item.destination}` : 'N/A'),
+      itemPrice: item => item.pricePerKm || item.price || 0,
+      itemCapacity: item => item.totalSeats || item.capacity || 'N/A'
+    },
+    cab: {
+      primary,
+      icon: '🚗',
+      label: 'Cabs',
+      singular: 'Cab',
+      endpoint: '/api/collaborator/cab',
+      listKey: 'cabs',
+      itemName: item => item.busName || item.cabName || item.name || item.title || 'Unnamed Cab',
+      itemType: item => item.busType || item.vehicleType || item.type || 'cab',
+      itemRoute: item => item.operatingCity || item.city || 'N/A',
+      itemPrice: item => item.pricePerKm || item.price || 0,
+      itemCapacity: item => item.totalSeats || item.capacity || 'N/A'
+    },
+    hotel: {
+      primary,
+      icon: '🏨',
+      label: 'Hotels',
+      singular: 'Hotel',
+      endpoint: '/api/collaborator/hotel',
+      listKey: 'hotels',
+      itemName: item => item.name || item.hotelName || item.title || 'Unnamed Hotel',
+      itemType: item => item.city || item.state || 'hotel',
+      itemRoute: item => [item.address, item.city, item.state].filter(Boolean).join(', ') || 'N/A',
+      itemPrice: item => item.pricePerNight || item.price || 0,
+      itemCapacity: item => item.totalRooms || item.capacity || 0
+    },
+    cafe: {
+      primary,
+      icon: '☕',
+      label: 'Cafes',
+      singular: 'Cafe',
+      endpoint: '/api/collaborator/cafe',
+      listKey: 'cafes',
+      itemName: item => item.name || item.cafeName || item.title || 'Unnamed Cafe',
+      itemType: item => item.cuisine || item.type || 'cafe',
+      itemRoute: item => [item.address, item.city].filter(Boolean).join(', ') || 'N/A',
+      itemPrice: item => item.pricePerPerson || item.price || 0,
+      itemCapacity: item => item.totalTables || item.capacity || 0
+    }
+  };
+  return configs[primary] || configs.bus;
+}
+
+function updateBusinessUI() {
+  const cfg = getInventoryConfig();
+
+  document.getElementById('invLabel').textContent = cfg.label || 'Items';
+  document.getElementById('invIcon').textContent = cfg.icon || '📦';
+  document.getElementById('qaInvItem').textContent = cfg.singular || 'Item';
+  document.getElementById('addInvLabel').textContent = cfg.label || 'Items';
+  document.getElementById('ovInvLabel').textContent = 'Active ' + (cfg.label || 'Items');
+  document.getElementById('invTitle').innerHTML = (cfg.icon || '📦') + ' Manage ' + (cfg.label || 'Items');
+  document.getElementById('ovInvIcon').textContent = cfg.icon || '📦';
+  document.getElementById('ovInvLabel').textContent = 'Active ' + (cfg.label || 'Items');
+  document.getElementById('sbBizType').textContent = (cfg.label || 'Business') + ' Dashboard';
 }
 
 /* ─── Pane Switching ─── */
+function openAddInventoryFlow() {
+  switchPane('inventory');
+  showAddItemModal();
+}
+
+
 function switchPane(name) {
   document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
   document.getElementById('pane-' + name).classList.add('active');
@@ -1651,38 +1723,107 @@ async function loadOverview() {
 }
 
 /* ─── Inventory ─── */
+function getScheduleForItem(item) {
+  return item?.schedule || item?.schedules?.[0] || {};
+}
+
+function normalizeRunningDays(rawRunningDays) {
+  if (Array.isArray(rawRunningDays) && rawRunningDays.length === 7) return rawRunningDays.map(Boolean);
+  if (Array.isArray(rawRunningDays) && rawRunningDays.every(day => typeof day === 'string')) {
+    const labels = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return labels.map(label => rawRunningDays.map(day => day.toLowerCase()).includes(label));
+  }
+  return [...DEFAULT_RUNNING_DAYS];
+}
+
+function getScheduleUpdateEndpoint(primary, itemId) {
+  if (primary === 'bus') return `/api/collaborator/bus/${itemId}/schedule`;
+  return null;
+}
+
+async function persistItemSchedule(itemId, schedulePatch) {
+  const primary = getPrimaryServiceType();
+  const item = INVENTORY.find(i => i.id === itemId);
+  if (!item) return { success: false, message: 'Item not found' };
+
+  const currentSchedule = getScheduleForItem(item);
+  const mergedSchedule = { ...currentSchedule, ...schedulePatch };
+  item.schedule = mergedSchedule;
+  item.schedules = [mergedSchedule];
+
+  const endpoint = getScheduleUpdateEndpoint(primary, itemId);
+  if (endpoint) {
+    const r = await collaboratorFetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(schedulePatch)
+    });
+    return await r.json();
+  }
+
+  const updatePath = primary === 'hotel'
+    ? `/api/collaborator/hotel/hotel/${itemId}`
+    : primary === 'cafe'
+      ? `/api/collaborator/cafe/cafe/${itemId}`
+      : `/api/collaborator/cab/${itemId}`;
+
+  const body = primary === 'hotel'
+    ? { schedule: mergedSchedule }
+    : { schedule: mergedSchedule };
+
+  const r = await collaboratorFetch(updatePath, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return await r.json();
+}
+
 async function loadInventory() {
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const cfg = getInventoryConfig();
   try {
-    const r = await fetch(API + '/api/collaborator/bus/', { headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    const path = cfg.primary === 'hotel' ? `${cfg.endpoint}/hotels` : cfg.primary === 'cafe' ? `${cfg.endpoint}/cafes` : `${cfg.endpoint}/`;
+    const r = await collaboratorFetch(path);
     if (r.status === 401) return logout();
     const d = await r.json();
-    INVENTORY = d.buses || d.services || d.listings || [];
+    INVENTORY = d[cfg.listKey] || d.services || d.listings || [];
     renderInventory();
     populateSelectors();
+    if (cfg.primary === 'hotel' && INVENTORY.length) {
+      for (const hotel of INVENTORY) {
+        HOTEL_ROOMS_CACHE[hotel.id] = HOTEL_ROOMS_CACHE[hotel.id] || [];
+      }
+    }
   } catch(e) { console.error(e); }
 }
 
 function renderInventory() {
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
-  if (!INVENTORY.length) { document.getElementById('inventoryList').innerHTML = '<p style="color:var(--text2);grid-column:1/-1;text-align:center;padding:2rem">No items yet. Click "Add" to create one.</p>'; return; }
+  const cfg = getInventoryConfig();
+  const primary = cfg.primary;
+  if (!INVENTORY.length) {
+    document.getElementById('inventoryList').innerHTML = `<p style="color:var(--text2);grid-column:1/-1;text-align:center;padding:2rem">No ${cfg.label.toLowerCase()} yet. Click "Add" to create one.</p>`;
+    return;
+  }
   document.getElementById('inventoryList').innerHTML = INVENTORY.map(item => {
     const status = item.status || 'pending_approval';
     const chipCls = status === 'active' ? 'green' : status === 'pending_approval' ? 'amber' : 'red';
+    const actionButton = primary === 'hotel'
+      ? `<button class="btn-icon" onclick="viewLayout('${item.id}')" title="Room Layout">🏢</button>`
+      : `<button class="btn-icon" onclick="viewLayout('${item.id}')" title="Layout">🗺️</button>`;
     return `<div class="item-card">
       <div class="top">
-        <div><div class="name">${item.busName || item.name || item.title || 'Unnamed'}</div><div class="sub">${item.busType || item.type || primary}</div></div>
+        <div><div class="name">${cfg.itemName(item)}</div><div class="sub">${cfg.itemType(item)}</div></div>
         <span class="chip ${chipCls}">${status.replace('_',' ')}</span>
       </div>
       <div class="body">
-        <div class="fld"><div class="l">Route</div><div class="v">${item.routeCities?.join(' → ') || item.source + '→' + item.destination || 'N/A'}</div></div>
-        <div class="fld"><div class="l">Price</div><div class="v">₹${item.pricePerKm || item.price || 0}</div></div>
-        <div class="fld"><div class="l">Capacity</div><div class="v">${item.totalSeats || item.capacity || 'N/A'}</div></div>
+        <div class="fld"><div class="l">${primary === 'hotel' ? 'Location' : primary === 'cafe' ? 'Address' : 'Route'}</div><div class="v">${cfg.itemRoute(item)}</div></div>
+        <div class="fld"><div class="l">${primary === 'hotel' ? 'Base Price' : 'Price'}</div><div class="v">₹${cfg.itemPrice(item)}</div></div>
+        <div class="fld"><div class="l">${primary === 'hotel' ? 'Rooms' : 'Capacity'}</div><div class="v">${cfg.itemCapacity(item)}</div></div>
         <div class="fld"><div class="l">Bookings</div><div class="v">${item.bookingCount || 0}</div></div>
       </div>
       <div class="foot">
         <button class="btn-icon" onclick="editItem('${item.id}')" title="Edit">✏️</button>
-
+        ${actionButton}
         <button class="btn-icon" onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
       </div>
     </div>`;
@@ -1690,31 +1831,32 @@ function renderInventory() {
 }
 
 function populateSelectors() {
+  const cfg = getInventoryConfig();
   const s1 = document.getElementById('layoutSelector');
   const s2 = document.getElementById('scheduleSelector');
   s1.innerHTML = '<option value="">— Select item —</option>';
   s2.innerHTML = '<option value="">— Select item —</option>';
   INVENTORY.forEach(item => {
-    const name = item.busName || item.name || item.title || item.id;
+    const name = cfg.itemName(item) || item.id;
     s1.innerHTML += `<option value="${item.id}">${name}</option>`;
     s2.innerHTML += `<option value="${item.id}">${name}</option>`;
   });
 }
 
 function showAddItemModal() {
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const primary = getPrimaryServiceType();
   const isHotel = primary === 'hotel';
   const isCafe = primary === 'cafe';
   const isCab = primary === 'cab';
-  const isBus = primary === 'bus';
-  document.getElementById('modalTitle').textContent = '➕ Add New ' + (isHotel ? 'Room' : isCafe ? 'Table' : primary.charAt(0).toUpperCase() + primary.slice(1));
+  document.getElementById('modalTitle').textContent = '➕ Add New ' + (isHotel ? 'Hotel' : isCafe ? 'Cafe' : primary.charAt(0).toUpperCase() + primary.slice(1));
   const fields = isHotel ? `
-    <div class="form-group"><label>Room Name/Number</label><input type="text" id="f_name" placeholder="e.g. Deluxe Room 101" required></div>
-    <div class="form-group"><label>Room Type</label><select id="f_type"><option>Standard</option><option>Deluxe</option><option>Suite</option><option>Penthouse</option></select></div>
-    <div class="form-group"><label>Floor</label><input type="number" id="f_floor" placeholder="1"></div>
-    <div class="form-group"><label>Capacity (guests)</label><input type="number" id="f_capacity" placeholder="2" required></div>
-    <div class="form-group"><label>Price per Night (₹)</label><input type="number" id="f_price" placeholder="1999" required></div>
-    <div class="form-group"><label>Amenities</label><input type="text" id="f_amenities" placeholder="AC, TV, WiFi, ..."></div>
+    <div class="form-group"><label>Hotel Name</label><input type="text" id="f_name" placeholder="e.g. Grand Palace Hotel" required></div>
+    <div class="form-group"><label>Description</label><textarea id="f_description" rows="2" placeholder="Describe your property"></textarea></div>
+    <div class="form-group"><label>Address</label><input type="text" id="f_address" placeholder="Street, locality, landmark" required></div>
+    <div class="form-group"><label>City</label><input type="text" id="f_city" placeholder="Patna" required></div>
+    <div class="form-group"><label>State</label><input type="text" id="f_state" placeholder="Bihar" required></div>
+    <div class="form-group"><label>Total Rooms</label><input type="number" id="f_totalRooms" placeholder="24" min="1" required></div>
+    <div class="form-group"><label>Amenities</label><input type="text" id="f_amenities" placeholder="WiFi, AC, Breakfast, Parking"></div>
   ` : isCafe ? `
     <div class="form-group"><label>Table Name/Number</label><input type="text" id="f_name" placeholder="e.g. Table A1" required></div>
     <div class="form-group"><label>Seating Capacity</label><input type="number" id="f_capacity" placeholder="4" required></div>
@@ -1749,22 +1891,25 @@ function showAddItemModal() {
 }
 
 async function saveItem(e) { e.preventDefault();
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const primary = getPrimaryServiceType();
   const data = { collaboratorId: COLLAB.id, type: primary };
+  let requestPath = '/api/collaborator/bus/';
   if (primary === 'hotel') {
-    data.roomName = document.getElementById('f_name').value.trim();
-    data.roomType = document.getElementById('f_type').value;
-    data.floor = parseInt(document.getElementById('f_floor').value) || 1;
-    data.capacity = parseInt(document.getElementById('f_capacity').value) || 2;
-    data.price = parseInt(document.getElementById('f_price').value) || 0;
+    data.name = document.getElementById('f_name').value.trim();
+    data.description = document.getElementById('f_description').value.trim();
+    data.address = document.getElementById('f_address').value.trim();
+    data.city = document.getElementById('f_city').value.trim();
+    data.state = document.getElementById('f_state').value.trim();
+    data.totalRooms = parseInt(document.getElementById('f_totalRooms').value, 10) || 0;
     data.amenities = document.getElementById('f_amenities').value.split(',').map(s=>s.trim()).filter(Boolean);
-    data.name = data.roomName;
+    requestPath = '/api/collaborator/hotel/create-hotel';
   } else if (primary === 'cafe') {
     data.tableName = document.getElementById('f_name').value.trim();
     data.capacity = parseInt(document.getElementById('f_capacity').value) || 4;
     data.location = document.getElementById('f_type').value;
     data.price = parseInt(document.getElementById('f_price').value) || 0;
     data.name = data.tableName;
+    requestPath = '/api/collaborator/cafe/';
   } else if (primary === 'cab') {
     data.busName = document.getElementById('f_name').value.trim();
     data.busType = document.getElementById('f_type').value;
@@ -1773,6 +1918,7 @@ async function saveItem(e) { e.preventDefault();
     data.operatingCity = document.getElementById('f_cabCity').value.trim();
     data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
     data.name = data.busName;
+    requestPath = '/api/collaborator/cab/';
   } else {
     data.busName = document.getElementById('f_name').value.trim();
     data.busType = document.getElementById('f_type').value;
@@ -1783,17 +1929,47 @@ async function saveItem(e) { e.preventDefault();
     data.name = data.busName;
   }
   try {
-    const r = await fetch(API + '/api/collaborator/bus/', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN}, body: JSON.stringify(data) });
+    const r = await collaboratorFetch(requestPath, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const d = await r.json();
-    if (d.success) { closeModal('itemModal'); loadInventory(); }
+    if (d.success) {
+      if (primary === 'hotel' && d.hotel?.id && data.totalRooms > 0) {
+        await collaboratorFetch('/api/collaborator/hotel/rooms/generate-room-layout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hotelId: d.hotel.id, totalRooms: data.totalRooms })
+        });
+      }
+      closeModal('itemModal');
+      await loadInventory();
+      const createdItemId = d.hotel?.id || d.cafe?.id || d.cab?.id || d.bus?.id || d.id;
+      if (createdItemId) {
+        const layoutSelector = document.getElementById('layoutSelector');
+        const scheduleSelector = document.getElementById('scheduleSelector');
+        if (layoutSelector) layoutSelector.value = createdItemId;
+        if (scheduleSelector) scheduleSelector.value = createdItemId;
+        if (primary === 'hotel') {
+          await loadLayout();
+        }
+        await loadSchedule();
+      }
+      switchPane('inventory');
+    }
     else alert(d.message || 'Failed to save');
   } catch(e) { alert('Error saving item'); }
 }
 
 async function deleteItem(id) {
   if (!confirm('Delete this item?')) return;
+  const primary = getPrimaryServiceType();
+  const deletePath = primary === 'hotel'
+    ? '/api/collaborator/hotel/hotel/' + id
+    : primary === 'cafe'
+      ? '/api/collaborator/cafe/' + id
+      : primary === 'cab'
+        ? '/api/collaborator/cab/' + id
+        : '/api/collaborator/bus/' + id;
   try {
-    const r = await fetch(API + '/api/collaborator/bus/' + id, { method:'DELETE', headers: { 'Authorization': 'Bearer ' + TOKEN } });
+    const r = await collaboratorFetch(deletePath, { method:'DELETE' });
     const d = await r.json();
     if (d.success) loadInventory();
     else alert(d.message || 'Delete failed');
@@ -1829,24 +2005,34 @@ let ACTIVE_SEAT_ID = null;
 async function loadLayout() {
   const id = document.getElementById('layoutSelector').value;
   if (!id) { document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Select an item to view layout</p>'; return; }
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const primary = getPrimaryServiceType();
   try {
     SELECTED_ITEM = id;
     SELECTED_SEATS.clear();
     closePopover();
-    
-    const r = await fetch(API + '/api/collaborator/bus/' + id + '/seats?date=' + new Date().toISOString().split('T')[0], { headers: { 'Authorization': 'Bearer ' + TOKEN } });
-    if (r.status === 401) return logout();
-    const d = await r.json();
-    const seats = d.seats || [];
+
+    let seats = [];
     const item = INVENTORY.find(i => i.id === id);
-    const capacity = item?.totalSeats || item?.capacity || seats.length || 20;
-    
-    // Store in global JS state
+
+    if (primary === 'hotel') {
+      const r = await collaboratorFetch('/api/collaborator/hotel/rooms/rooms/' + id);
+      if (r.status === 401) return logout();
+      const d = await r.json();
+      seats = d.rooms || [];
+      HOTEL_ROOMS_CACHE[id] = seats;
+    } else {
+      const endpoint = primary === 'cab' ? '/api/collaborator/cab/' : primary === 'cafe' ? '/api/collaborator/cafe/' : '/api/collaborator/bus/';
+      const r = await collaboratorFetch(endpoint + id + '/seats?date=' + new Date().toISOString().split('T')[0]);
+      if (r.status === 401) return logout();
+      const d = await r.json();
+      seats = d.seats || [];
+    }
+
+    const capacity = item?.totalSeats || item?.capacity || item?.totalRooms || seats.length || 20;
+
     SEATS_DATA = seats;
     FILTER_STATE = 'all';
-    
-    // Show/hide containers based on type
+
     if (primary === 'bus') {
       document.getElementById('seatKpiContainer').style.display = 'grid';
       document.getElementById('seatFilterContainer').style.display = 'flex';
@@ -1856,7 +2042,7 @@ async function loadLayout() {
       document.getElementById('seatKpiContainer').style.display = 'none';
       document.getElementById('seatFilterContainer').style.display = 'none';
     }
-    
+
     renderSeatMap(seats, capacity, primary, item);
   } catch(e) { console.error(e); document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Error loading layout</p>'; }
 }
@@ -1940,19 +2126,59 @@ function renderSeatMap(seats, capacity, type, item) {
   const isHotel = type === 'hotel';
   const isCafe = type === 'cafe';
   
-  if (isHotel || isCafe) {
-    document.getElementById('layoutTitle').textContent = isHotel ? 'Room Layout' : 'Table Layout';
+  if (isHotel) {
+    document.getElementById('layoutTitle').textContent = 'Room Layout';
+    document.getElementById('layoutActions').style.display = 'flex';
+    document.getElementById('layoutLegend').style.display = 'flex';
+
+    const floorsMap = {};
+    (seats || []).forEach((room, idx) => {
+      const fallbackFloor = Math.floor(idx / 10) + 1;
+      const floor = parseInt(room.floor || room.floorNumber || fallbackFloor, 10) || 1;
+      if (!floorsMap[floor]) floorsMap[floor] = [];
+      floorsMap[floor].push(room);
+    });
+
+    const floorEntries = Object.entries(floorsMap).sort((a, b) => Number(a[0]) - Number(b[0]));
+    if (!floorEntries.length) {
+      document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">No rooms generated yet for this hotel.</p>';
+      return;
+    }
+
+    const html = floorEntries.map(([floor, rooms]) => `
+      <div style="margin-bottom:1.25rem;padding:1rem;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
+          <h4 style="margin:0;color:var(--gold);font-size:.9rem">Floor ${floor}</h4>
+          <span class="chip gold">${rooms.length} rooms</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
+          ${rooms.map(room => `
+            <button type="button" class="seat ${room.status || 'available'}" onclick="updateHotelRoomStatus('${room.id}', '${room.status || 'available'}')" title="${room.roomNumber || room.id}: ${room.status || 'available'}" style="width:100%;height:auto;padding:.8rem .5rem;flex-direction:column;gap:4px;font-size:.72rem;border-radius:14px">
+              <span style="font-size:1.2rem">🛏️</span>
+              <span>Room ${room.roomNumber || room.id}</span>
+              <small style="opacity:.85">${room.roomType || 'Standard'}</small>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('seatMapContainer').innerHTML = html;
+    return;
+  }
+
+  if (isCafe) {
+    document.getElementById('layoutTitle').textContent = 'Table Layout';
     document.getElementById('layoutActions').style.display = 'flex';
     document.getElementById('layoutLegend').style.display = 'flex';
     const cnt = Math.min(seats.length || capacity, 30);
     const gridSize = Math.ceil(Math.sqrt(cnt));
     let html = '<div style="display:grid;grid-template-columns:repeat(' + gridSize + ',1fr);gap:10px;max-width:400px;margin:0 auto">';
     for (let i = 0; i < cnt; i++) {
-      const s = seats[i] || { id: (type==='hotel'?'RM':'TB')+(i+1), status:'available', number: (type==='hotel'?'Room ':'Table ')+(i+1) };
+      const s = seats[i] || { id: 'TB' + (i + 1), status:'available', number:'Table ' + (i + 1) };
       const cls = s.status || 'available';
-      const label = isHotel ? '🛏️' : '🍽️';
       html += `<div class="seat ${cls}" onclick="toggleSeat('${s.id}')" title="${s.number||s.id}: ${s.status}" style="width:auto;height:auto;padding:.8rem .4rem;flex-direction:column;gap:4px;font-size:.65rem;border-radius:12px">
-        <span style="font-size:1.2rem">${label}</span>
+        <span style="font-size:1.2rem">🍽️</span>
         <span>${s.number||s.id}</span>
       </div>`;
     }
@@ -2293,19 +2519,25 @@ async function loadSchedule() {
   const id = document.getElementById('scheduleSelector').value;
   if (!id) { document.getElementById('scheduleContent').innerHTML = '<p style="color:var(--text2)">Select an item to view schedule</p>'; return; }
   const item = INVENTORY.find(i => i.id === id);
+  const primary = getPrimaryServiceType();
   const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  const runningDays = item?.schedules?.[0]?.runningDays || [true,true,true,true,true,true,true];
+  const schedule = getScheduleForItem(item);
+  const runningDays = normalizeRunningDays(schedule.runningDays);
+  const startLabel = primary === 'hotel' ? 'Check-in Starts' : primary === 'cafe' ? 'Opening Time' : primary === 'cab' ? 'Start Time' : 'Departure Time';
+  const endLabel = primary === 'hotel' ? 'Check-out Until' : primary === 'cafe' ? 'Closing Time' : primary === 'cab' ? 'End Time' : 'Arrival Time';
+  const startValue = schedule.departureTime || schedule.startTime || schedule.openTime || schedule.checkInTime || '06:00';
+  const endValue = schedule.arrivalTime || schedule.endTime || schedule.closeTime || schedule.checkOutTime || '22:00';
   document.getElementById('scheduleContent').innerHTML = `
     <div style="margin-bottom:1rem">
-      <h4 style="font-size:.9rem;color:#fff;margin-bottom:.8rem">Running Days</h4>
+      <h4 style="font-size:.9rem;color:#fff;margin-bottom:.8rem">Working Days</h4>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${days.map((d,i) => `
         <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:${runningDays[i]?'var(--gold-dim)':'var(--card)'};border-radius:8px;border:1px solid ${runningDays[i]?'rgba(245,197,24,.2)':'var(--border)'};cursor:pointer;font-size:.8rem;color:${runningDays[i]?'var(--gold)':'var(--text2)'}">
           <input type="checkbox" ${runningDays[i]?'checked':''} onchange="saveRunningDays('${id}')" style="accent-color:var(--gold)"> ${d.substring(0,3)}
         </label>`).join('')}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="form-group"><label>Departure Time</label><input type="time" id="schedDepart" value="${item?.schedules?.[0]?.departureTime || '06:00'}" onchange="saveScheduleTime('${id}')"></div>
-      <div class="form-group"><label>Arrival Time</label><input type="time" id="schedArrive" value="${item?.schedules?.[0]?.arrivalTime || '10:30'}" onchange="saveScheduleTime('${id}')"></div>
+      <div class="form-group"><label>${startLabel}</label><input type="time" id="schedDepart" value="${startValue}" onchange="saveScheduleTime('${id}')"></div>
+      <div class="form-group"><label>${endLabel}</label><input type="time" id="schedArrive" value="${endValue}" onchange="saveScheduleTime('${id}')"></div>
     </div>
     <div style="margin-top:1rem"><button class="btn-sec btn-sm" onclick="saveScheduleTime('${id}')">💾 Save Schedule</button></div>`;
 }
@@ -2446,19 +2678,25 @@ function showCollabRoleSwitcher(roles, mainToken) {
 async function saveRunningDays(id) {
   const checks = [...document.querySelectorAll('#scheduleContent input[type=checkbox]')].map(c => c.checked);
   try {
-    await fetch(API + '/api/collaborator/bus/' + id + '/schedule', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
-      body: JSON.stringify({ runningDays: checks }) });
+    await persistItemSchedule(id, { runningDays: checks });
+    loadSchedule();
   } catch(e) {}
 }
 
 async function saveScheduleTime(id) {
   const dep = document.getElementById('schedDepart')?.value;
   const arr = document.getElementById('schedArrive')?.value;
+  const primary = getPrimaryServiceType();
+  const payload = primary === 'hotel'
+    ? { checkInTime: dep, checkOutTime: arr }
+    : primary === 'cafe'
+      ? { openTime: dep, closeTime: arr }
+      : primary === 'cab'
+        ? { startTime: dep, endTime: arr }
+        : { departureTime: dep, arrivalTime: arr };
   try {
-    const r = await fetch(API + '/api/collaborator/bus/' + id + '/schedule', { method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
-      body: JSON.stringify({ departureTime: dep, arrivalTime: arr }) });
-    const d = await r.json();
-    if (d.success) alert('✅ Schedule saved');
+    const d = await persistItemSchedule(id, payload);
+    if (d.success !== false) alert('✅ Schedule saved');
   } catch(e) { alert('Error saving schedule'); }
 }
 

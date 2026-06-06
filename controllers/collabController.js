@@ -10,6 +10,7 @@ function buildCollaboratorSessionPayload(collab) {
     email: collab.email,
     name: collab.name,
     collaborator: true,
+    type: (collab.type || (Array.isArray(collab.serviceCategories) ? collab.serviceCategories[0] : collab.serviceCategories) || 'business'),
     serviceCategories: collab.serviceCategories || [],
     permissions: collab.serviceCategories || []
   };
@@ -25,6 +26,7 @@ function serializeCollaborator(collab) {
     city: collab.city,
     state: collab.state,
     businessName: collab.businessName,
+    type: (collab.type || (Array.isArray(collab.serviceCategories) ? collab.serviceCategories[0] : collab.serviceCategories) || 'business'),
     serviceCategories: collab.serviceCategories || [],
     upiId: collab.upiId,
     description: collab.description || collab.businessDescription || '',
@@ -282,6 +284,34 @@ export async function selectCollaboratorRole(req, res) {
   } catch (e) {
     console.error('Select collaborator role error:', e);
     return res.status(500).json({ success: false, message: 'Failed to activate collaborator role' });
+  }
+}
+
+export async function validateToken(req, res) {
+  try {
+    // Token is already validated by middleware
+    const collabId = req.collaborator.collaboratorId;
+    const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+    if (!collab) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+    
+    // Check if account is suspended
+    if (collab.verification_status === 'suspended') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Account suspended. Please contact support.' 
+      });
+    }
+    
+    return res.json({ 
+      success: true, 
+      valid: true,
+      collaborator: serializeCollaborator(collab)
+    });
+  } catch (e) {
+    console.error('Validate token error:', e);
+    return res.status(500).json({ success: false, message: 'Token validation failed' });
   }
 }
 

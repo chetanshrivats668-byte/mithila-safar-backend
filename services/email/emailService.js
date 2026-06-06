@@ -226,4 +226,60 @@ export async function sendVerificationEmail(email, userName, otpCode) {
   console.log(`👉 Code: ${otpCode}`);
   console.log('═══════════════════════════════════════════════════════════════');
   return false;
+
 }
+
+
+export function getEmailDeliveryStatus() {
+  return {
+    configured: Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS),
+    host: SMTP_HOST || '',
+    port: Number(SMTP_PORT),
+    from: SMTP_FROM,
+    user: SMTP_USER || '',
+    devBypassEnabled: process.env.DEV_OTP_BYPASS === 'true'
+  };
+}
+
+let transporterVerified = false;
+let transporterVerifyAttempted = false;
+
+export async function verifyEmailTransport() {
+  if (!transporter) {
+    return {
+      success: false,
+      configured: false,
+      message: 'SMTP configuration missing. Set SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM to enable real email delivery.'
+    };
+  }
+
+  if (transporterVerified) {
+    return {
+      success: true,
+      configured: true,
+      message: `SMTP transport already verified for ${SMTP_HOST}:${SMTP_PORT}`
+    };
+  }
+
+  try {
+    await transporter.verify();
+    transporterVerified = true;
+    transporterVerifyAttempted = true;
+    console.log(`[EMAIL SERVICE]: SMTP transport verified successfully for ${SMTP_HOST}:${SMTP_PORT}`);
+    return {
+      success: true,
+      configured: true,
+      message: `SMTP transport verified successfully for ${SMTP_HOST}:${SMTP_PORT}`
+    };
+  } catch (err) {
+    transporterVerifyAttempted = true;
+    transporterVerified = false;
+    console.error(`[EMAIL SERVICE ERROR]: SMTP transport verification failed for ${SMTP_HOST}:${SMTP_PORT}:`, err.message);
+    return {
+      success: false,
+      configured: true,
+      message: `SMTP transport verification failed: ${err.message}`
+    };
+  }
+}
+

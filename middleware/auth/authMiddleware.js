@@ -117,11 +117,37 @@ export function requireModuleAccess(...moduleNames) {
     if (!req.collaborator) {
       return res.status(401).json({ success: false, message: 'Unauthorized: Collaborator access required' });
     }
-    const categories = req.collaborator.serviceCategories || [];
-    const hasAccess = moduleNames.some(m => categories.includes(m));
-    if (!hasAccess) {
-      return res.status(403).json({ success: false, message: `Forbidden: You do not have access to the ${moduleNames.join('/')} module` });
+
+    const rawCategories = req.collaborator.serviceCategories;
+    const normalizedCategories = Array.isArray(rawCategories)
+      ? rawCategories
+      : rawCategories
+        ? [rawCategories]
+        : [];
+    const normalizedRoleType = typeof req.collaborator.type === 'string' ? req.collaborator.type.toLowerCase() : '';
+    const categories = normalizedCategories
+      .map(category => typeof category === 'string' ? category.toLowerCase() : '')
+      .filter(Boolean);
+
+    if (normalizedRoleType && !categories.includes(normalizedRoleType)) {
+      categories.push(normalizedRoleType);
     }
+
+    const requestedModules = moduleNames
+      .map(moduleName => typeof moduleName === 'string' ? moduleName.toLowerCase() : '')
+      .filter(Boolean);
+
+    const hasAccess = !requestedModules.length || requestedModules.some(moduleName => categories.includes(moduleName));
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: `Forbidden: You do not have access to the ${moduleNames.join('/')} module`,
+        collaboratorModules: categories
+      });
+    }
+
+    req.collaborator.serviceCategories = categories;
     next();
   };
 }
