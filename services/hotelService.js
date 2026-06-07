@@ -7,14 +7,10 @@ export async function createHotel(db, data) {
   const hotelData = {
     id: hotelId,
     collaboratorId: data.collaboratorId,
-    name: data.name,
-    description: data.description || '',
+    hotelName: data.hotelName || data.name || '',
     address: data.address || '',
-    city: data.city,
-    state: data.state || '',
-    images: data.images || [],
-    amenities: data.amenities || [],
-    totalRooms: data.totalRooms || 0,
+    city: data.city || '',
+    amenities: Array.isArray(data.amenities) ? data.amenities : [],
     status: 'pending_approval',
     createdAt: now,
     updatedAt: now
@@ -77,17 +73,16 @@ export async function deleteHotel(db, hotelId) {
 export async function createRoom(db, data) {
   const roomId = 'ROM' + Date.now().toString(36).toUpperCase();
   const now = new Date().toISOString();
+  const totalRooms = Number(data.totalRooms || 0);
   const roomData = {
     id: roomId,
     hotelId: data.hotelId,
-    roomNumber: data.roomNumber,
-    type: data.type,
-    price: data.price,
-    capacity: data.capacity,
-    status: 'available',
-    amenities: data.amenities || [],
-    createdAt: now,
-    updatedAt: now
+    roomType: data.roomType || data.type || '',
+    price: Number(data.price || 0),
+    totalRooms,
+    availableRooms: data.availableRooms !== undefined ? Number(data.availableRooms) : totalRooms,
+    amenities: Array.isArray(data.amenities) ? data.amenities : [],
+    createdAt: now
   };
   return await dbCreate('hotel_rooms', roomId, roomData);
 }
@@ -95,7 +90,7 @@ export async function createRoom(db, data) {
 export async function getRoomsByHotel(db, hotelId) {
   return await dbList('hotel_rooms', {
     filters: [{ column: 'hotelId', op: 'eq', value: hotelId }],
-    orderBy: { column: 'roomNumber', ascending: true }
+    orderBy: { column: 'roomType', ascending: true }
   });
 }
 

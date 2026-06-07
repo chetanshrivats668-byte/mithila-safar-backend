@@ -257,11 +257,17 @@
                 </div>
                 <div class="form-group">
                     <label>Boarding Point</label>
-                    <input type="text" id="carBoarding" placeholder="e.g. Station Road, Near SBI Bank" required autocomplete="off">
+                    <div style="display:flex;gap:.4rem;align-items:center;">
+                        <input type="text" id="carBoarding" placeholder="e.g. Station Road, Near SBI Bank" required autocomplete="off" style="flex:1;">
+                        <button type="button" id="boardingLocBtn" onclick="fillLocationFromGPS('carBoarding')" title="Use my current location" style="padding:.45rem .65rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;white-space:nowrap;flex-shrink:0;">📍</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Dropping Point</label>
-                    <input type="text" id="carDropping" placeholder="e.g. Airport, Bus Stand" required autocomplete="off">
+                    <div style="display:flex;gap:.4rem;align-items:center;">
+                        <input type="text" id="carDropping" placeholder="e.g. Airport, Bus Stand" required autocomplete="off" style="flex:1;">
+                        <button type="button" id="droppingLocBtn" onclick="fillLocationFromGPS('carDropping')" title="Use my current location" style="padding:.45rem .65rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;white-space:nowrap;flex-shrink:0;">📍</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Date</label>

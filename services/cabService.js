@@ -7,16 +7,14 @@ export async function createCab(db, data) {
   const cabData = {
     id: cabId,
     collaboratorId: data.collaboratorId,
-    vehicleModel: data.vehicleModel,
-    vehicleNumber: data.vehicleNumber,
-    type: data.type,
-    capacity: data.capacity,
-    acAvailable: data.acAvailable !== undefined ? data.acAvailable : true,
-    pricePerKm: data.pricePerKm,
+    cabName: data.cabName || data.vehicleModel || '',
+    cabNumber: data.cabNumber || data.vehicleNumber || '',
     driverName: data.driverName || '',
     driverPhone: data.driverPhone || '',
+    cabType: data.cabType || data.type || '',
+    fare: Number(data.fare ?? data.pricePerKm ?? 0),
+    route: data.route || data.city || '',
     status: 'pending_approval',
-    city: data.city,
     createdAt: now,
     updatedAt: now
   };
@@ -48,8 +46,8 @@ export async function getCabsByCollaborator(db, collaboratorId) {
   }
   
   return dbList('collaborator_cabs', {
-    filters: [{ field: 'collaboratorId', operator: 'eq', value: collaboratorId }],
-    orderBy: { field: 'createdAt', direction: 'desc' }
+    filters: [{ column: 'collaboratorId', op: 'eq', value: collaboratorId }],
+    orderBy: { column: 'createdAt', ascending: false }
   });
 }
 

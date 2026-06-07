@@ -7,14 +7,9 @@ export async function createCafe(db, data) {
   const cafeData = {
     id: cafeId,
     collaboratorId: data.collaboratorId,
-    name: data.name,
-    description: data.description || '',
+    cafeName: data.cafeName || data.name || '',
     address: data.address || '',
-    city: data.city,
-    state: data.state || '',
-    images: data.images || [],
-    menu: data.menu || [],
-    totalTables: data.totalTables || 0,
+    city: data.city || '',
     status: 'pending_approval',
     createdAt: now,
     updatedAt: now
@@ -84,11 +79,9 @@ export async function createTable(db, data) {
     id: tableId,
     cafeId: data.cafeId,
     tableNumber: data.tableNumber,
-    capacity: data.capacity,
+    capacity: Number(data.capacity || 2),
     status: 'available',
-    location: data.location || 'indoor',
-    createdAt: now,
-    updatedAt: now
+    createdAt: now
   };
   await dbCreate('cafe_tables', tableId, tableData);
   return { id: tableId, ...tableData };

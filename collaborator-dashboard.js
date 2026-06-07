@@ -796,15 +796,20 @@ function closeAddBusModal() {
 async function handleAddBus(e) {
   e.preventDefault();
   const busId = document.getElementById('addBusForm').dataset.busId;
+  const routeCities = document.getElementById('busRouteCities').value
+    .split(',')
+    .map(city => city.trim())
+    .filter(Boolean);
+
   const busData = {
-    name: document.getElementById('busName').value,
-    type: document.getElementById('busType').value,
-    number_plate: document.getElementById('busNumberPlate').value,
-    total_seats: parseInt(document.getElementById('busTotalSeats').value),
-    seat_layout: document.getElementById('busSeatLayout').value,
-    price_per_km: parseFloat(document.getElementById('busPricePerKm').value),
-    driver_name: document.getElementById('busDriverName').value,
-    route_cities: document.getElementById('busRouteCities').value
+    busName: document.getElementById('busName').value.trim(),
+    busType: document.getElementById('busType').value,
+    numberPlate: document.getElementById('busNumberPlate').value.trim(),
+    totalSeats: parseInt(document.getElementById('busTotalSeats').value, 10),
+    seatLayout: document.getElementById('busSeatLayout').value,
+    pricePerKm: parseFloat(document.getElementById('busPricePerKm').value),
+    driverName: document.getElementById('busDriverName').value.trim(),
+    routeCities
   };
 
   try {

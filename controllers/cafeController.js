@@ -6,14 +6,18 @@ export async function createCafe(req, res) {
     const data = req.body;
     data.collaboratorId = req.collaborator.collaboratorId;
     const cafe = await cafeService.createCafe(req.app.locals.db, data);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'create_cafe',
-      entityType: 'collaborator_cafes',
-      entityId: cafe.id,
-      details: { cafeName: cafe.cafeName }
-    });
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'create_cafe',
+        entityType: 'collaborator_cafes',
+        entityId: cafe.id,
+        details: { cafeName: cafe.cafeName }
+      });
+    } catch (auditError) {
+      console.error('Create cafe audit log error:', auditError);
+    }
     res.status(201).json({ success: true, message: 'Cafe created and pending approval', cafe });
   } catch (e) {
     console.error('Create cafe error:', e);
@@ -109,14 +113,18 @@ export async function createTable(req, res) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     const table = await cafeService.createTable(req.app.locals.db, data);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'create_table',
-      entityType: 'cafe_tables',
-      entityId: table.id,
-      details: { cafeId: data.cafeId, tableNumber: table.tableNumber }
-    });
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'create_table',
+        entityType: 'cafe_tables',
+        entityId: table.id,
+        details: { cafeId: data.cafeId, tableNumber: table.tableNumber }
+      });
+    } catch (auditError) {
+      console.error('Create table audit log error:', auditError);
+    }
     res.status(201).json({ success: true, message: 'Table created', table });
   } catch (e) {
     console.error('Create table error:', e);

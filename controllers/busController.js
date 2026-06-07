@@ -13,14 +13,23 @@ export async function createBus(req, res) {
     }
 
     const bus = await busService.createBus(req.app.locals.db, data);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'create_bus',
-      entityType: 'collaborator_buses',
-      entityId: bus.id,
-      details: { busName: bus.busName, route: `${bus.from} → ${bus.to}` }
-    });
+
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'create_bus',
+        entityType: 'collaborator_buses',
+        entityId: bus.id,
+        details: {
+          busName: bus.busName,
+          route: Array.isArray(bus.routeCities) ? bus.routeCities.join(' → ') : ''
+        }
+      });
+    } catch (auditError) {
+      console.error('Create bus audit log error:', auditError);
+    }
+
     res.status(201).json({ success: true, message: 'Bus created and pending approval', bus });
   } catch (e) {
     console.error('Create bus error:', e);

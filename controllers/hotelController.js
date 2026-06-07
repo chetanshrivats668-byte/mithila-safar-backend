@@ -6,14 +6,18 @@ export async function createHotel(req, res) {
     const data = req.body;
     data.collaboratorId = req.collaborator.collaboratorId;
     const hotel = await hotelService.createHotel(req.app.locals.db, data);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'create_hotel',
-      entityType: 'collaborator_hotels',
-      entityId: hotel.id,
-      details: { hotelName: hotel.hotelName }
-    });
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'create_hotel',
+        entityType: 'collaborator_hotels',
+        entityId: hotel.id,
+        details: { hotelName: hotel.hotelName }
+      });
+    } catch (auditError) {
+      console.error('Create hotel audit log error:', auditError);
+    }
     res.status(201).json({ success: true, message: 'Hotel created and pending approval', hotel });
   } catch (e) {
     console.error('Create hotel error:', e);
@@ -109,14 +113,18 @@ export async function createRoom(req, res) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     const room = await hotelService.createRoom(req.app.locals.db, data);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'create_room',
-      entityType: 'hotel_rooms',
-      entityId: room.id,
-      details: { hotelId: data.hotelId, roomNumber: room.roomNumber }
-    });
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'create_room',
+        entityType: 'hotel_rooms',
+        entityId: room.id,
+        details: { hotelId: data.hotelId, roomType: room.roomType }
+      });
+    } catch (auditError) {
+      console.error('Create room audit log error:', auditError);
+    }
     res.status(201).json({ success: true, message: 'Room created', room });
   } catch (e) {
     console.error('Create room error:', e);

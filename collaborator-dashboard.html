@@ -200,6 +200,32 @@ tr:hover td{background:var(--card2)}
   border-color: rgba(245, 197, 24, 0.3);
 }
 
+/* Day Selection Pills */
+.day-pill-btn {
+  background: var(--card);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+.day-pill-btn:hover {
+  background: var(--card2);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.day-pill-btn.active {
+  background: var(--gold-dim);
+  color: var(--gold);
+  border-color: rgba(245, 197, 24, 0.3);
+  box-shadow: 0 0 12px rgba(245, 197, 24, 0.1);
+}
+
+
 /* Bus chassis container */
 .bus-chassis {
   background: #0f172a;
@@ -2528,18 +2554,42 @@ async function loadSchedule() {
   const startValue = schedule.departureTime || schedule.startTime || schedule.openTime || schedule.checkInTime || '06:00';
   const endValue = schedule.arrivalTime || schedule.endTime || schedule.closeTime || schedule.checkOutTime || '22:00';
   document.getElementById('scheduleContent').innerHTML = `
-    <div style="margin-bottom:1rem">
-      <h4 style="font-size:.9rem;color:#fff;margin-bottom:.8rem">Working Days</h4>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${days.map((d,i) => `
-        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:${runningDays[i]?'var(--gold-dim)':'var(--card)'};border-radius:8px;border:1px solid ${runningDays[i]?'rgba(245,197,24,.2)':'var(--border)'};cursor:pointer;font-size:.8rem;color:${runningDays[i]?'var(--gold)':'var(--text2)'}">
-          <input type="checkbox" ${runningDays[i]?'checked':''} onchange="saveRunningDays('${id}')" style="accent-color:var(--gold)"> ${d.substring(0,3)}
-        </label>`).join('')}</div>
+    <div style="margin-bottom:1.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;flex-wrap:wrap;gap:8px">
+        <h4 style="font-size:.9rem;color:#fff;margin:0">Working Days</h4>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectDays('all')" style="padding:4px 8px;font-size:.7rem">All</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectDays('weekdays')" style="padding:4px 8px;font-size:.7rem">Weekdays</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectDays('weekends')" style="padding:4px 8px;font-size:.7rem">Weekends</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectDays('clear')" style="padding:4px 8px;font-size:.7rem">Clear</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${days.map((d,i) => `
+          <button type="button" class="day-pill-btn ${runningDays[i]?'active':''}" data-day-index="${i}" onclick="toggleDayPill(this)">
+            ${d.substring(0,3)}
+          </button>
+        `).join('')}
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <div class="form-group"><label>${startLabel}</label><input type="time" id="schedDepart" value="${startValue}" onchange="saveScheduleTime('${id}')"></div>
-      <div class="form-group"><label>${endLabel}</label><input type="time" id="schedArrive" value="${endValue}" onchange="saveScheduleTime('${id}')"></div>
+    <div style="margin-bottom:1.5rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;flex-wrap:wrap;gap:8px">
+        <h4 style="font-size:.9rem;color:#fff;margin:0">Timing Settings</h4>
+        <div style="display:flex;gap:6px">
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectTime('morning')" style="padding:4px 8px;font-size:.7rem">Morning</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectTime('afternoon')" style="padding:4px 8px;font-size:.7rem">Afternoon</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectTime('evening')" style="padding:4px 8px;font-size:.7rem">Evening</button>
+          <button type="button" class="btn-sec btn-sm" onclick="quickSelectTime('night')" style="padding:4px 8px;font-size:.7rem">Night</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="form-group"><label>${startLabel}</label><input type="time" id="schedDepart" value="${startValue}"></div>
+        <div class="form-group"><label>${endLabel}</label><input type="time" id="schedArrive" value="${endValue}"></div>
+      </div>
     </div>
-    <div style="margin-top:1rem"><button class="btn-sec btn-sm" onclick="saveScheduleTime('${id}')">💾 Save Schedule</button></div>`;
+    <div style="margin-top:1.5rem">
+      <button class="btn-sec btn-sm" id="saveScheduleBtn" onclick="saveUnifiedSchedule('${id}')" style="background:var(--gold);color:var(--navy);font-weight:700;border-color:var(--gold)">💾 Save Day & Time Settings</button>
+    </div>`;
 }
 
 async function collaboratorFetch(path, options = {}, retry = true) {
@@ -2675,29 +2725,101 @@ function showCollabRoleSwitcher(roles, mainToken) {
   });
 }
 
-async function saveRunningDays(id) {
-  const checks = [...document.querySelectorAll('#scheduleContent input[type=checkbox]')].map(c => c.checked);
-  try {
-    await persistItemSchedule(id, { runningDays: checks });
-    loadSchedule();
-  } catch(e) {}
+function toggleDayPill(btn) {
+  btn.classList.toggle('active');
 }
 
-async function saveScheduleTime(id) {
+function quickSelectDays(type) {
+  const pills = document.querySelectorAll('.day-pill-btn');
+  pills.forEach((pill, idx) => {
+    if (type === 'all') {
+      pill.classList.add('active');
+    } else if (type === 'weekdays') {
+      if (idx >= 1 && idx <= 5) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    } else if (type === 'weekends') {
+      if (idx === 0 || idx === 6) {
+        pill.classList.add('active');
+      } else {
+        pill.classList.remove('active');
+      }
+    } else if (type === 'clear') {
+      pill.classList.remove('active');
+    }
+  });
+}
+
+function quickSelectTime(preset) {
+  const depInput = document.getElementById('schedDepart');
+  const arrInput = document.getElementById('schedArrive');
+  if (!depInput || !arrInput) return;
+  if (preset === 'morning') {
+    depInput.value = '06:00';
+    arrInput.value = '12:00';
+  } else if (preset === 'afternoon') {
+    depInput.value = '12:00';
+    arrInput.value = '17:00';
+  } else if (preset === 'evening') {
+    depInput.value = '17:00';
+    arrInput.value = '21:00';
+  } else if (preset === 'night') {
+    depInput.value = '21:00';
+    arrInput.value = '06:00';
+  }
+}
+
+async function saveUnifiedSchedule(id) {
+  const pills = [...document.querySelectorAll('.day-pill-btn')];
+  const runningDays = [false, false, false, false, false, false, false];
+  pills.forEach(pill => {
+    const idx = parseInt(pill.getAttribute('data-day-index'), 10);
+    if (pill.classList.contains('active')) {
+      runningDays[idx] = true;
+    }
+  });
+
   const dep = document.getElementById('schedDepart')?.value;
   const arr = document.getElementById('schedArrive')?.value;
   const primary = getPrimaryServiceType();
-  const payload = primary === 'hotel'
+  const timeFields = primary === 'hotel'
     ? { checkInTime: dep, checkOutTime: arr }
     : primary === 'cafe'
       ? { openTime: dep, closeTime: arr }
       : primary === 'cab'
         ? { startTime: dep, endTime: arr }
         : { departureTime: dep, arrivalTime: arr };
+
+  const payload = {
+    runningDays,
+    ...timeFields
+  };
+
   try {
+    const btn = document.getElementById('saveScheduleBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+    }
     const d = await persistItemSchedule(id, payload);
-    if (d.success !== false) alert('✅ Schedule saved');
-  } catch(e) { alert('Error saving schedule'); }
+    if (d.success !== false) {
+      alert('✅ Schedule saved successfully');
+      loadSchedule();
+    } else {
+      alert(d.message || 'Error saving schedule');
+    }
+  } catch(e) {
+    console.error('Error saving schedule:', e);
+    alert('Error saving schedule');
+  } finally {
+    const btn = document.getElementById('saveScheduleBtn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '💾 Save Day & Time Settings';
+    }
+  }
 }
 
 /* ─── Analytics ─── */

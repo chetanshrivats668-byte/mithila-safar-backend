@@ -82,7 +82,8 @@ function closeModal(id) {
 }
 
 function closeOnOverlay(e, id) {
-    if (e.target === e.currentTarget) closeModal(id);
+    // Disabled: clicking outside the modal no longer closes it
+    // Users must use the × close button instead
 }
 
 function switchModals(closeId, openId) {
@@ -2019,6 +2020,86 @@ function toggleLiveLocation(cb) {
     );
 }
 
+// ========== GPS FILL FOR INPUTS ==========
+function fillLocationFromGPS(inputId) {
+    if (!navigator.geolocation) {
+        notify('Geolocation is not supported by your browser', 'error');
+        return;
+    }
+    var btn = document.getElementById(
+        inputId === 'carBoarding' ? 'boardingLocBtn' : 'droppingLocBtn'
+    );
+    var originalText = btn ? btn.textContent : '📍';
+    if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+    navigator.geolocation.getCurrentPosition(
+        function(pos) {
+            var lat = pos.coords.latitude;
+            var lng = pos.coords.longitude;
+            // Reverse geocode using OpenStreetMap Nominatim (free, no API key)
+            fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var addr = data.address || {};
+                    // Build a short readable address
+                    var parts = [
+                        addr.road || addr.pedestrian || addr.footway || addr.path || '',
+                        addr.neighbourhood || addr.suburb || addr.village || addr.town || addr.city_district || '',
+                        addr.city || addr.county || addr.state_district || ''
+                    ].filter(Boolean);
+                    var readable = parts.slice(0, 3).join(', ') || data.display_name || (lat.toFixed(5) + ', ' + lng.toFixed(5));
+                    var input = document.getElementById(inputId);
+                    if (input) input.value = readable;
+                    notify('📍 Location filled!', 'success');
+                })
+                .catch(function() {
+                    // Fallback to raw coordinates
+                    var input = document.getElementById(inputId);
+                    if (input) input.value = lat.toFixed(6) + ', ' + lng.toFixed(6);
+                    notify('📍 Location filled (coordinates)', 'success');
+                })
+                .finally(function() {
+                    if (btn) { btn.textContent = originalText; btn.disabled = false; }
+                });
+        },
+        function(err) {
+            if (btn) { btn.textContent = originalText; btn.disabled = false; }
+            if (err.code === err.PERMISSION_DENIED) {
+                notify('Location permission denied. Please allow location in browser settings.', 'error');
+            } else {
+                notify('Could not get your location. Please try again.', 'error');
+            }
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+
+// Pre-request location permission silently on page load
+function requestLocationPermissionSilently() {
+    if (!navigator.geolocation) return;
+    navigator.permissions && navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+        if (result.state === 'prompt') {
+            // Trigger the permission dialog once so browser caches the decision
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    // Cache coordinates for later use
+                    window._cachedUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                },
+                function() { /* user denied — that's OK */ },
+                { enableHighAccuracy: false, timeout: 8000 }
+            );
+        } else if (result.state === 'granted') {
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    window._cachedUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                },
+                function() {},
+                { enableHighAccuracy: false, timeout: 8000 }
+            );
+        }
+    });
+}
+
 // ========== COLLABORATOR FORM ==========
 function showCollabForm() {
     var type = document.getElementById('collabType').value;
@@ -2106,6 +2187,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Restore session
     restoreSession();
     bootstrapAuthenticatedExperience();
+
+    // Ask for location permission silently on load
+    requestLocationPermissionSilently();
 
     // Populate location selects
     populateLocationSelects();

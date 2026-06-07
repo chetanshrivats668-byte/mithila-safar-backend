@@ -324,11 +324,10 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
       <div id="services-list"><div class="empty"><p>Loading…</p></div></div>
     </div>
 
-    <!-- Collaborators Pane -->
     <div class="pane" id="pane-collaborators">
-      <div class="sec-hdr">Business Partner Accounts</div>
+      <div class="sec-hdr">✅ Accepted Business Partners</div>
       <div class="search-bar">
-        <input type="text" id="collabSearchInput" placeholder="🔍 Search by partner name..." onkeydown="if(event.key==='Enter')searchCollaborator()">
+        <input type="text" id="collabSearchInput" placeholder="🔍 Search by Partner ID or name..." onkeydown="if(event.key==='Enter')searchCollaborator()">
         <button onclick="searchCollaborator()">Search</button>
         <button class="sec" onclick="clearCollabSearch()">Clear</button>
       </div>
@@ -682,11 +681,21 @@ async function loadCollaborators() {
   } catch(e) { console.error(e); }
 }
 
-/* -- Search Collaborator by Name -- */
+/* -- Search Collaborator by ID or Name -- */
 let allCollaborators = [];
 async function searchCollaborator() {
   const q = document.getElementById('collabSearchInput').value.trim().toLowerCase();
   if (!q) { loadCollaborators(); return; }
+  // First search locally (supports ID search)
+  if (allCollaborators.length) {
+    const results = allCollaborators.filter(c =>
+      (c.id || '').toLowerCase().includes(q) ||
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.businessName || '').toLowerCase().includes(q)
+    );
+    if (results.length) { renderCollaboratorsList(results); return; }
+  }
   try {
     const r = await fetch('/api/admin/search-collaborator/' + encodeURIComponent(q), { headers: { 'Authorization': 'Bearer ' + T } });
     if (r.status === 401) return out();
@@ -694,7 +703,7 @@ async function searchCollaborator() {
     if (d.success && d.collaborators?.length) {
       renderCollaboratorsList(d.collaborators);
     } else {
-      document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No partner found with name: ' + q + '</p></div>';
+      document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No partner found matching: <strong>' + q + '</strong></p></div>';
     }
   } catch(e) { console.error(e); }
 }
@@ -703,20 +712,29 @@ function clearCollabSearch() {
   loadCollaborators();
 }
 function renderCollaboratorsList(arr) {
-  if (!arr.length) { document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No collaborators</p></div>'; return; }
+  // Only show verified (accepted) partners in this section
+  const verified = arr.filter(c => c.verification_status === 'verified' || c.status === 'verified');
+  if (!verified.length) { document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No accepted partners found</p></div>'; return; }
   window._collabMap = {};
-  arr.forEach(c => window._collabMap[c.id] = c);
-  document.getElementById('collaborators-list').innerHTML = arr.map(c => renderCollabCard(c)).join('');
+  verified.forEach(c => window._collabMap[c.id] = c);
+  allCollaborators = verified;
+  document.getElementById('collaborators-list').innerHTML = verified.map(c => renderCollabCard(c)).join('');
 }
 function renderCollabCard(c) {
+  const shortId = (c.id || '').slice(0, 12).toUpperCase();
   return `
     <div class="card" style="cursor:pointer" onclick="showCollabDetail('${c.id}')">
       <div class="card-head">
         <div>
-          <div class="card-id">${c.name}</div>
+          <div class="card-id">🤝 ${c.name}</div>
           <div class="card-name">${c.businessName || 'N/A'} · ${c.city || 'N/A'}</div>
         </div>
         ${badge(c.verification_status)}
+      </div>
+      <div style="background:rgba(245,197,24,.08);border:1px solid rgba(245,197,24,.2);border-radius:8px;padding:.4rem .8rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.6rem;">
+        <span style="font-size:.65rem;color:var(--text2);font-weight:700;text-transform:uppercase;">Partner ID</span>
+        <span style="font-size:.82rem;color:var(--gold);font-family:monospace;font-weight:700;letter-spacing:.05em;flex:1;">${c.id}</span>
+        <button onclick="event.stopPropagation();copyId('${c.id}')" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:.75rem;padding:2px 6px;border-radius:4px;" title="Copy ID">📋</button>
       </div>
       <div class="card-grid">
         <div class="info"><div class="lbl">Email</div><div class="val">${c.email || 'N/A'}</div></div>
@@ -724,19 +742,23 @@ function renderCollabCard(c) {
         <div class="info"><div class="lbl">Services</div><div class="val">${(c.serviceCategories || []).join(', ') || 'N/A'}</div></div>
         <div class="info"><div class="lbl">UPI ID</div><div class="val">${c.upiId || 'N/A'}</div></div>
         <div class="info"><div class="lbl">Joined</div><div class="val">${fmt(c.createdAt || Date.now())}</div></div>
-        <div class="info"><div class="lbl">Status</div><div class="val">${c.status || 'pending'}</div></div>
+        <div class="info"><div class="lbl">City</div><div class="val">${c.city || 'N/A'}</div></div>
       </div>
-      ${c.verification_status === 'pending' ? `<div class="card-actions">
-        <button class="act approve" onclick="event.stopPropagation();verifyCollaborator('${c.id}','verify')">✅ Accept Registration</button>
-        <button class="act reject" onclick="event.stopPropagation();verifyCollaborator('${c.id}','reject')">❌ Reject</button>
-      </div>` : c.verification_status !== 'verified' ? `<div class="card-actions">
-        <button class="act approve" onclick="event.stopPropagation();verifyCollaborator('${c.id}','verify')">✅ Verify Account</button>
-        <button class="act reject" onclick="event.stopPropagation();verifyCollaborator('${c.id}','reject')">❌ Reject</button>
+      <div class="card-actions">
+        <button class="act secondary" onclick="event.stopPropagation();showCollabDetail('${c.id}')">📋 View Details</button>
         ${c.verification_status !== 'suspended' ? `<button class="act reject" onclick="event.stopPropagation();suspendCollaborator('${c.id}')">⛔ Suspend</button>` : `<button class="act approve" onclick="event.stopPropagation();unsuspendCollaborator('${c.id}')">🔄 Unsuspend</button>`}
-      </div>` : `<div class="card-actions">
-        ${c.verification_status !== 'suspended' ? `<button class="act reject" onclick="event.stopPropagation();suspendCollaborator('${c.id}')">⛔ Suspend Account</button>` : `<button class="act approve" onclick="event.stopPropagation();unsuspendCollaborator('${c.id}')">🔄 Unsuspend Account</button>`}
-      </div>`}
+      </div>
     </div>`;
+}
+
+function copyId(id) {
+  navigator.clipboard.writeText(id).then(() => {
+    const el = document.createElement('div');
+    el.textContent = '✅ Partner ID copied!';
+    el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:.5rem 1.2rem;border-radius:8px;font-weight:700;font-size:.85rem;z-index:9999;';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+  });
 }
 
 /* -- Collaborator Actions -- */
@@ -790,9 +812,9 @@ function showCollabDetail(id) {
   const c = window._collabMap && window._collabMap[id];
   if (!c) return;
   _selectedCollabId = id;
-  document.getElementById('modalTitle').textContent = c.name + ' — Details';
+  document.getElementById('modalTitle').textContent = '🤝 ' + c.name;
   const fields = [
-    { label: 'ID', val: c.id, full: true },
+    { label: '🆔 Partner ID', val: `<span style="font-family:monospace;color:var(--gold);font-size:1rem;font-weight:800;letter-spacing:.05em;">${c.id}</span> <button onclick="copyId('${c.id}')" style="background:none;border:1px solid rgba(245,197,24,.3);color:var(--gold);cursor:pointer;font-size:.72rem;padding:2px 8px;border-radius:4px;margin-left:6px;">📋 Copy</button>`, full: true },
     { label: 'Name', val: c.name },
     { label: 'Email', val: c.email },
     { label: 'Phone', val: c.phone },
@@ -805,7 +827,6 @@ function showCollabDetail(id) {
     { label: 'State', val: c.state || 'N/A' },
     { label: 'Address', val: c.address || 'N/A', full: true },
     { label: 'UPI ID', val: c.upiId || 'N/A' },
-    { label: 'Status', val: c.status || 'N/A' },
     { label: 'Verification Status', val: c.verification_status || 'N/A' },
     { label: 'Rating', val: c.rating !== undefined ? c.rating : 'N/A' },
     { label: 'Total Bookings', val: c.totalBookings !== undefined ? c.totalBookings : 'N/A' },
@@ -813,8 +834,7 @@ function showCollabDetail(id) {
     { label: 'Bank Details', val: c.bankDetails ? (typeof c.bankDetails === 'object' ? Object.entries(c.bankDetails).map(([k,v]) => k + ': ' + v).join(', ') : c.bankDetails) : 'N/A', full: true },
     { label: 'Aadhaar URL', val: c.aadhaarUrl ? `<a href="${c.aadhaarUrl}" target="_blank" style="color:#f5c518">View</a>` : 'N/A', full: true },
     { label: 'PAN URL', val: c.panUrl ? `<a href="${c.panUrl}" target="_blank" style="color:#f5c518">View</a>` : 'N/A', full: true },
-    { label: 'Created At', val: fmtDateTime(c.createdAt) },
-    { label: 'Updated At', val: fmtDateTime(c.updatedAt) },
+    { label: 'Joined', val: fmtDateTime(c.createdAt) },
     { label: 'Verified At', val: fmtDateTime(c.verifiedAt) },
     { label: 'Verified By', val: c.verifiedBy || 'N/A' }
   ];
