@@ -167,7 +167,7 @@ export async function sendVerificationEmail(email, userName, otpCode) {
     <div class="container">
       <div class="header">
         <h1>Yatri Point</h1>
-          <div class="tagline">JAI MATA DI</div>
+          <div class="tagline">TRAVEL & STAY</div>
       </div>
       <div class="content">
         <p class="greeting">Namaste ${displayName},</p>

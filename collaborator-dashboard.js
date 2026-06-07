@@ -5,20 +5,71 @@ const state = {
   currentPage: 'overview',
   buses: [],
   bookings: [],
-  earnings: []
+  earnings: [],
+  isValidating: false
 };
 
 const API_BASE = '/api/collaborator';
 
 // ========== INITIALIZATION ==========
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (state.token && state.collaborator) {
-    showDashboard();
-    loadDashboardData();
+    // Try to validate the existing token
+    const isValid = await validateStoredToken();
+    if (isValid) {
+      showDashboard();
+      loadDashboardData();
+    } else {
+      // Token invalid or expired - clear and show login
+      clearSession();
+      showLoginForm();
+    }
   } else {
     showLoginForm();
   }
 });
+
+// ========== TOKEN VALIDATION ==========
+async function validateStoredToken() {
+  if (!state.token) return false;
+  if (state.isValidating) return false;
+  
+  state.isValidating = true;
+  try {
+    const res = await fetch(`${API_BASE}/validate-token`, {
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${state.token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.collaborator) {
+        // Update stored collaborator data with fresh data from server
+        state.collaborator = data.collaborator;
+        localStorage.setItem('collabData', JSON.stringify(data.collaborator));
+        return true;
+      }
+    }
+    
+    // Token expired or invalid
+    return false;
+  } catch (err) {
+    console.error('Token validation error:', err);
+    return false;
+  } finally {
+    state.isValidating = false;
+  }
+}
+
+function clearSession() {
+  state.token = null;
+  state.collaborator = null;
+  localStorage.removeItem('collabToken');
+  localStorage.removeItem('collabData');
+}
 
 // ========== AUTH FUNCTIONS ==========
 function switchAuthTab(tab) {

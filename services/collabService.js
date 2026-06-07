@@ -49,6 +49,14 @@ function normalizeList(arr) {
   return (arr || []).map(normalize);
 }
 
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+function normalizePhone(phone) {
+  return typeof phone === 'string' ? phone.replace(/\D/g, '').slice(-10) : '';
+}
+
 export async function getCollaboratorById(db, collabId) {
   const mem = memoryDb.collabs.get(collabId);
   if (mem) return normalize(mem);
@@ -59,20 +67,22 @@ export async function getCollaboratorById(db, collabId) {
 }
 
 export async function getCollaboratorByEmail(db, email) {
-  const found = Array.from(memoryDb.collabs.values()).find(c => c.email === email);
+  const normalizedEmail = normalizeEmail(email);
+  const found = Array.from(memoryDb.collabs.values()).find(c => normalizeEmail(c.email) === normalizedEmail);
   if (found) return normalize(found);
   if (isSupabaseAvailable()) {
-    const results = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: email }] });
+    const results = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: normalizedEmail }] });
     return normalize(results.length > 0 ? results[0] : null);
   }
   return null;
 }
 
 export async function getCollaboratorByPhone(db, phone) {
-  const found = Array.from(memoryDb.collabs.values()).find(c => c.phone === phone);
+  const normalizedPhone = normalizePhone(phone);
+  const found = Array.from(memoryDb.collabs.values()).find(c => normalizePhone(c.phone) === normalizedPhone);
   if (found) return normalize(found);
   if (isSupabaseAvailable()) {
-    const results = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: phone }] });
+    const results = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: normalizedPhone }] });
     return normalize(results.length > 0 ? results[0] : null);
   }
   return null;
@@ -85,8 +95,8 @@ export async function createCollaborator(db, data) {
     id: collabId,
     userId: data.userId || null,
     name: data.name,
-    email: data.email,
-    phone: data.phone,
+    email: normalizeEmail(data.email),
+    phone: normalizePhone(data.phone),
     phoneVerified: data.phoneVerified || false,
     password: data.password,
     businessName: data.businessName,

@@ -2360,7 +2360,9 @@ footer {
 
     .mobile-auth .btn-login,
     .mobile-auth .btn-signup {
-        min-height: 44px;
+        min-height: 36px;
+        font-size: 0.8rem;
+        padding: 0.3rem;
     }
 
     /* Target specific inline styled items to force them friendly on mobile */

@@ -3,6 +3,12 @@ import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
 
+function isCollaboratorApproved(collab) {
+  const verificationStatus = collab?.verification_status || collab?.verificationStatus || '';
+  const status = collab?.status || '';
+  return verificationStatus === 'verified' || status === 'approved' || status === 'active';
+}
+
 function buildCollaboratorSessionPayload(collab) {
   return {
     collaboratorId: collab.id,
@@ -58,12 +64,18 @@ export async function registerCollaborator(req, res) {
 
     const existingEmail = await collabService.getCollaboratorByEmail(req.app.locals.db, data.email);
     if (existingEmail) {
-      return res.status(409).json({ success: false, message: 'Email already registered' });
+      const message = isCollaboratorApproved(existingEmail)
+        ? 'This collaborator account is already approved. Please log in with your email and password.'
+        : 'You already have a pending collaborator application. Please wait for admin review.';
+      return res.status(409).json({ success: false, message });
     }
 
     const existingPhone = await collabService.getCollaboratorByPhone(req.app.locals.db, data.phone);
     if (existingPhone) {
-      return res.status(409).json({ success: false, message: 'Phone number already registered' });
+      const message = isCollaboratorApproved(existingPhone)
+        ? 'This collaborator account is already approved. Please log in with your email and password.'
+        : 'You already have a pending collaborator application. Please wait for admin review.';
+      return res.status(409).json({ success: false, message });
     }
 
     const hashedPassword = crypto.createHash('sha256').update(data.password).digest('hex');
@@ -99,6 +111,13 @@ export async function loginCollaborator(req, res) {
 
     if (collab.verification_status === 'suspended') {
       return res.status(403).json({ success: false, message: 'Account suspended. Contact support for assistance.' });
+    }
+
+    if (!isCollaboratorApproved(collab)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your collaborator account is pending admin approval. Please wait for approval before logging in.'
+      });
     }
 
     const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
@@ -225,7 +244,7 @@ export async function getMyCollaboratorRoles(req, res) {
     }
 
     const collaborators = await collabService.getCollaboratorsByUserId(req.app.locals.db, userId);
-    const roles = collaborators.map(collab => ({
+    const roles = collaborators.filter(collab => isCollaboratorApproved(collab)).map(collab => ({
       id: collab.id,
       userId: collab.userId || null,
       type: (collab.serviceCategories || [])[0] || 'business',
@@ -279,6 +298,15 @@ export async function selectCollaboratorRole(req, res) {
       return res.status(403).json({ success: false, message: 'This collaborator profile is suspended' });
     }
 
+    if (!isCollaboratorApproved(collab)) {
+      return res.status(403).json({ success: false, message: 'This collaborator profile is still awaiting admin approval' });
+    }
+
+    if (!collab.userId) {
+      await collabService.updateCollaborator(req.app.locals.db, collaboratorId, { userId });
+      collab.userId = userId;
+    }
+
     const token = generateToken(buildCollaboratorSessionPayload(collab));
     return res.json(buildCollaboratorSessionResponse(collab, token));
   } catch (e) {
@@ -301,6 +329,13 @@ export async function validateToken(req, res) {
       return res.status(403).json({ 
         success: false, 
         message: 'Account suspended. Please contact support.' 
+      });
+    }
+
+    if (!isCollaboratorApproved(collab)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Collaborator account is awaiting admin approval.'
       });
     }
     
