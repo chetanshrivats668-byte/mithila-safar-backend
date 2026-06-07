@@ -35,72 +35,70 @@
     --text: #2c3e50;
 }
 
-/* ===== DARK MODE ===== */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #0f0f13;
-        --card: #1a1a24;
-        --text: #e8eaf0;
-        --light: #1a1a24;
-        --dark: #e8eaf0;
-        --border: #2c2c3e;
-        --gray: #8892a0;
-        --gray-light: #3a3a52;
-        --white: #1a1a24;
-        --shadow: 0 2px 8px rgba(0, 0, 0, .4);
-        --shadow-lg: 0 10px 30px rgba(0, 0, 0, .6);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
-    }
+/* ===== PERMANENT DARK THEME ===== */
+:root {
+    --bg: #0f0f13;
+    --card: #1a1a24;
+    --text: #e8eaf0;
+    --light: #1a1a24;
+    --dark: #e8eaf0;
+    --border: #2c2c3e;
+    --gray: #8892a0;
+    --gray-light: #3a3a52;
+    --white: #1a1a24;
+    --shadow: 0 2px 8px rgba(0, 0, 0, .4);
+    --shadow-lg: 0 10px 30px rgba(0, 0, 0, .6);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, .4);
+}
 
-    body {
-        background: var(--bg);
-        color: var(--text);
-    }
+body {
+    background: var(--bg);
+    color: var(--text);
+}
 
-    .booking-section,
-    .modal-content,
-    .result-card,
-    .service-card,
-    .pay-amount-box,
-    .pay-advance,
-    .qr-section,
-    .ticket,
-    .booking-card {
-        background: var(--card);
-        color: var(--text);
-    }
+.booking-section,
+.modal-content,
+.result-card,
+.service-card,
+.pay-amount-box,
+.pay-advance,
+.qr-section,
+.ticket,
+.booking-card {
+    background: var(--card);
+    color: var(--text);
+}
 
-    .form-group input,
-    .form-group select,
-    .modal-form input,
-    .modal-form select,
-    .modal-form textarea {
-        background: #252535;
-        color: var(--text);
-        border-color: var(--border);
-    }
+.form-group input,
+.form-group select,
+.modal-form input,
+.modal-form select,
+.modal-form textarea {
+    background: #252535;
+    color: var(--text);
+    border-color: var(--border);
+}
 
-    .back-btn {
-        background: #252535;
-        border-color: var(--border);
-        color: var(--text);
-    }
+.back-btn {
+    background: #252535;
+    border-color: var(--border);
+    color: var(--text);
+}
 
-    .tag {
-        background: #252535;
-        color: var(--primary-light);
-    }
+.tag {
+    background: #252535;
+    color: var(--primary-light);
+}
 
-    .filter-chip {
-        background: #252535;
-        border-color: var(--border);
-        color: var(--text);
-    }
+.filter-chip {
+    background: #252535;
+    border-color: var(--border);
+    color: var(--text);
+}
 
-    footer {
-        background: #08080e;
-        color: #e8eaf0;
-    }
+footer {
+    background: #08080e;
+    color: #e8eaf0;
 }
 
 html {
@@ -2516,19 +2514,18 @@ footer {
     }
 }
 
-@media (prefers-color-scheme: dark) {
-    .live-location-toggle {
-        background: linear-gradient(135deg, #1b2e1e, #1e2b1e);
-        border-color: #2e6b33;
-    }
+/* PERMANENT DARK THEME FOR LIVE LOCATION */
+.live-location-toggle {
+    background: linear-gradient(135deg, #1b2e1e, #1e2b1e);
+    border-color: #2e6b33;
+}
 
-    .live-location-toggle strong {
-        color: #81c784;
-    }
+.live-location-toggle strong {
+    color: #81c784;
+}
 
-    .live-location-toggle small {
-        color: #66bb6a;
-    }
+.live-location-toggle small {
+    color: #66bb6a;
 }
 
 /* === PAYMENT TABS === */
