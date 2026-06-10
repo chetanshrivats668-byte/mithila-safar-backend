@@ -1,5 +1,6 @@
 import { get as dbGet, create as dbCreate, update as dbUpdate, remove as dbRemove } from '../db.js';
 import crypto from 'crypto';
+import { trackEmailOtpVerification, trackEmailSend } from './performanceMonitor.js';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_RATE_LIMIT_MS = 60 * 1000; // 1 minute cooldown between resends
@@ -23,6 +24,7 @@ export function generateOTPCode() {
  * @param {string} otpCode - Generated 6-digit OTP code
  */
 export async function saveEmailOTP(db, email, otpCode) {
+  const startTime = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
   const expiresAt = Date.now() + OTP_EXPIRY_MS;
   const otpData = {
@@ -40,12 +42,18 @@ export async function saveEmailOTP(db, email, otpCode) {
     try {
       await dbCreate('email_otps', normalizedEmail, otpData);
       console.log(`💾 [OTP HELPER]: OTP stored in Supabase for ${normalizedEmail}`);
+      const duration = Date.now() - startTime;
+      trackEmailSend(duration, true); // Success
       return;
     } catch (err) {
       console.warn(`[OTP HELPER]: Supabase write failed for ${normalizedEmail}. Falling back to In-Memory store. Error:`, err.message);
+      const duration = Date.now() - startTime;
+      trackEmailSend(duration, false); // Failure
     }
   } else {
     console.log(`💾 [OTP HELPER]: Database uninitialized. OTP stored In-Memory for ${normalizedEmail}`);
+    const duration = Date.now() - startTime;
+    trackEmailSend(duration, true); // Success (memory fallback)
   }
 }
 
@@ -58,7 +66,7 @@ export async function saveEmailOTP(db, email, otpCode) {
 export async function checkOTPRequestRateLimit(db, email) {
   const normalizedEmail = email.toLowerCase().trim();
 
-  // First check in-memory cache for immediate response
+  // Fast path: Check in-memory cache first
   const cached = inMemoryOtpStore.get(normalizedEmail);
   if (cached) {
     const elapsed = Date.now() - new Date(cached.createdAt).getTime();
@@ -67,6 +75,7 @@ export async function checkOTPRequestRateLimit(db, email) {
     }
   }
 
+  // Only check database if memory cache doesn't exist or has expired
   if (db) {
     try {
       const data = await dbGet('email_otps', normalizedEmail);
@@ -75,6 +84,8 @@ export async function checkOTPRequestRateLimit(db, email) {
         if (elapsed < OTP_RATE_LIMIT_MS) {
           return true; // Rate-limited in database
         }
+        // Cache the result to avoid future database hits
+        inMemoryOtpStore.set(normalizedEmail, data);
       }
     } catch (err) {
       console.warn('[OTP HELPER]: Database rate-limit check failed. Relying on In-Memory cache.', err.message);
@@ -92,54 +103,61 @@ export async function checkOTPRequestRateLimit(db, email) {
  * @returns {Promise<Object>} Verification status object
  */
 export async function verifyEmailOTP(db, email, otpCode) {
+  const startTime = Date.now();
   const normalizedEmail = email.toLowerCase().trim();
   const cleanedOtp = otpCode.toString().trim();
 
-  // Check DEV OTP bypass
-  if (process.env.DEV_OTP_BYPASS === 'true' && cleanedOtp === '112233') {
-    console.warn(`🚨 [DEV OTP BYPASS] Accepted OTP 112233 for ${normalizedEmail}`);
-    // Clear stores upon successful bypass to avoid lingering state
-    inMemoryOtpStore.delete(normalizedEmail);
-    if (db) {
-      try { await dbRemove('email_otps', normalizedEmail); } catch (e) {}
-    }
-    return { success: true };
+  // Fast path: Check memory cache first
+  const cachedData = inMemoryOtpStore.get(normalizedEmail);
+  if (cachedData) {
+    const result = await verifyFromMemory(db, normalizedEmail, cleanedOtp, cachedData);
+    const duration = Date.now() - startTime;
+    trackEmailOtpVerification(duration, true); // Cache hit
+    return result;
   }
 
+  // Slow path: Check database
   let data = null;
   let source = 'memory';
 
-  // 1. Try to fetch from database if available
   if (db) {
     try {
       const result = await dbGet('email_otps', normalizedEmail);
       if (result) {
         data = result;
         source = 'supabase';
+        // Cache the database result for future requests
+        inMemoryOtpStore.set(normalizedEmail, data);
       }
     } catch (err) {
       console.warn('[OTP HELPER]: Database OTP read failed. Checking local memory cache...', err.message);
     }
   }
 
-  // 2. Fall back to local memory store if not found in database or if database failed
-  if (!data) {
-    data = inMemoryOtpStore.get(normalizedEmail);
-    source = 'memory';
-  }
-
   // If no OTP found anywhere
   if (!data) {
+    const duration = Date.now() - startTime;
+    trackEmailOtpVerification(duration, false); // Cache miss
     return {
       success: false,
       message: 'No verification code found or session expired. Please request a new code.'
     };
   }
 
+  const result = await verifyFromMemory(db, normalizedEmail, cleanedOtp, data);
+  const duration = Date.now() - startTime;
+  trackEmailOtpVerification(duration, false); // Cache miss
+  return result;
+}
+
+/**
+ * Helper function to verify OTP from memory or cached data
+ */
+async function verifyFromMemory(db, normalizedEmail, cleanedOtp, data) {
   // Expiry check
   if (Date.now() > data.expiresAt) {
     inMemoryOtpStore.delete(normalizedEmail);
-    if (db && source === 'supabase') {
+    if (db) {
       try { await dbRemove('email_otps', normalizedEmail); } catch (e) {}
     }
     return {
@@ -151,7 +169,7 @@ export async function verifyEmailOTP(db, email, otpCode) {
   // Brute-force protection check
   if (data.attemptsCount >= MAX_ATTEMPTS) {
     inMemoryOtpStore.delete(normalizedEmail);
-    if (db && source === 'supabase') {
+    if (db) {
       try { await dbRemove('email_otps', normalizedEmail); } catch (e) {}
     }
     return {
@@ -164,13 +182,21 @@ export async function verifyEmailOTP(db, email, otpCode) {
   if (data.otpCode !== cleanedOtp) {
     const newAttempts = (data.attemptsCount || 0) + 1;
     
-    // Update local cache
+    // Update local cache immediately for fast response
     data.attemptsCount = newAttempts;
     inMemoryOtpStore.set(normalizedEmail, data);
 
+    // Update database asynchronously (fire-and-forget)
+    if (db) {
+      dbUpdate('email_otps', normalizedEmail, { attemptsCount: newAttempts })
+        .catch(updateErr => {
+          console.warn('[OTP HELPER]: Failed to update attempt count in database:', updateErr.message);
+        });
+    }
+
     if (newAttempts >= MAX_ATTEMPTS) {
       inMemoryOtpStore.delete(normalizedEmail);
-      if (db && source === 'supabase') {
+      if (db) {
         try { await dbRemove('email_otps', normalizedEmail); } catch (e) {}
       }
       return {
@@ -178,13 +204,6 @@ export async function verifyEmailOTP(db, email, otpCode) {
         message: 'Too many incorrect attempts. This code is now invalidated. Please request a new one.'
       };
     } else {
-      if (db && source === 'supabase') {
-        try {
-          await dbUpdate('email_otps', normalizedEmail, { attemptsCount: newAttempts });
-        } catch (updateErr) {
-          console.warn('[OTP HELPER]: Failed to update attempt count in database:', updateErr.message);
-        }
-      }
       const remaining = MAX_ATTEMPTS - newAttempts;
       return {
         success: false,
@@ -195,8 +214,8 @@ export async function verifyEmailOTP(db, email, otpCode) {
 
   // Success: delete document immediately to prevent replay attacks
   inMemoryOtpStore.delete(normalizedEmail);
-  if (db && source === 'supabase') {
-    try {
+  if (db) {
+    try { 
       await dbRemove('email_otps', normalizedEmail);
     } catch (deleteErr) {
       console.warn('[OTP HELPER]: Failed to clean up OTP in database after success:', deleteErr.message);

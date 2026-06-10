@@ -1,4 +1,36 @@
 import { verifyAccessToken } from '../../utils/jwt/jwtHelper.js';
+import * as collabService from '../../services/collabService.js';
+
+async function ensureActiveCollaborator(decoded, req, res) {
+  if (!decoded?.collaboratorId) {
+    return { ok: false };
+  }
+
+  const db = req.app?.locals?.db;
+  if (!db) {
+    return { ok: true };
+  }
+
+  const collab = await collabService.getCollaboratorById(db, decoded.collaboratorId);
+  if (!collab) {
+    res.status(404).json({ success: false, message: 'Collaborator profile not found' });
+    return { ok: false };
+  }
+
+  const verificationStatus = collab.verification_status || collab.verificationStatus || '';
+  const status = collab.status || '';
+
+  if (verificationStatus === 'suspended' || status === 'suspended' || status === 'inactive') {
+    res.status(403).json({
+      success: false,
+      message: 'Forbidden: This collaborator account is suspended or inactive.'
+    });
+    return { ok: false };
+  }
+
+  req.collaboratorProfile = collab;
+  return { ok: true };
+}
 
 /**
  * Standard user authentication middleware (Access Token verification)
@@ -60,7 +92,6 @@ export function requireAdmin(req, res, next) {
       return res.status(403).json({ success: false, message: 'Forbidden: Admin privileges required' });
     }
 
-    // Explicitly block temporary sessions from accessing admin functions
     if (decoded.temporarySession) {
       return res.status(403).json({ success: false, message: 'Forbidden: Temporary offline sessions cannot access admin functions.' });
     }
@@ -79,7 +110,7 @@ export function requireAdmin(req, res, next) {
 /**
  * Collaborator/Vendor authorization middleware
  */
-export function requireCollaborator(req, res, next) {
+export async function requireCollaborator(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -96,12 +127,17 @@ export function requireCollaborator(req, res, next) {
       return res.status(403).json({ success: false, message: 'Forbidden: Collaborator privileges required' });
     }
 
-    // Explicitly block temporary sessions from accessing collaborator dashboards
     if (decoded.temporarySession) {
       return res.status(403).json({ success: false, message: 'Forbidden: Temporary offline sessions cannot access partner dashboards.' });
     }
 
     req.collaborator = decoded;
+
+    const collaboratorCheck = await ensureActiveCollaborator(decoded, req, res);
+    if (!collaboratorCheck.ok) {
+      return;
+    }
+
     next();
   } catch (err) {
     const isExpired = err.name === 'TokenExpiredError';

@@ -84,7 +84,7 @@ body{font-family:'Inter',-apple-system,sans-serif;background:linear-gradient(135
 .tear-dashes{flex:1;border-top:2px dashed #e2e8f0;margin:0 6px}
 
 /* === INFO GRID === */
-.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
 .info-cell{background:#f8faff;border-radius:12px;padding:12px 14px;border:1px solid #e8f0fe}
 .info-cell .i-label{font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px}
 .info-cell .i-value{font-size:13px;font-weight:700;color:#0f172a}
@@ -234,6 +234,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:linear-gradient(135
           <div class="i-label">💺 Seat(s)</div>
           <div class="i-value" id="seatLabel">—</div>
         </div>
+        <div class="info-cell">
+          <div class="i-label">📞 Verified Phone</div>
+          <div class="i-value" id="verifiedPhone">—</div>
+        </div>
       </div>
 
       <!-- TEAR LINE -->
@@ -349,6 +353,10 @@ document.addEventListener('DOMContentLoaded', function() {
               }).join(', ')
             : '—';
         document.getElementById('seatLabel').textContent = seatDisplay;
+
+        // ---- Verified Phone ----
+        var phone = data.userPhone || data.phone || '—';
+        document.getElementById('verifiedPhone').textContent = phone;
 
         // ---- Operator ----
         var opName = (data.selectedBus && (data.selectedBus.operatorName || data.selectedBus.busName || data.selectedBus.busname)) || 'Mithila Travels';

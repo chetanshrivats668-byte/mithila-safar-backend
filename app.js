@@ -186,6 +186,55 @@ function notify(msg, type) {
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500);
 }
 
+// ========== PENDING VERIFICATION QUEUE ==========
+function enqueuePendingVerification(endpoint, token, phone) {
+    try {
+        const key = 'pendingVerifications';
+        const list = JSON.parse(localStorage.getItem(key) || '[]');
+        list.push({ endpoint: endpoint, token: token, phone: phone, createdAt: Date.now() });
+        localStorage.setItem(key, JSON.stringify(list));
+        return true;
+    } catch (e) {
+        console.warn('enqueuePendingVerification error', e);
+        return false;
+    }
+}
+
+async function syncPendingVerifications() {
+    if (!navigator.onLine) return;
+    const key = 'pendingVerifications';
+    let list = JSON.parse(localStorage.getItem(key) || '[]');
+    if (!list || !list.length) return;
+
+    for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        try {
+            const res = await fetch(window.location.origin + item.endpoint, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({ token: item.token, phone: item.phone })
+            });
+            const d = await res.json();
+            if (d && d.success) {
+                notify('Pending verification synced for ' + (item.phone || ''), 'success');
+                list.splice(i, 1); i--; // remove and adjust index
+            } else {
+                console.warn('Pending verification rejected by server', d && d.message);
+                // don't remove; server may want retry later
+            }
+        } catch (err) {
+            console.warn('syncPendingVerifications network error', err);
+            break; // stop processing on network failure
+        }
+    }
+
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { console.warn(e); }
+}
+
+window.addEventListener('online', function () { syncPendingVerifications(); });
+// Try syncing on load
+setTimeout(syncPendingVerifications, 1000);
+
 // ========== AUTH STATE ==========
 function updateUILoggedIn() {
     const authBtns = document.getElementById('authBtns');
@@ -440,6 +489,20 @@ function saveSession(token, user, newRefreshToken) {
 function authHeaders() {
     return authToken ? { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
+
+async function handleCollaboratorApplicationMessaging(loginPayload) {
+    if (!loginPayload || !loginPayload.applicationStatus) return false;
+    if (loginPayload.applicationStatus === 'pending') {
+        notify('Your collaborator application is under review.', 'info');
+        return true;
+    }
+    if (loginPayload.applicationStatus === 'rejected') {
+        notify('Your collaborator application was not approved.', 'error');
+        return true;
+    }
+    return false;
+}
+
 
 async function checkAndRedirectCollaborator() {
     if (!authToken) return;
@@ -1501,7 +1564,100 @@ function confirmCafeSeats() {
 }
 
 // ========== PAYMENT ==========
+let pendingBookingAmount = null;
+
+function openPhoneVerificationPopup(amount) {
+    pendingBookingAmount = amount;
+    var phoneInput = document.getElementById('bookingPhoneInput');
+    if (phoneInput && currentUser) {
+        // Pre-fill user's phone, stripping +91 prefix
+        var userPhone = (currentUser.phone || '').replace(/\D/g, '');
+        if (userPhone.startsWith('91') && userPhone.length > 10) {
+            userPhone = userPhone.substring(2);
+        }
+        phoneInput.value = userPhone;
+    }
+    
+    // Clear error
+    var errorEl = document.getElementById('bookingPhoneError');
+    if (errorEl) {
+        errorEl.style.display = 'none';
+        errorEl.textContent = '';
+    }
+    
+    var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
+    if (verifyBtn) {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify via OTP';
+        verifyBtn.style.background = '';
+    }
+    
+    openModal('phoneVerificationModal');
+}
+
+async function verifyPhoneForBooking() {
+    var phoneInput = document.getElementById('bookingPhoneInput');
+    if (!phoneInput) return;
+    
+    var phone = phoneInput.value.replace(/\D/g, '');
+    if (phone.length !== 10) {
+        notify('Please enter a valid 10-digit phone number', 'error');
+        return;
+    }
+    
+    var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
+    var errorEl = document.getElementById('bookingPhoneError');
+    
+    if (verifyBtn) {
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = 'Opening OTP Widget...';
+    }
+    if (errorEl) errorEl.style.display = 'none';
+    
+    verifyPhoneWithMsg91(
+        phone,
+        function() {
+            if (currentUser) {
+                currentUser.phone = '+91' + phone;
+                currentUser.phoneVerified = true;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+            notify('Phone verified successfully! ✅', 'success');
+            closeModal('phoneVerificationModal');
+            
+            loadProfile();
+            
+            if (pendingBookingAmount !== null) {
+                openPayment(pendingBookingAmount);
+            }
+        },
+        function(err) {
+            var errMsg = typeof err === 'string' ? err : 'OTP verification failed. Please try again.';
+            notify(errMsg, 'error');
+            if (errorEl) {
+                errorEl.textContent = errMsg;
+                errorEl.style.display = 'block';
+            }
+            if (verifyBtn) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify via OTP';
+            }
+        }
+    );
+}
+
 function openPayment(amount) {
+    if (!requireAuth()) return;
+    
+    // Check if phone number is verified
+    if (!currentUser || !currentUser.phoneVerified) {
+        openPhoneVerificationPopup(amount);
+        return;
+    }
+
+    // Save phone to currentBooking just in case
+    currentBooking.userPhone = currentUser.phone || '';
+
     document.getElementById('paySubtotal').textContent = amount;
     document.getElementById('payDiscount').textContent = '0';
     document.getElementById('payFinal').textContent = amount;
@@ -1742,7 +1898,13 @@ async function payViaUpiId() {
                         closePaymentPage();
                         notify('Booking confirmed! ID: ' + data.orderId, 'success');
                         
-                        var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'UPI (' + upiId + ')' };
+                        var ticketData = {
+                            ...currentBooking,
+                            orderId: data.orderId,
+                            amount: amount / 100,
+                            paymentMethod: 'UPI (' + upiId + ')',
+                            paymentStatus: 'confirmed'
+                        };
                         localStorage.setItem('latestTicket', JSON.stringify(ticketData));
                         window.location.href = 'e-ticket.html';
                     } else {
@@ -1753,7 +1915,11 @@ async function payViaUpiId() {
                 }
             },
             theme: { color: '#d84e55' },
-            modal: { ondismiss: function() { notify('Payment cancelled', 'info'); } }
+            modal: {
+                ondismiss: function() {
+                    notify('Payment cancelled. Ticket not generated.', 'info');
+                }
+            }
         };
         var rzp = new Razorpay(options);
         rzp.on('payment.failed', function(response) {
@@ -1791,18 +1957,24 @@ async function confirmUpiPayment() {
         var data = await res.json();
         if (data.success) {
             closePaymentPage();
-            notify(data.message || 'Payment submitted for verification.', 'success');
+            notify(data.message || 'Payment submitted for verification. Ticket will be generated after payment confirmation.', 'success');
             
-            var ticketData = { ...currentBooking, orderId: 'UPI_' + Date.now().toString(36).toUpperCase(), paymentMethod: 'UPI (QR - ' + qrUpiId + ')' };
-            localStorage.setItem('latestTicket', JSON.stringify(ticketData));
-            window.location.href = 'e-ticket.html';
+            var pendingTicketData = {
+                ...currentBooking,
+                orderId: data.orderId || ('UPI_' + Date.now().toString(36).toUpperCase()),
+                amount: amount,
+                paymentMethod: 'UPI (QR - ' + qrUpiId + ')',
+                paymentStatus: 'pending',
+                paymentReference: qrUpiId
+            };
+            localStorage.setItem('latestTicket', JSON.stringify(pendingTicketData));
+            navigateTo('bookings');
         } else {
             notify('UPI confirmation failed: ' + data.message, 'error');
         }
     } catch (err) {
         closePaymentPage();
-        notify('Payment submitted! (offline mode)', 'success');
-        navigateTo('home');
+        notify('Could not submit payment confirmation. Ticket not generated.', 'error');
     }
 }
 
@@ -1931,69 +2103,125 @@ function handlePhotoUpload(e) {
     reader.readAsDataURL(file);
 }
 
-// ========== PHONE OTP ==========
-var currentOTPVerificationId = null;
+// ========== PHONE OTP (MSG91 Widget) ==========
+var MSG91_WIDGET_ID = '366668686d37313131303336';
+var MSG91_TOKEN_AUTH = '504876TuixWdLhznmm6a26849cP1';
+var msg91WidgetReady = false;
+var msg91WidgetLoading = false;
+var msg91WidgetCallbacks = [];
 
-function initSendOTP() {
+function loadMsg91Widget(callback) {
+    if (msg91WidgetReady && typeof window.initSendOTP === 'function') {
+        if (typeof callback === 'function') callback();
+        return;
+    }
+
+    if (typeof callback === 'function') msg91WidgetCallbacks.push(callback);
+    if (msg91WidgetLoading) return;
+
+    msg91WidgetLoading = true;
+    var urls = [
+        'https://control.msg91.com/app/otp-provider.js',
+        'https://verify.msg91.com/otp-provider.js',
+        'https://verify.phone91.com/otp-provider.js'
+    ];
+    var index = 0;
+
+    function flushCallbacks() {
+        var callbacks = msg91WidgetCallbacks.slice();
+        msg91WidgetCallbacks = [];
+        callbacks.forEach(function(cb) {
+            try { cb(); } catch (e) { console.warn('MSG91 callback error', e); }
+        });
+    }
+
+    function attemptLoad() {
+        if (index >= urls.length) {
+            msg91WidgetLoading = false;
+            notify('Unable to load OTP verification service right now.', 'error');
+            return;
+        }
+
+        var script = document.createElement('script');
+        script.src = urls[index];
+        script.async = true;
+        script.onload = function() {
+            if (typeof window.initSendOTP === 'function') {
+                msg91WidgetReady = true;
+                msg91WidgetLoading = false;
+                flushCallbacks();
+            } else {
+                index++;
+                attemptLoad();
+            }
+        };
+        script.onerror = function() {
+            index++;
+            attemptLoad();
+        };
+        document.head.appendChild(script);
+    }
+
+    attemptLoad();
+}
+
+function verifyPhoneWithMsg91(phone, onSuccess, onFailure) {
+    if (typeof msg91OTP !== 'undefined') {
+        msg91OTP.verify('+91' + phone)
+            .then(function(verifiedToken) {
+                if (typeof onSuccess === 'function') onSuccess({ accessToken: verifiedToken });
+            })
+            .catch(function(err) {
+                if (typeof onFailure === 'function') onFailure(err);
+            });
+    } else {
+        if (typeof onFailure === 'function') onFailure('OTP verification library not loaded.');
+    }
+}
+
+function markPhoneVerified(phone, sendBtn) {
+    if (currentUser) {
+        currentUser.phone = '+91' + phone;
+        currentUser.phoneVerified = true;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    }
+
+    var profilePhoneEl = document.getElementById('profilePhoneDisplay');
+    if (profilePhoneEl) profilePhoneEl.textContent = '+91' + phone;
+
+    var badge = document.getElementById('phoneVerifiedBadge');
+    if (badge) badge.style.display = 'inline-block';
+
+    notify('Phone verified successfully! ✅', 'success');
+    if (sendBtn) {
+        sendBtn.textContent = '✅ Verified';
+        sendBtn.style.background = '#28a745';
+        sendBtn.disabled = false;
+    }
+}
+
+function sendPhoneOTP() {
     var phone = document.getElementById('profilePhoneInput').value.replace(/\D/g, '');
     if (phone.length !== 10) return notify('Please enter a valid 10-digit phone number', 'error');
-    // Use backend to send OTP
-    fetch(API_URL + '/api/auth/send-otp', {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ phone: '+91' + phone })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.success) {
-            currentOTPVerificationId = data.verificationId || 'mock';
-            document.getElementById('otpSubtitle').textContent = 'Enter OTP sent to +91 ' + phone;
-            closeModal('loginModal');
-            openModal('otpModal');
-        } else {
-            notify(data.message || 'Failed to send OTP', 'error');
+
+    var sendBtn = document.getElementById('sendOtpBtn');
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Opening...'; }
+
+    verifyPhoneWithMsg91(
+        phone,
+        function() {
+            markPhoneVerified(phone, sendBtn);
+        },
+        function(err) {
+            notify(typeof err === 'string' ? err : 'OTP verification failed. Please try again.', 'error');
+            if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send OTP'; }
         }
-    }).catch(function() {
-        // Dev bypass
-        currentOTPVerificationId = 'dev';
-        document.getElementById('otpSubtitle').textContent = 'Enter OTP sent to +91 ' + phone + ' (DEV: 112233)';
-        openModal('otpModal');
-    });
+    );
 }
 
-function confirmOTP() {
-    var otp = document.getElementById('otpInput').value.replace(/\D/g, '');
-    if (otp.length !== 6) return notify('Please enter a valid 6-digit OTP', 'error');
-    fetch(API_URL + '/api/auth/verify-otp', {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ verificationId: currentOTPVerificationId, otp: otp })
-    }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data.success) {
-            closeModal('otpModal');
-            if (currentUser) {
-                currentUser.phone = data.phone || '+91' + document.getElementById('profilePhoneInput').value.replace(/\D/g, '');
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            }
-            notify('Phone verified successfully!', 'success');
-            if (data.token && data.user) saveSession(data.token, data.user);
-        } else {
-            document.getElementById('otpError').textContent = data.message || 'Invalid OTP';
-            document.getElementById('otpError').style.display = 'block';
-        }
-    }).catch(function() {
-        // Dev bypass: 112233
-        if (otp === '112233') {
-            closeModal('otpModal');
-            notify('Phone verified (dev mode)!', 'success');
-        } else {
-            document.getElementById('otpError').textContent = 'Verification failed';
-            document.getElementById('otpError').style.display = 'block';
-        }
-    });
-}
-
-function resendOTP() {
-    notify('OTP resent', 'info');
-    document.getElementById('otpInput').value = '';
-    document.getElementById('otpError').style.display = 'none';
-}
+// Legacy stubs — widget handles all OTP UI internally
+function confirmOTP() { /* handled by MSG91 widget */ }
+function resendOTP() { /* handled by MSG91 widget */ }
 
 // ========== LIVE LOCATION ==========
 function toggleLiveLocation(cb) {
@@ -2212,7 +2440,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen to hash changes
     window.addEventListener('hashchange', handleHashAction);
 
-    // Fetch config and init Google Sign-In
+    // Fetch config and init Google Sign-In + MSG91 widget auth
     fetch(API_URL + '/api/config')
         .then(function(r) { return r.json(); })
         .then(function(config) {

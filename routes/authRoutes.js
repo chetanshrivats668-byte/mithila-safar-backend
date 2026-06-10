@@ -12,6 +12,7 @@ router.post('/google', authController.googleLogin);
 // Email OTP Endpoints
 router.post('/send-email-otp', authController.sendEmailOTP);
 router.post('/verify-email-otp', authController.verifyEmailOTP);
+router.post('/verify-msg91-token', authController.verifyMsg91Token);
 router.post('/refresh', authController.refreshAccessToken);
 
 // Profile Management Endpoints

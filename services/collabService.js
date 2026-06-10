@@ -5,7 +5,15 @@ import { memoryDb } from '../utils/firestoreFallback.js';
 // to include a backward-compatible `verification_status` field.
 function normalize(c) {
   if (!c) return c;
+  c.googleEmail = normalizeEmail(c.googleEmail || c.googleemail || c.email);
+  c.email = normalizeEmail(c.email);
   c.verification_status = c.verificationStatus || c.verification_status || c.verificationstatus || 'pending';
+  c.partnerCollabStatus = c.partnerCollabStatus || c.partnercollabstatus || 'pending';
+  if (c.submittedfrom && !c.submittedFrom) c.submittedFrom = c.submittedfrom;
+  if (c.approvedat && !c.approvedAt) c.approvedAt = c.approvedat;
+  if (c.approvedby && !c.approvedBy) c.approvedBy = c.approvedby;
+  if (c.partnercollabrejectedat && !c.partnerCollabRejectedAt) c.partnerCollabRejectedAt = c.partnercollabrejectedat;
+  if (c.partnercollabreapplyafter && !c.partnerCollabReapplyAfter) c.partnerCollabReapplyAfter = c.partnercollabreapplyafter;
   if (c.businessname && !c.businessName) c.businessName = c.businessname;
   if (c.businesstype && !c.businessType) c.businessType = c.businesstype;
   if (c.servicecategories && !c.serviceCategories) c.serviceCategories = c.servicecategories;
@@ -39,7 +47,10 @@ function normalize(c) {
   delete c.createdat; delete c.updatedat; delete c.suspendedat;
   delete c.suspendedby; delete c.unsuspendedat; delete c.unsuspendedby;
   delete c.totalbookings; delete c.totalearnings;
-  delete c.verificationstatus;
+  delete c.verificationstatus; delete c.googleemail;
+  delete c.partnercollabstatus; delete c.submittedfrom;
+  delete c.approvedat; delete c.approvedby;
+  delete c.partnercollabrejectedat; delete c.partnercollabreapplyafter;
   delete c.routecities; delete c.operatingcity;
   delete c.pincode;
   return c;
@@ -77,6 +88,19 @@ export async function getCollaboratorByEmail(db, email) {
   return null;
 }
 
+export async function getCollaboratorByGoogleEmail(db, googleEmail) {
+  const normalizedGoogleEmail = normalizeEmail(googleEmail);
+  const found = Array.from(memoryDb.collabs.values()).find(c => normalizeEmail(c.googleEmail || c.email) === normalizedGoogleEmail);
+  if (found) return normalize(found);
+  if (isSupabaseAvailable()) {
+    const results = await dbList('collaborators', { filters: [{ column: 'googleEmail', op: 'eq', value: normalizedGoogleEmail }] });
+    if (results.length > 0) return normalize(results[0]);
+    const fallbackResults = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: normalizedGoogleEmail }] });
+    return normalize(fallbackResults.length > 0 ? fallbackResults[0] : null);
+  }
+  return null;
+}
+
 export async function getCollaboratorByPhone(db, phone) {
   const normalizedPhone = normalizePhone(phone);
   const found = Array.from(memoryDb.collabs.values()).find(c => normalizePhone(c.phone) === normalizedPhone);
@@ -96,6 +120,7 @@ export async function createCollaborator(db, data) {
     userId: data.userId || null,
     name: data.name,
     email: normalizeEmail(data.email),
+    googleEmail: normalizeEmail(data.googleEmail || data.email),
     phone: normalizePhone(data.phone),
     phoneVerified: data.phoneVerified || false,
     password: data.password,
@@ -117,6 +142,12 @@ export async function createCollaborator(db, data) {
     bankDetails: data.bankDetails || {},
     documents: data.documents || {},
     verification_status: data.verificationStatus || data.verification_status || 'pending',
+    partnerCollabStatus: data.partnerCollabStatus || 'pending',
+    submittedFrom: data.submittedFrom || data.userId || null,
+    approvedAt: data.approvedAt || null,
+    approvedBy: data.approvedBy || null,
+    partnerCollabRejectedAt: data.partnerCollabRejectedAt || null,
+    partnerCollabReapplyAfter: data.partnerCollabReapplyAfter || null,
     verifiedAt: data.verifiedAt || null,
     verifiedBy: data.verifiedBy || null,
     status: data.status || 'pending',
@@ -131,6 +162,13 @@ export async function createCollaborator(db, data) {
     const record = {
       ...collabData,
       verificationStatus: data.verificationStatus || 'pending',
+      partnerCollabStatus: data.partnerCollabStatus || 'pending',
+      submittedFrom: data.submittedFrom || data.userId || null,
+      approvedAt: data.approvedAt || null,
+      approvedBy: data.approvedBy || null,
+      partnerCollabRejectedAt: data.partnerCollabRejectedAt || null,
+      partnerCollabReapplyAfter: data.partnerCollabReapplyAfter || null,
+      userId: data.userId || null,
       status: data.status || 'pending'
     };
     delete record.verification_status;

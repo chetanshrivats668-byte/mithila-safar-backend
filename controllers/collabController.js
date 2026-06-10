@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
+import { verifyMsg91AccessToken } from './auth/authController.js';
 
 function isCollaboratorApproved(collab) {
   const verificationStatus = collab?.verification_status || collab?.verificationStatus || '';
@@ -38,8 +39,34 @@ function serializeCollaborator(collab) {
     description: collab.description || collab.businessDescription || '',
     status: collab.status,
     verification_status: collab.verification_status,
+    partnerCollabStatus: collab.partnerCollabStatus || 'pending',
+    submittedFrom: collab.submittedFrom || null,
+    approvedAt: collab.approvedAt || null,
+    approvedBy: collab.approvedBy || null,
     permissions: collab.serviceCategories || []
   };
+}
+
+function getReapplyAfterDate() {
+  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function isPartnerCollabApprovedForAccount(collab, accountId) {
+  return Boolean(
+    collab &&
+    accountId &&
+    collab.submittedFrom === accountId &&
+    collab.partnerCollabStatus === 'approved' &&
+    collab.verification_status !== 'suspended'
+  );
+}
+
+function isPartnerCollabRejectedAndCoolingDown(collab) {
+  return Boolean(
+    collab?.partnerCollabStatus === 'rejected' &&
+    collab?.partnerCollabReapplyAfter &&
+    new Date(collab.partnerCollabReapplyAfter).getTime() > Date.now()
+  );
 }
 
 function buildCollaboratorSessionResponse(collab, token) {
@@ -149,19 +176,6 @@ export async function loginWithOTP(req, res) {
       return res.status(400).json({ success: false, message: 'Email and OTP required' });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 🚨 DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-    // ═══════════════════════════════════════════════════════════════
-    if (process.env.DEV_OTP_BYPASS === 'true' && otp === '112233') {
-      console.warn('🚨 DEV BYPASS: OTP 112233 accepted for login', email);
-      const collab = await collabService.getCollaboratorByEmail(req.app.locals.db, email);
-      if (!collab) {
-        return res.status(404).json({ success: false, message: 'Account not found' });
-      }
-      const token = generateToken(buildCollaboratorSessionPayload(collab));
-      return res.json(buildCollaboratorSessionResponse(collab, token));
-    }
-    // ═══════════════════════════════════════════════════════════════
 
     const key = `login:${email}`;
     const stored = otpStore.get(key);
@@ -194,45 +208,136 @@ export async function loginWithOTP(req, res) {
   }
 }
 
-export async function loginWithPhoneOTP(req, res) {
+export async function loginWithPhone(req, res) {
   try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: 'Phone and OTP required' });
+    const { phone, token } = req.body;
+    if (!phone || !token) {
+      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
     }
 
-    const key = phone;
-    const stored = otpStore.get(key);
-
-    if (!stored) {
-      return res.status(400).json({ success: false, message: 'OTP not found. Request new OTP.' });
+    // Verify token with MSG91
+    const verification = await verifyMsg91AccessToken(token, phone);
+    if (!verification || !verification.success) {
+      return res.status(400).json({ success: false, message: 'Phone verification failed' });
     }
 
-    if (Date.now() > stored.expires) {
-      otpStore.delete(key);
-      return res.status(400).json({ success: false, message: 'OTP expired. Request new OTP.' });
-    }
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const formattedPhone = '+91' + cleanPhone;
 
-    if (stored.otp !== otp) {
-      if (process.env.DEV_OTP_BYPASS === 'true' && otp === '112233') {
-        console.warn('🚨 DEV BYPASS: OTP 112233 accepted for phone login', phone);
-      } else {
-        return res.status(401).json({ success: false, message: 'Invalid OTP' });
-      }
-    }
-
-    otpStore.delete(key);
-
-    const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, phone);
+    const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, formattedPhone);
     if (!collab) {
-      return res.status(401).json({ success: false, message: 'No account found with this phone number' });
+      return res.status(401).json({ success: false, message: 'No collaborator account found with this phone number' });
     }
 
-    const token = generateToken(buildCollaboratorSessionPayload(collab));
-    return res.json(buildCollaboratorSessionResponse(collab, token));
+    if (collab.verification_status === 'suspended') {
+      return res.status(403).json({ success: false, message: 'Account suspended. Contact support for assistance.' });
+    }
+
+    if (!isCollaboratorApproved(collab)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your collaborator account is pending admin approval.'
+      });
+    }
+
+    const jwtToken = generateToken(buildCollaboratorSessionPayload(collab));
+    return res.json(buildCollaboratorSessionResponse(collab, jwtToken));
   } catch (e) {
-    console.error('Login with phone OTP error:', e);
-    return res.status(500).json({ success: false, message: 'Login failed' });
+    console.error('Login with phone error:', e);
+    return res.status(500).json({ success: false, message: 'Login failed: ' + e.message });
+  }
+}
+
+export async function submitPartnerCollab(req, res) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authenticated account is required' });
+    }
+
+    const data = sanitizeInput(req.body || {});
+    const db = req.app.locals.db;
+    const user = await req.app.locals.db.get('users', userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found' });
+    }
+
+    const submittedFrom = userId;
+    const userEmail = user.email || '';
+    const userPhone = user.phone || '';
+
+    let collab =
+      await collabService.getCollaboratorByEmail(db, userEmail) ||
+      await collabService.getCollaboratorByPhone(db, userPhone);
+
+    if (collab?.verification_status === 'suspended') {
+      return res.status(403).json({ success: false, message: 'Suspended collaborators cannot submit partner collaboration applications.' });
+    }
+
+    if (collab && isPartnerCollabRejectedAndCoolingDown(collab)) {
+      return res.status(429).json({
+        success: false,
+        message: 'Your previous partner collaboration application was rejected. Please wait before reapplying.',
+        reapplyAfter: collab.partnerCollabReapplyAfter
+      });
+    }
+
+    const updates = {
+      userId,
+      submittedFrom,
+      partnerCollabStatus: 'pending',
+      approvedAt: null,
+      approvedBy: null,
+      partnerCollabRejectedAt: null,
+      partnerCollabReapplyAfter: null
+    };
+
+    if (data.name) updates.name = data.name;
+    if (userEmail) updates.email = userEmail;
+    if (userPhone) updates.phone = userPhone;
+    if (data.phone) updates.phone = data.phone;
+    if (data.businessName) updates.businessName = data.businessName;
+    if (data.businessType) updates.businessType = data.businessType;
+    if (data.businessDescription || data.description) updates.businessDescription = data.businessDescription || data.description;
+    if (data.address) updates.address = data.address;
+    if (data.city) updates.city = data.city;
+    if (data.state) updates.state = data.state;
+    if (data.landmark) updates.landmark = data.landmark;
+    if (data.pinCode) updates.pinCode = data.pinCode;
+    if (data.operatingCity) updates.operatingCity = data.operatingCity;
+    if (Array.isArray(data.routeCities)) updates.routeCities = data.routeCities;
+    if (Array.isArray(data.serviceCategories)) updates.serviceCategories = data.serviceCategories;
+    if (data.documents) updates.documents = data.documents;
+    if (data.bankDetails) updates.bankDetails = data.bankDetails;
+    if (data.aadhaarUrl) updates.aadhaarUrl = data.aadhaarUrl;
+    if (data.panUrl) updates.panUrl = data.panUrl;
+    if (data.aadhaarId) updates.aadhaarId = data.aadhaarId;
+    if (data.yearsOfExperience) updates.yearsOfExperience = data.yearsOfExperience;
+
+    if (collab) {
+      await collabService.updateCollaborator(db, collab.id, updates);
+      collab = await collabService.getCollaboratorById(db, collab.id);
+    } else {
+      collab = await collabService.createCollaborator(db, {
+        ...updates,
+        name: updates.name || user.name || userEmail.split('@')[0] || 'Collaborator',
+        email: updates.email || userEmail,
+        phone: updates.phone || userPhone,
+        password: crypto.randomBytes(16).toString('hex'),
+        verificationStatus: 'pending',
+        status: 'pending'
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Partner collaboration application submitted successfully and is pending admin review.',
+      collaborator: serializeCollaborator(collab)
+    });
+  } catch (e) {
+    console.error('Submit partner collab error:', e);
+    return res.status(500).json({ success: false, message: 'Failed to submit partner collaboration application' });
   }
 }
 
@@ -397,91 +502,3 @@ export async function getListings(req, res) {
   }
 }
 
-export async function sendOTP(req, res) {
-  try {
-    const { phone, email } = req.body;
-
-    if (!phone && !email) {
-      return res.status(400).json({ success: false, message: 'Phone or email required' });
-    }
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const key = phone || email;
-
-    otpStore.set(key, {
-      otp: otp,
-      expires: Date.now() + 5 * 60 * 1000
-    });
-
-    console.log(`OTP for ${key}: ${otp}`);
-
-    if (phone) {
-      // ═══════════════════════════════════════════════════════════════
-      // 🚨 DEV OTP BYPASS — catch SMS failure gracefully
-      // ═══════════════════════════════════════════════════════════════
-      try {
-        const { sendSMS } = await import('../services/smsService.js');
-        await sendSMS(phone, `Your Yatri Point verification code is: ${otp}. Valid for 5 minutes.`);
-      } catch (smsErr) {
-        if (process.env.DEV_OTP_BYPASS === 'true') {
-          console.warn('🚨 DEV BYPASS: SMS send failed but bypass active. OTP for', phone, ':', otp);
-        } else {
-          throw smsErr;
-        }
-      }
-    }
-
-    res.json({ success: true, message: 'OTP sent successfully' });
-  } catch (e) {
-    console.error('Send OTP error:', e);
-    // ═══════════════════════════════════════════════════════════════
-    // 🚨 DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-    // ═══════════════════════════════════════════════════════════════
-    if (process.env.DEV_OTP_BYPASS === 'true') {
-      console.warn('🚨 DEV BYPASS: Send OTP failed but bypass active.');
-      return res.json({ success: true, message: 'DEV: OTP bypass active.' });
-    }
-    res.status(500).json({ success: false, message: 'Failed to send OTP' });
-  }
-}
-
-export async function verifyOTP(req, res) {
-  try {
-    const { phone, email, otp } = req.body;
-
-    if (!otp) {
-      return res.status(400).json({ success: false, message: 'OTP required' });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // 🚨 DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-    // ═══════════════════════════════════════════════════════════════
-    if (process.env.DEV_OTP_BYPASS === 'true' && otp === '112233') {
-      console.warn('🚨 DEV BYPASS: OTP 112233 accepted for', phone || email);
-      return res.json({ success: true, message: 'Phone verified successfully' });
-    }
-    // ═══════════════════════════════════════════════════════════════
-
-    const key = phone || email;
-    const stored = otpStore.get(key);
-
-    if (!stored) {
-      return res.status(400).json({ success: false, message: 'OTP not found. Request new OTP.' });
-    }
-
-    if (Date.now() > stored.expires) {
-      otpStore.delete(key);
-      return res.status(400).json({ success: false, message: 'OTP expired. Request new OTP.' });
-    }
-
-    if (stored.otp !== otp) {
-      return res.status(400).json({ success: false, message: 'Invalid OTP' });
-    }
-
-    otpStore.delete(key);
-    res.json({ success: true, message: 'Phone verified successfully' });
-  } catch (e) {
-    console.error('Verify OTP error:', e);
-    res.status(500).json({ success: false, message: 'Failed to verify OTP' });
-  }
-}

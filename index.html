@@ -547,7 +547,7 @@
                                 style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--bg);color:var(--text);"
                                 oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                             <button id="sendOtpBtn" class="btn-primary" style="padding:.6rem 1rem;white-space:nowrap;"
-                                onclick="initSendOTP()">Send OTP</button>
+                                onclick="sendPhoneOTP()">Send OTP</button>
                         </div>
                     </div>
                 </div>
@@ -700,6 +700,28 @@
         </div>
     </div>
 
+
+    <!-- ===== PHONE VERIFICATION FOR BOOKING MODAL ===== -->
+    <div class="modal" id="phoneVerificationModal" onclick="closeOnOverlay(event,'phoneVerificationModal')">
+        <div class="modal-content" style="max-width:380px;">
+            <button class="close-modal" onclick="closeModal('phoneVerificationModal')">×</button>
+            <h2>📱 Verify Phone Number</h2>
+            <p class="subtitle">Please verify your 10-digit mobile number before booking.</p>
+            <div style="margin:1.2rem 0; display:flex; flex-direction:column; gap:0.8rem;">
+                <div style="display:flex; gap:.5rem;">
+                    <div style="display:flex; align-items:center; background:var(--bg); border:1.5px solid var(--border); border-radius:8px; padding:0 .6rem; font-weight:600; color:var(--gray); font-size:.9rem;">
+                        +91
+                    </div>
+                    <input id="bookingPhoneInput" type="tel" placeholder="10-digit mobile number" maxlength="10"
+                        pattern="[6-9][0-9]{9}"
+                        style="flex:1; padding:.6rem .8rem; border:1.5px solid var(--border); border-radius:8px; font-size:.9rem; background:var(--bg); color:var(--text);"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                </div>
+            </div>
+            <button id="btnVerifyPhoneBooking" class="btn-primary" style="width:100%;" onclick="verifyPhoneForBooking()">Verify via OTP</button>
+            <p id="bookingPhoneError" style="color:var(--danger); text-align:center; font-size:.85rem; margin-top:.5rem; display:none;"></p>
+        </div>
+    </div>
 
     <!-- ===== OTP VERIFICATION MODAL ===== -->
     <div class="modal" id="otpModal" onclick="closeOnOverlay(event,'otpModal')">
@@ -943,7 +965,7 @@
             <div id="upiSection" style="display:none; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
                 <div style="font-size:2.5rem; margin-bottom:0.5rem;">📱</div>
                 <h3 style="margin-bottom:0.3rem; color:var(--success);">UPI QR Payment</h3>
-                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:1.5rem;">Scan QR code with any UPI app (GPay, PhonePe, Paytm)</p>
+                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:1.5rem;">Scan QR code with any UPI app available on the user's phone (GPay, PhonePe, Paytm, etc.)</p>
                 
                 <div style="background:white; padding:1.5rem; border-radius:12px; display:inline-block; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
                     <img src="/public/images/upi-qr-code.png" alt="UPI QR Code" style="width:280px; height:auto; display:block;">
@@ -952,10 +974,11 @@
                 <div style="margin-top:1.5rem; padding:1rem; background:rgba(0,128,0,0.05); border-radius:10px; border:1px solid rgba(0,128,0,0.2);">
                     <p style="font-size:0.9rem; color:var(--text); margin-bottom:0.5rem;"><strong>Payment Steps:</strong></p>
                     <ol style="font-size:0.85rem; color:var(--gray); text-align:left; padding-left:1.2rem; line-height:1.8;">
-                        <li>Open any UPI app (GPay, PhonePe, Paytm)</li>
+                        <li>Open any UPI app available on your phone</li>
                         <li>Scan the QR code above</li>
                         <li>Enter amount: <strong><span id="upiAmount">0</span></strong></li>
-                        <li>Complete payment and share screenshot</li>
+                        <li>Complete payment</li>
+                        <li>If you exit before successful payment, ticket will not be generated</li>
                     </ol>
                 </div>
                 
@@ -966,7 +989,7 @@
                 </div>
                 
                 <p style="margin-top:1rem; font-size:0.8rem; color:var(--gray);">
-                    <strong>UPI ID:</strong> your-upi-id@upi<br>
+                    <strong>UPI ID:</strong> 8178030064@ptyes<br>
                     <strong>Name:</strong> SUDHAKAR KUMAR MISHRA
                 </p>
                 
@@ -1037,6 +1060,7 @@
         <div class="footer-bottom">© 2026 Yatri Point (Yatri Point). All rights reserved.</div>
     </footer>
 
+    <script src="msg91-otp.js"></script>
     <script src="app.js"></script>
 </body>
 

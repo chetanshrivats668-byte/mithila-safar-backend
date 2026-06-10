@@ -55,9 +55,6 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// ========== FAST2SMS CONFIG ==========
-const FAST2SMS_API_KEY = (process.env.FAST2SMS_API_KEY || '').trim();
-
 // ========== IN-MEMORY STORES & CONFIG ==========
 const otpStore = new Map();
 const OTP_MAX_ATTEMPTS = 3;
@@ -73,7 +70,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRY = '8h';
 
-// ========== SMS HELPER (Fast2SMS) — see services/smsService.js ==========
+// ========== SMS HELPER (MSG91) — see services/smsService.js ==========
 
 // Build SMS message for partner notification
 function buildPartnerSMS(booking) {
@@ -163,7 +160,11 @@ app.get('/api/config', (req, res) => {
     messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.FIREBASE_APP_ID,
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
-    googleClientId: process.env.GOOGLE_CLIENT_ID
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    msg91WidgetId: process.env.MSG91_WIDGET_ID || '366668686d37313131303336',
+    // MSG91_WIDGET_TOKEN_AUTH is the client-facing widget token from MSG91 dashboard.
+    // It is DIFFERENT from MSG91_AUTH_KEY (the secret server-side key). Leave empty if not set.
+    msg91TokenAuth: process.env.MSG91_WIDGET_TOKEN_AUTH || ''
   });
 });
 
@@ -434,7 +435,7 @@ app.post('/api/user/bookings/delete', requireAuth, blockTemporarySession, async 
   }
 });
 
-// ========== FAST2SMS OTP ==========
+// ========== MSG91 OTP ==========
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 app.post('/api/send-otp', async (req, res) => {
@@ -449,9 +450,6 @@ app.post('/api/send-otp', async (req, res) => {
     if (existing && Date.now() < existing.expiry && (existing.sendCount || 0) >= 3) {
       return res.status(429).json({ success: false, message: 'Too many OTP requests. Please wait and try again.' });
     }
-    if (!FAST2SMS_API_KEY) {
-      return res.status(503).json({ success: false, message: 'SMS service not configured. Contact support.' });
-    }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiry = Date.now() + OTP_EXPIRY_MS;
     otpStore.set(cleanPhone, {
@@ -459,44 +457,16 @@ app.post('/api/send-otp', async (req, res) => {
       sendCount: (existing && Date.now() < (existing.expiry || 0)) ? (existing.sendCount || 0) + 1 : 1
     });
 
-    // Send via Fast2SMS — POST with authorization header (key must NOT be URL-encoded here)
-    const smsRes = await fetch('https://www.fast2sms.com/dev/bulkV2', {
-      method: 'POST',
-      headers: {
-        'authorization': FAST2SMS_API_KEY,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        route: 'otp',
-        variables_values: otp,
-        numbers: cleanPhone,
-        flash: '0'
-      }).toString()
-    });
-    const smsData = await smsRes.json();
+    const smsRes = await sendSMS(cleanPhone, `Your Yatri Point verification code is: ${otp}. Valid for 5 minutes.`);
 
-    if (smsData.return === true || smsData.status_code === 200) {
+    if (smsRes.success) {
       return res.json({ success: true, message: 'OTP sent to +91-' + cleanPhone });
     } else {
-      // ═══════════════════════════════════════════════════════════════
-      // DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-      // ═══════════════════════════════════════════════════════════════
-      if (process.env.DEV_OTP_BYPASS === 'true') {
-        console.warn('[DEV BYPASS]: Fast2SMS failed. OTP for', cleanPhone, ':', otp, '| Fast2SMS said:', smsData.message);
-        return res.json({ success: true, message: 'DEV: OTP bypass active. Check server console for OTP.' });
-      }
       otpStore.delete(cleanPhone);
-      return res.status(500).json({ success: false, message: smsData.message || 'SMS delivery failed. Check Fast2SMS balance/key.' });
+      return res.status(500).json({ success: false, message: smsRes.reason || 'SMS delivery failed. Check SMS service configuration.' });
     }
   } catch (err) {
     console.error('Send OTP error:', err);
-    // ═══════════════════════════════════════════════════════════════
-    // 🚨 DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-    // ═══════════════════════════════════════════════════════════════
-    if (process.env.DEV_OTP_BYPASS === 'true') {
-      console.warn('[DEV BYPASS]: Fast2SMS threw but bypass active. OTP was already stored in memory.');
-      return res.json({ success: true, message: 'DEV: OTP bypass active.' });
-    }
     res.status(500).json({ success: false, message: 'OTP service error. Please try again.' });
   }
 });
@@ -509,14 +479,6 @@ app.post('/api/verify-otp', (req, res) => {
       return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // 🚨 DEV OTP BYPASS — only active when DEV_OTP_BYPASS=true
-    // ═══════════════════════════════════════════════════════════════
-    if (process.env.DEV_OTP_BYPASS === 'true' && otp.toString().trim() === '112233') {
-      console.warn('[DEV BYPASS]: OTP 112233 accepted for', cleanPhone);
-      return res.json({ success: true, phone: '+91' + cleanPhone, message: 'Phone verified successfully' });
-    }
-    // ═══════════════════════════════════════════════════════════════
 
     const stored = otpStore.get(cleanPhone);
     if (!stored) {
@@ -547,13 +509,14 @@ app.post('/api/verify-otp', (req, res) => {
   }
 });
 
-// ========== FAST2SMS WEBHOOK (Delivery Reports) ==========
-app.post('/api/fast2sms/webhook', async (req, res) => {
+// ========== MSG91 WEBHOOK (Delivery Reports) ==========
+app.post('/api/msg91/webhook', async (req, res) => {
   try {
     const dlrData = req.body;
+    console.log('[MSG91 Webhook] DLR received:', JSON.stringify(dlrData));
     res.status(200).send('OK');
   } catch (err) {
-    console.error('Webhook error:', err);
+    console.error('[MSG91 Webhook] Error:', err);
     res.status(500).send('Error');
   }
 });

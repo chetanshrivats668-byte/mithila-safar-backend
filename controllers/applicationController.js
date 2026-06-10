@@ -1,8 +1,11 @@
-import crypto from 'crypto';
 import { sanitizeInput } from '../middleware/validator.js';
 import * as appService from '../services/applicationService.js';
 import * as collabService from '../services/collabService.js';
-import { generateToken } from '../middleware/auth.js';
+import crypto from 'crypto';
+
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
 
 export async function submitApplication(req, res) {
   try {
@@ -17,16 +20,27 @@ export async function submitApplication(req, res) {
     if (!data.aadhaarId || !/^\d{12}$/.test(data.aadhaarId.replace(/\s/g, ''))) errors.push('Valid 12-digit Aadhaar ID is required');
     if (errors.length > 0) return res.status(400).json({ success: false, errors });
 
-    const existing = await appService.getApplicationByEmail(req.app.locals.db, data.email);
+    const normalizedEmail = normalizeEmail(data.email);
+    const requestedGoogleEmail = normalizeEmail(data.googleEmail || data.email);
+    const existing = await appService.getApplicationByEmail(req.app.locals.db, normalizedEmail);
     if (existing) {
       if (existing.status === 'pending') return res.status(409).json({ success: false, message: 'You already have a pending application. Please wait for admin review.' });
       if (existing.status === 'approved') return res.status(409).json({ success: false, message: 'Your application was already approved. Please login with your credentials.' });
     }
 
+    const existingByGoogleEmail = requestedGoogleEmail
+      ? await appService.getApplicationByGoogleEmail(req.app.locals.db, requestedGoogleEmail)
+      : null;
+    if (existingByGoogleEmail && existingByGoogleEmail.id !== existing?.id) {
+      if (existingByGoogleEmail.status === 'pending') return res.status(409).json({ success: false, message: 'You already have a pending application. Please wait for admin review.' });
+      if (existingByGoogleEmail.status === 'approved') return res.status(409).json({ success: false, message: 'Your application was already approved. Please login with your credentials.' });
+    }
+
     const hashedPassword = crypto.createHash('sha256').update(data.password).digest('hex');
     const application = await appService.createApplication(req.app.locals.db, {
       name: data.name,
-      email: data.email,
+      email: normalizedEmail,
+      googleEmail: requestedGoogleEmail,
       phone: data.phone,
       password: hashedPassword,
       serviceCategory: data.serviceCategory,
@@ -47,7 +61,14 @@ export async function submitApplication(req, res) {
     res.status(201).json({
       success: true,
       message: 'Application submitted successfully! We will review and notify you.',
-      application: { id: application.id, name: application.name, email: application.email, serviceCategory: application.serviceCategory, status: application.status }
+      application: {
+        id: application.id,
+        name: application.name,
+        email: application.email,
+        googleEmail: application.googleEmail,
+        serviceCategory: application.serviceCategory,
+        status: application.status
+      }
     });
   } catch (e) {
     console.error('Submit application error:', e);
@@ -57,10 +78,12 @@ export async function submitApplication(req, res) {
 
 export async function checkApplicationStatus(req, res) {
   try {
-    const { email } = req.query;
+    const email = normalizeEmail(req.query.email);
     if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
-    const app = await appService.getApplicationByEmail(req.app.locals.db, email);
+    const app = await appService.getApplicationByGoogleEmail(req.app.locals.db, email)
+      || await appService.getApplicationByEmail(req.app.locals.db, email);
     if (!app) return res.json({ success: true, hasApplication: false });
+
     res.json({
       success: true,
       hasApplication: true,
@@ -69,6 +92,7 @@ export async function checkApplicationStatus(req, res) {
         name: app.name,
         serviceCategory: app.serviceCategory,
         status: app.status,
+        googleEmail: app.googleEmail || app.email || '',
         createdAt: app.createdAt
       }
     });
@@ -99,12 +123,21 @@ export async function adminApproveApplication(req, res) {
     if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
     if (app.status !== 'pending') return res.status(400).json({ success: false, message: 'Application is already ' + app.status });
 
-    const collabId = 'CL' + Date.now().toString(36).toUpperCase();
     const now = new Date().toISOString();
-    const collabData = {
-      id: collabId,
+    const normalizedGoogleEmail = normalizeEmail(app.googleEmail || app.email);
+
+    let existingCollaborator = normalizedGoogleEmail
+      ? await collabService.getCollaboratorByGoogleEmail(req.app.locals.db, normalizedGoogleEmail)
+      : null;
+
+    if (!existingCollaborator && app.email) {
+      existingCollaborator = await collabService.getCollaboratorByEmail(req.app.locals.db, app.email);
+    }
+
+    const collaboratorPayload = {
       name: app.name,
-      email: app.email,
+      email: normalizeEmail(app.email),
+      googleEmail: normalizedGoogleEmail,
       phone: app.phone,
       phoneVerified: false,
       password: app.password,
@@ -122,17 +155,26 @@ export async function adminApproveApplication(req, res) {
       state: app.serviceState || '',
       landmark: app.serviceLandmark || '',
       pinCode: app.servicePincode || '',
-      // Create as approved so collaborator appears in public listings
       status: 'approved',
       verificationStatus: 'verified',
       verifiedAt: now,
-      verifiedBy: req.admin?.username || 'admin',
-      createdAt: now,
-      updatedAt: now
+      verifiedBy: req.admin?.username || 'admin'
     };
 
-    await collabService.createCollaborator(req.app.locals.db, collabData);
-    await appService.updateApplication(req.app.locals.db, id, { status: 'approved', adminNotes: 'Approved by ' + (req.admin?.username || 'admin') });
+    if (existingCollaborator) {
+      await collabService.updateCollaborator(req.app.locals.db, existingCollaborator.id, collaboratorPayload);
+    } else {
+      await collabService.createCollaborator(req.app.locals.db, {
+        id: 'CL' + Date.now().toString(36).toUpperCase(),
+        ...collaboratorPayload
+      });
+    }
+
+    await appService.updateApplication(req.app.locals.db, id, {
+      status: 'approved',
+      googleEmail: normalizedGoogleEmail,
+      adminNotes: 'Approved by ' + (req.admin?.username || 'admin')
+    });
 
     res.json({ success: true, message: 'Application approved! Collaborator account created.' });
   } catch (e) {

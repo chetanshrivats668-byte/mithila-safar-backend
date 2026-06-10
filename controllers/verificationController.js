@@ -5,8 +5,14 @@ import * as collabService from '../services/collabService.js';
 function n(c) {
   if (!c) return c;
   c.verification_status = c.verification_status || c.verificationStatus || c.verificationstatus || 'pending';
+  c.partnerCollabStatus = c.partnerCollabStatus || c.partnercollabstatus || 'pending';
+  c.submittedFrom = c.submittedFrom || c.submittedfrom || null;
   c.verifiedAt = c.verifiedAt || c.verifiedat || null;
   c.verifiedBy = c.verifiedBy || c.verifiedby || null;
+  c.approvedAt = c.approvedAt || c.approvedat || null;
+  c.approvedBy = c.approvedBy || c.approvedby || null;
+  c.partnerCollabRejectedAt = c.partnerCollabRejectedAt || c.partnercollabrejectedat || null;
+  c.partnerCollabReapplyAfter = c.partnerCollabReapplyAfter || c.partnercollabreapplyafter || null;
   return c;
 }
 
@@ -92,6 +98,54 @@ export async function adminVerifyCollaborator(req, res) {
   } catch (e) {
     console.error('Admin verify error:', e);
     res.status(500).json({ success: false, message: 'Verification failed' });
+  }
+}
+
+export async function approvePartnerCollab(req, res) {
+  try {
+    const { collaboratorId, action } = req.body || {};
+    if (!collaboratorId || !action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'collaboratorId and valid action (approve or reject) are required' });
+    }
+
+    const collabSnap = n(await collabService.getCollaboratorById(req.app.locals.db, collaboratorId));
+    if (!collabSnap) {
+      return res.status(404).json({ success: false, message: 'Collaborator not found' });
+    }
+
+    const adminId = req.admin?.username || req.admin?.email || 'admin';
+    const now = new Date().toISOString();
+    const updates = {
+      partnerCollabStatus: action === 'approve' ? 'approved' : 'rejected',
+      approvedAt: action === 'approve' ? now : null,
+      approvedBy: action === 'approve' ? adminId : null,
+      partnerCollabRejectedAt: action === 'reject' ? now : null,
+      partnerCollabReapplyAfter: action === 'reject' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null
+    };
+
+    if (action === 'approve') {
+      if (collabSnap.verification_status !== 'verified') {
+        updates.verificationStatus = 'verified';
+      }
+      if (collabSnap.status === 'pending' || collabSnap.status === 'rejected') {
+        updates.status = 'approved';
+      }
+    }
+
+    await collabService.updateCollaborator(req.app.locals.db, collaboratorId, updates);
+
+    return res.json({
+      success: true,
+      message: action === 'approve' ? 'Partner collaboration approved.' : 'Partner collaboration rejected.',
+      collaboratorId,
+      partnerCollabStatus: updates.partnerCollabStatus,
+      approvedAt: updates.approvedAt,
+      approvedBy: updates.approvedBy,
+      reapplyAfter: updates.partnerCollabReapplyAfter
+    });
+  } catch (e) {
+    console.error('Approve partner collab error:', e);
+    return res.status(500).json({ success: false, message: 'Partner collaboration review failed' });
   }
 }
 

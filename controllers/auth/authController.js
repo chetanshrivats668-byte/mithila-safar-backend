@@ -1,3 +1,50 @@
+import * as appService from '../../services/applicationService.js';
+import * as collabService from '../../services/collabService.js';
+
+function normalizeEmail(email) {
+  return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+function isApprovedCollaborator(collab) {
+  const verificationStatus = collab?.verification_status || collab?.verificationStatus || '';
+  const status = collab?.status || '';
+  return verificationStatus === 'verified' || status === 'approved' || status === 'active';
+}
+
+function shouldRedirectToCollaboratorDashboard(collab, userId) {
+  return Boolean(
+    collab &&
+    userId &&
+    collab.userId === userId &&
+    collab.submittedFrom === userId &&
+    collab.partnerCollabStatus === 'approved' &&
+    collab.verification_status !== 'suspended' &&
+    collab.status !== 'suspended'
+  );
+}
+
+async function getPartnerCollabRedirect(db, user) {
+  if (!db || !user?.id) {
+    return null;
+  }
+
+  const collaborators = await collabService.getCollaboratorsByUserId(db, user.id);
+  const approvedPartnerCollab = collaborators.find(collab => shouldRedirectToCollaboratorDashboard(collab, user.id));
+
+  if (!approvedPartnerCollab) {
+    return null;
+  }
+
+  return {
+    redirectTo: '/collaborator-dashboard',
+    collaboratorContext: {
+      collaboratorId: approvedPartnerCollab.id,
+      partnerCollabStatus: approvedPartnerCollab.partnerCollabStatus || 'pending',
+      submittedFrom: approvedPartnerCollab.submittedFrom || null
+    }
+  };
+}
+
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
@@ -9,18 +56,44 @@ import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../.
 import { memoryDb } from '../../utils/firestoreFallback.js';
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, isSupabaseAvailable } from '../../utils/db.js';
 
+export async function verifyMsg91AccessToken(accessToken, phone = '') {
+  const authKey = process.env.MSG91_AUTH_KEY || '504876AD0r3lYK6a292cd5P1';
+
+
+
+  const response = await fetch('https://control.msg91.com/api/v5/widget/verifyAccessToken', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: JSON.stringify({
+      authkey: authKey,
+      'access-token': accessToken
+    })
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(data?.message || 'MSG91 access token verification failed');
+    error.statusCode = response.status;
+    error.payload = data;
+    throw error;
+  }
+
+  return data;
+}
+
 function buildEmailDeliveryFailurePayload(email, context = 'verification email') {
   const deliveryStatus = getEmailDeliveryStatus();
-  const devBypassEnabled = process.env.DEV_OTP_BYPASS === 'true';
 
   if (!deliveryStatus.configured) {
     return {
       success: false,
       unverified: true,
       email,
-      message: devBypassEnabled
-        ? `OTP generated for ${email}, but email sending is disabled because SMTP is not configured. DEV_OTP_BYPASS is enabled, so use code 112233 or check the server console.`
-        : `OTP generated for ${email}, but ${context} could not be delivered because SMTP is not configured. Please contact support.`
+      message: `OTP generated for ${email}, but ${context} could not be delivered because SMTP is not configured. Please contact support.`
     };
   }
 
@@ -28,9 +101,7 @@ function buildEmailDeliveryFailurePayload(email, context = 'verification email')
     success: false,
     unverified: true,
     email,
-    message: devBypassEnabled
-      ? `OTP generated for ${email}, but ${context} failed to deliver. DEV_OTP_BYPASS is enabled, so use code 112233 or check the server console.`
-      : `We generated your verification code, but ${context} failed to deliver to ${email}. Please try again later or contact support.`
+    message: `We generated your verification code, but ${context} failed to deliver to ${email}. Please try again later or contact support.`
   };
 }
 
@@ -80,7 +151,7 @@ export async function registerUser(req, res) {
       authProvider: 'email',
       role: 'user',
       phoneVerified: false,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -88,15 +159,19 @@ export async function registerUser(req, res) {
     if (useMemory) memoryDb.users.set(userId, userData);
     else await dbCreate('users', userId, userData);
 
-    const otpCode = generateOTPCode();
-    await saveEmailOTP(db, email, otpCode);
-    const mailSent = await sendVerificationEmail(email, name, otpCode);
-    if (!mailSent) {
-      console.warn(`[AUTH CONTROLLER]: Verification email failed to deliver to ${email}. Ensure SMTP is configured.`);
-      return res.status(503).json(buildEmailDeliveryFailurePayload(userData.email, 'the signup verification email'));
-    }
+    const tokenPayload = { userId, email: userData.email, name: userData.name, role: userData.role || 'user' };
+    const token = generateAccessToken(tokenPayload, true);
+    const refreshToken = generateRefreshToken(tokenPayload, true);
+    const { password: _, ...safeUser } = userData;
+    safeUser.id = userId;
 
-    return res.status(201).json({ success: true, unverified: true, email: userData.email, message: 'Account created successfully! A 6-digit verification code has been sent to your email.' });
+    return res.status(201).json({
+      success: true,
+      token,
+      refreshToken,
+      user: safeUser,
+      message: 'Account created successfully!'
+    });
   } catch (err) {
     console.error('[REGISTER USER ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Failed to create account. Please try again.' });
@@ -153,28 +228,13 @@ export async function loginUser(req, res) {
     const valid = await bcrypt.compare(password, userData.password);
     if (!valid) return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
-    if (userData.emailVerified === false) {
-      const otpCode = generateOTPCode();
-      const isRateLimited = await checkOTPRequestRateLimit(db, userData.email);
-      if (!isRateLimited) {
-        await saveEmailOTP(db, userData.email, otpCode);
-        const mailSent = await sendVerificationEmail(userData.email, userData.name, otpCode);
-        if (!mailSent) {
-          console.warn(`[AUTH CONTROLLER]: Verification email failed to deliver to ${userData.email} on login. Ensure SMTP is configured.`);
-          return res.status(503).json(buildEmailDeliveryFailurePayload(userData.email, 'the login verification email'));
-        }
-        return res.json({ success: false, unverified: true, email: userData.email, message: 'Your email address is unverified. A fresh verification code has been sent to your email.' });
-      }
-
-      return res.json({ success: false, unverified: true, email: userData.email, message: 'Your email address is unverified. Please enter the most recent verification code or wait 60 seconds before requesting a new one.' });
-    }
-
     const tokenPayload = { userId: docId, email: userData.email, name: userData.name, role: userData.role || 'user' };
     const token = generateAccessToken(tokenPayload, true);
     const refreshToken = generateRefreshToken(tokenPayload, true);
     const { password: _, ...safeUser } = userData;
     safeUser.id = docId;
-    return res.json({ success: true, token, refreshToken, user: safeUser });
+    const redirect = await getPartnerCollabRedirect(db, safeUser);
+    return res.json({ success: true, token, refreshToken, user: safeUser, redirectTo: redirect?.redirectTo || null, collaboratorContext: redirect?.collaboratorContext || null });
   } catch (err) {
     console.error('[LOGIN USER ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
@@ -260,7 +320,8 @@ export async function googleLogin(req, res) {
     const token = generateAccessToken(tokenPayload, true);
     const refreshToken = generateRefreshToken(tokenPayload, true);
     const { password: _, ...safeUser } = userData;
-    return res.json({ success: true, token, refreshToken, user: safeUser });
+    const redirect = await getPartnerCollabRedirect(db, safeUser);
+    return res.json({ success: true, token, refreshToken, user: safeUser, redirectTo: redirect?.redirectTo || null, collaboratorContext: redirect?.collaboratorContext || null });
   } catch (err) {
     console.error('[GOOGLE LOGIN ERROR]:', err.message);
     return res.status(500).json({ success: false, message: 'Google authentication failed: ' + err.message });
@@ -290,13 +351,17 @@ export async function sendEmailOTP(req, res) {
       }
     }
 
-    const mailSent = await sendVerificationEmail(normalizedEmail, userName, otpCode);
-    if (!mailSent) {
-      console.warn(`[AUTH CONTROLLER]: Verification email failed to deliver to ${normalizedEmail} on resend. Ensure SMTP is configured.`);
-      return res.status(503).json(buildEmailDeliveryFailurePayload(normalizedEmail, 'the verification email resend'));
-    }
+    sendVerificationEmail(normalizedEmail, userName, otpCode)
+      .then(mailSent => {
+        if (!mailSent) {
+          console.warn(`[AUTH CONTROLLER]: Verification email failed to deliver to ${normalizedEmail}. Ensure SMTP is configured.`);
+        }
+      })
+      .catch(err => {
+        console.error(`[AUTH CONTROLLER]: Email sending failed for ${normalizedEmail}:`, err);
+      });
 
-    return res.json({ success: true, message: 'Verification code resent successfully to ' + normalizedEmail });
+    return res.json({ success: true, message: 'Verification code sent successfully to ' + normalizedEmail });
   } catch (err) {
     console.error('[RESEND OTP ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Failed to send verification code. Please try again.' });
@@ -328,8 +393,17 @@ export async function verifyEmailOTP(req, res) {
         const refreshToken = generateRefreshToken(tokenPayload, true);
         const safeUser = { ...userData, id: userId, emailVerified: true };
         delete safeUser.password;
+        const redirect = await getPartnerCollabRedirect(db, safeUser);
 
-        return res.json({ success: true, token, refreshToken, user: safeUser, message: 'Email verified successfully! Welcome to Yatri Point.' });
+        return res.json({
+          success: true,
+          token,
+          refreshToken,
+          user: safeUser,
+          redirectTo: redirect?.redirectTo || null,
+          collaboratorContext: redirect?.collaboratorContext || null,
+          message: 'Email verified successfully! Welcome to Yatri Point.'
+        });
       } catch (dbErr) {
         console.error('?? [VERIFY OTP DB WRITE ERROR]:', dbErr.message);
       }
@@ -343,6 +417,55 @@ export async function verifyEmailOTP(req, res) {
   } catch (err) {
     console.error('[VERIFY OTP ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Verification failed' });
+  }
+}
+
+export async function verifyMsg91Token(req, res) {
+  try {
+    const accessToken = req.body.accessToken || req.body.access_token || req.body['access-token'] || req.body.token;
+    const phone = typeof req.body.phone === 'string' ? req.body.phone.trim() : '';
+
+    if (!accessToken) {
+      return res.status(400).json({ success: false, message: 'MSG91 access token is required' });
+    }
+
+    const verificationResponse = await verifyMsg91AccessToken(accessToken, phone);
+
+    const responsePhone =
+      verificationResponse?.mobile ||
+      verificationResponse?.phone ||
+      verificationResponse?.data?.mobile ||
+      verificationResponse?.data?.phone ||
+      '';
+
+    if (phone && responsePhone) {
+      const normalizedInputPhone = phone.replace(/\D/g, '');
+      const normalizedResponsePhone = String(responsePhone).replace(/\D/g, '');
+
+      if (
+        normalizedInputPhone &&
+        normalizedResponsePhone &&
+        !normalizedResponsePhone.endsWith(normalizedInputPhone) &&
+        !normalizedInputPhone.endsWith(normalizedResponsePhone)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Verified phone number does not match the submitted phone number'
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Phone number verified successfully',
+      verification: verificationResponse
+    });
+  } catch (err) {
+    console.error('[MSG91 VERIFY TOKEN ERROR]:', err?.payload || err.message || err);
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      message: err?.payload?.message || err.message || 'Failed to verify MSG91 access token'
+    });
   }
 }
 
@@ -408,3 +531,4 @@ export async function refreshAccessToken(req, res) {
     return res.status(500).json({ success: false, message: 'Refresh process failed' });
   }
 }
+

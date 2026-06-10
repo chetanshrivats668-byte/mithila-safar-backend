@@ -7,6 +7,7 @@ const router = Router();
 router.post('/request', requireCollaborator, verificationController.requestVerification);
 router.get('/status', requireCollaborator, verificationController.getVerificationStatus);
 router.post('/admin-verify', requireAdmin, verificationController.adminVerifyCollaborator);
+router.post('/admin/approve-partner-collab', requireAdmin, verificationController.approvePartnerCollab);
 router.post('/admin-suspend', requireAdmin, verificationController.adminSuspendCollaborator);
 router.post('/admin-unsuspend', requireAdmin, verificationController.adminUnsuspendCollaborator);
 router.post('/admin/bus-approve', requireAdmin, verificationController.adminApproveService);
