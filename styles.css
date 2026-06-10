@@ -450,7 +450,7 @@ header {
 }
 
 .top-account-value {
-    max-width: 120px;
+    max-width: none;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -2048,7 +2048,7 @@ footer {
 
     .top-account-name {
         display: inline-flex;
-        max-width: 150px;
+        max-width: none;
         overflow: hidden;
         flex-shrink: 1;
     }
@@ -2330,7 +2330,7 @@ footer {
     }
 
     .top-account-name {
-        max-width: 100px;
+        max-width: none;
         padding: .2rem .45rem;
         font-size: .85rem;
     }
