@@ -129,6 +129,11 @@
                 <button class="btn-signup" onclick="openModal('signupModal')">Sign Up</button>
             </div>
 
+            <div class="top-account-name" id="topAccountName" style="display:none">
+                <span class="top-account-label">Account:</span>
+                <span class="top-account-value" id="topAccountNameText">User</span>
+            </div>
+
             <div id="userSection" class="user-menu" style="display:none" onclick="toggleDropdown()">
                 <div class="user-avatar" id="userAvatar"><span id="userInitial">U</span></div>
                 <span class="user-name" id="userNameDisplay">User</span>
@@ -258,14 +263,14 @@
                 <div class="form-group">
                     <label>Boarding Point</label>
                     <div style="display:flex;gap:.4rem;align-items:center;">
-                        <input type="text" id="carBoarding" placeholder="e.g. Station Road, Near SBI Bank" required autocomplete="off" style="flex:1;">
+                        <input type="text" id="carBoarding" placeholder="e.g. Station Road, Near SBI Bank" required autocomplete="off" style="flex:1;min-width:0;">
                         <button type="button" id="boardingLocBtn" onclick="fillLocationFromGPS('carBoarding')" title="Use my current location" style="padding:.45rem .65rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;white-space:nowrap;flex-shrink:0;">📍</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Dropping Point</label>
                     <div style="display:flex;gap:.4rem;align-items:center;">
-                        <input type="text" id="carDropping" placeholder="e.g. Airport, Bus Stand" required autocomplete="off" style="flex:1;">
+                        <input type="text" id="carDropping" placeholder="e.g. Airport, Bus Stand" required autocomplete="off" style="flex:1;min-width:0;">
                         <button type="button" id="droppingLocBtn" onclick="fillLocationFromGPS('carDropping')" title="Use my current location" style="padding:.45rem .65rem;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.85rem;white-space:nowrap;flex-shrink:0;">📍</button>
                     </div>
                 </div>

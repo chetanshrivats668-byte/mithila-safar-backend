@@ -488,7 +488,7 @@ export async function getCurrentUser(req, res) {
 
 export async function updateUserProfile(req, res) {
   try {
-    const { name, picture } = req.body;
+    const { name, picture, phone, phoneVerified } = req.body;
     const db = req.app.locals.db;
     if (!db || req.user.temporarySession) {
       return res.status(503).json({ success: false, message: 'Profile editing is temporarily unavailable in database offline fallback mode.' });
@@ -497,6 +497,26 @@ export async function updateUserProfile(req, res) {
     const updates = { updatedAt: new Date().toISOString() };
     if (name) updates.name = name;
     if (picture) updates.picture = picture;
+
+    if (typeof phone === 'string') {
+      const normalizedPhone = phone.replace(/\D/g, '').slice(-10);
+      if (normalizedPhone && !/^[6-9]\d{9}$/.test(normalizedPhone)) {
+        return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number' });
+      }
+      updates.phone = normalizedPhone ? `+91${normalizedPhone}` : '';
+      if (!normalizedPhone) updates.phoneVerified = false;
+    }
+
+    if (typeof phoneVerified === 'boolean') {
+      updates.phoneVerified = phoneVerified;
+    }
+
+    if (updates.phoneVerified === true && !updates.phone) {
+      const existingUser = await dbGet('users', req.user.userId);
+      if (!existingUser?.phone) {
+        return res.status(400).json({ success: false, message: 'Phone number is required before marking it verified' });
+      }
+    }
 
     await dbUpdate('users', req.user.userId, updates);
     const userData = await dbGet('users', req.user.userId);

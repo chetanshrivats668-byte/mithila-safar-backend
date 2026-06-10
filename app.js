@@ -240,16 +240,21 @@ function updateUILoggedIn() {
     const authBtns = document.getElementById('authBtns');
     const userSection = document.getElementById('userSection');
     const mobileAuth = document.getElementById('mobileAuth');
+    const topAccountName = document.getElementById('topAccountName');
+    const topAccountNameText = document.getElementById('topAccountNameText');
     if (authBtns) authBtns.style.display = 'none';
     if (userSection) userSection.style.display = 'flex';
     if (mobileAuth) mobileAuth.style.display = 'none';
     if (currentUser) {
-        const initial = (currentUser.name || currentUser.email || 'U')[0].toUpperCase();
+        const displayName = currentUser.name || currentUser.email || 'User';
+        const initial = displayName[0].toUpperCase();
         const nameEl = document.getElementById('userNameDisplay');
         const initialEl = document.getElementById('userInitial');
-        if (nameEl) nameEl.textContent = currentUser.name || currentUser.email || 'User';
+        if (nameEl) nameEl.textContent = displayName;
         if (initialEl) initialEl.textContent = initial;
+        if (topAccountNameText) topAccountNameText.textContent = displayName;
     }
+    if (topAccountName) topAccountName.style.display = 'inline-flex';
     document.querySelectorAll('.mobile-menu .btn-login, .mobile-menu .btn-signup').forEach(b => b.style.display = 'none');
 }
 
@@ -257,9 +262,11 @@ function updateUILoggedOut() {
     const authBtns = document.getElementById('authBtns');
     const userSection = document.getElementById('userSection');
     const mobileAuth = document.getElementById('mobileAuth');
+    const topAccountName = document.getElementById('topAccountName');
     if (authBtns) authBtns.style.display = 'flex';
     if (userSection) userSection.style.display = 'none';
     if (mobileAuth) mobileAuth.style.display = 'flex';
+    if (topAccountName) topAccountName.style.display = 'none';
     document.querySelectorAll('.mobile-menu .btn-login, .mobile-menu .btn-signup').forEach(b => b.style.display = '');
 }
 
@@ -2076,6 +2083,8 @@ function saveProfileName() {
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
             document.getElementById('profileName').textContent = name;
             document.getElementById('userNameDisplay').textContent = name;
+            const topAccountNameText = document.getElementById('topAccountNameText');
+            if (topAccountNameText) topAccountNameText.textContent = name;
             notify('Name updated', 'success');
         } else {
             notify(data.message || 'Failed to update', 'error');
@@ -2086,6 +2095,8 @@ function saveProfileName() {
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         document.getElementById('profileName').textContent = name;
         document.getElementById('userNameDisplay').textContent = name;
+        const topAccountNameText = document.getElementById('topAccountNameText');
+        if (topAccountNameText) topAccountNameText.textContent = name;
         notify('Name updated (offline)', 'success');
     });
 }
@@ -2179,15 +2190,49 @@ function verifyPhoneWithMsg91(phone, onSuccess, onFailure) {
     }
 }
 
-function markPhoneVerified(phone, sendBtn) {
-    if (currentUser) {
-        currentUser.phone = '+91' + phone;
+async function markPhoneVerified(phone, sendBtn) {
+    var formattedPhone = '+91' + phone;
+
+    if (currentUser && authToken) {
+        try {
+            var res = await fetch(API_URL + '/api/auth/profile', {
+                method: 'PUT',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    phone: formattedPhone,
+                    phoneVerified: true
+                })
+            });
+            var data = await res.json().catch(function() { return {}; });
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to save verified phone number');
+            }
+            if (data.user) {
+                currentUser = data.user;
+            } else {
+                currentUser.phone = formattedPhone;
+                currentUser.phoneVerified = true;
+            }
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        } catch (err) {
+            notify(err.message || 'Phone verified but could not be saved to your account', 'error');
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send OTP';
+            }
+            return;
+        }
+    } else if (currentUser) {
+        currentUser.phone = formattedPhone;
         currentUser.phoneVerified = true;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
     }
 
+    var profilePhoneInput = document.getElementById('profilePhoneInput');
+    if (profilePhoneInput) profilePhoneInput.value = phone;
+
     var profilePhoneEl = document.getElementById('profilePhoneDisplay');
-    if (profilePhoneEl) profilePhoneEl.textContent = '+91' + phone;
+    if (profilePhoneEl) profilePhoneEl.textContent = formattedPhone;
 
     var badge = document.getElementById('phoneVerifiedBadge');
     if (badge) badge.style.display = 'inline-block';
