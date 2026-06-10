@@ -1980,8 +1980,9 @@ footer {
     }
 
     .header-right {
-        gap: .65rem;
+        gap: .5rem;
         flex-shrink: 0;
+        min-width: 0;
     }
 
     .user-menu {
@@ -2047,7 +2048,20 @@ footer {
 
     .top-account-name {
         display: inline-flex;
-        max-width: 150px;
+        max-width: 110px;
+        overflow: hidden;
+        flex-shrink: 1;
+    }
+
+    .top-account-label {
+        display: none;
+    }
+
+    .top-account-value {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .hero {
@@ -2301,17 +2315,24 @@ footer {
     }
 
     .header-right {
-        gap: .45rem;
+        gap: .3rem;
+        min-width: 0;
     }
 
     .user-menu {
-        padding: .2rem .4rem;
-        max-width: 132px;
+        padding: .2rem .35rem;
+        max-width: 110px;
     }
 
     .user-avatar {
         width: 28px;
         height: 28px;
+    }
+
+    .top-account-name {
+        max-width: 78px;
+        padding: .2rem .45rem;
+        font-size: .68rem;
     }
 
     .user-name,

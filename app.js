@@ -696,12 +696,11 @@ async function handleSignup(e) {
             return;
         }
         closeModal('signupModal');
-        openModal('emailOtpModal');
-        pendingVerificationEmail = email;
-        document.getElementById('emailOtpSubtitle').innerText = 'Enter the 6-digit verification code sent to ' + email;
-        document.getElementById('emailOtpInput').value = '';
-        document.getElementById('emailOtpError').style.display = 'none';
-        notify('Account created! Please verify your email.', 'success');
+        if (data.token && data.user) {
+            saveSession(data.token, data.user, data.refreshToken);
+        }
+        notify('Account created successfully!', 'success');
+        await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Signup failed: ' + (err.message || 'network error'), 'error');
     } finally {
