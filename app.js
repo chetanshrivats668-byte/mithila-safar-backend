@@ -2273,6 +2273,12 @@ function toggleLiveLocation(cb) {
         document.getElementById('liveLocationStatus').style.display = 'none';
         return;
     }
+    
+    if (!confirm("Would you like to share your live location from this device?")) {
+        cb.checked = false;
+        return;
+    }
+
     if (!navigator.geolocation) {
         cb.checked = false;
         notify('Geolocation not supported by your browser', 'error');

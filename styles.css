@@ -437,7 +437,7 @@ header {
     border-radius: 999px;
     background: rgba(255, 255, 255, .14);
     color: var(--white);
-    font-size: .78rem;
+    font-size: .95rem;
     font-weight: 600;
     white-space: nowrap;
 }
@@ -2048,7 +2048,7 @@ footer {
 
     .top-account-name {
         display: inline-flex;
-        max-width: 110px;
+        max-width: 150px;
         overflow: hidden;
         flex-shrink: 1;
     }
@@ -2321,7 +2321,7 @@ footer {
 
     .user-menu {
         padding: .2rem .35rem;
-        max-width: 110px;
+        max-width: 150px;
     }
 
     .user-avatar {
@@ -2330,9 +2330,9 @@ footer {
     }
 
     .top-account-name {
-        max-width: 78px;
+        max-width: 100px;
         padding: .2rem .45rem;
-        font-size: .68rem;
+        font-size: .85rem;
     }
 
     .user-name,
