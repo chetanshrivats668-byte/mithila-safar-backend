@@ -451,8 +451,7 @@ header {
 
 .top-account-value {
     max-width: none;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
 }
 
 .dropdown-arrow {
@@ -2049,8 +2048,8 @@ footer {
     .top-account-name {
         display: inline-flex;
         max-width: none;
-        overflow: hidden;
         flex-shrink: 1;
+        white-space: normal;
     }
 
     .top-account-label {
@@ -2058,10 +2057,8 @@ footer {
     }
 
     .top-account-value {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        max-width: none;
+        white-space: normal;
     }
 
     .hero {
