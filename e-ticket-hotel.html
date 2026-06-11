@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yatri Point – Hotel E-Ticket</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;margin:0;padding:24px;display:flex;justify-content:center}
+.ticket{max-width:650px;width:100%;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,40,.25)}
+.head{background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);color:#fff;padding:24px;display:flex;justify-content:space-between;align-items:center}
+.badge{background:#10b981;color:#fff;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700}
+.body{padding:24px;display:grid;gap:14px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cell{background:#f8faff;border:1px solid #e8f0fe;border-radius:10px;padding:12px}
+.k{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700}.v{font-size:16px;font-weight:800;color:#0f172a;margin-top:4px}
+.actions{display:flex;gap:10px;justify-content:center;margin:16px 0}.btn{border:none;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
+@media(max-width:600px){.row{grid-template-columns:1fr}}
+@media print{.actions{display:none}}
+</style>
+</head>
+<body>
+<div style="width:100%">
+  <div class="actions"><button class="btn" onclick="window.print()">🖨️ Print</button><button class="btn" onclick="location.href='index.html'">🏠 Home</button></div>
+  <div class="ticket">
+    <div class="head"><div><h2 style="margin:0">🏨 Hotel Booking Ticket</h2><div id="bookingId" style="opacity:.8">YPH-XXXX</div></div><div class="badge">CONFIRMED</div></div>
+    <div class="body">
+      <div class="row"><div class="cell"><div class="k">Hotel</div><div class="v" id="hotelName">—</div></div><div class="cell"><div class="k">City</div><div class="v" id="city">—</div></div></div>
+      <div class="row"><div class="cell"><div class="k">Check-In</div><div class="v" id="checkin">—</div></div><div class="cell"><div class="k">Check-Out</div><div class="v" id="checkout">—</div></div></div>
+      <div class="row"><div class="cell"><div class="k">Guests</div><div class="v" id="guests">1</div></div><div class="cell"><div class="k">Rooms</div><div class="v" id="rooms">1</div></div></div>
+      <div class="row"><div class="cell"><div class="k">Guest Name</div><div class="v" id="guestName">—</div></div><div class="cell"><div class="k">Phone</div><div class="v" id="phone">—</div></div></div>
+      <div class="row"><div class="cell"><div class="k">Payment Method</div><div class="v" id="payMethod">—</div></div><div class="cell"><div class="k">Amount Paid</div><div class="v" id="amount">₹—</div></div></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var raw = localStorage.getItem('latestTicket') || localStorage.getItem('latestHotelTicket');
+  if(!raw) return;
+  var d = JSON.parse(raw);
+  var fmt = function(x){ if(!x) return '—'; try { return new Date(x).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});} catch(e){ return x; } };
+  document.getElementById('bookingId').textContent = d.orderId || ('YPH-'+Date.now().toString(36).toUpperCase());
+  document.getElementById('hotelName').textContent = d.hotelName || d.name || (d.selectedHotel&&d.selectedHotel.name) || '—';
+  document.getElementById('city').textContent = d.city || d.location || (d.selectedHotel&&d.selectedHotel.city) || '—';
+  document.getElementById('checkin').textContent = fmt(d.checkin || d.checkInDate || d.date);
+  document.getElementById('checkout').textContent = fmt(d.checkout || d.checkOutDate);
+  document.getElementById('guests').textContent = d.guests || d.passengers || 1;
+  document.getElementById('rooms').textContent = d.rooms || 1;
+  document.getElementById('guestName').textContent = d.userName || d.guestName || 'Primary Guest';
+  document.getElementById('phone').textContent = d.userPhone || d.phone || '—';
+  document.getElementById('payMethod').textContent = (d.paymentMethod || 'Razorpay').toUpperCase();
+  document.getElementById('amount').textContent = '₹' + (d.amount || d.payNow || '—');
+})();
+</script>
+</body>
+</html>

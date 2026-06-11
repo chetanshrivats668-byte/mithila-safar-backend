@@ -22,6 +22,23 @@ let emailOtpCooldownTime = 0;
 let emailOtpTimerInterval = null;
 let advancePaymentActive = false;
 
+function getTicketPageByType(type) {
+    var t = (type || '').toLowerCase();
+    if (t === 'hotel') return 'e-ticket-hotel.html';
+    if (t === 'cab' || t === 'car') return 'e-ticket-cab.html';
+    if (t === 'cafe') return 'e-ticket-cafe.html';
+    return 'e-ticket.html'; // bus default
+}
+
+function saveAndRedirectTicket(ticketData) {
+    localStorage.setItem('latestTicket', JSON.stringify(ticketData));
+    var t = (ticketData && ticketData.type || '').toLowerCase();
+    if (t === 'hotel') localStorage.setItem('latestHotelTicket', JSON.stringify(ticketData));
+    if (t === 'cab' || t === 'car') localStorage.setItem('latestCabTicket', JSON.stringify(ticketData));
+    if (t === 'cafe') localStorage.setItem('latestCafeTicket', JSON.stringify(ticketData));
+    window.location.href = getTicketPageByType(t);
+}
+
 // ========== SPLASH ==========
 function showSplash() {
     const splash = document.getElementById('splashScreen');
@@ -1799,8 +1816,7 @@ async function payViaRazorpay() {
 
                         // Generate ticket immediately
                         var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'Razorpay' };
-                        localStorage.setItem('latestTicket', JSON.stringify(ticketData));
-                        window.location.href = 'e-ticket.html';
+                        saveAndRedirectTicket(ticketData);
                     } else {
                         notify('Payment verification failed: ' + verifyData.message, 'error');
                     }
@@ -1938,8 +1954,7 @@ async function payViaUpiId() {
                             paymentMethod: 'UPI (' + upiId + ')',
                             paymentStatus: 'confirmed'
                         };
-                        localStorage.setItem('latestTicket', JSON.stringify(ticketData));
-                        window.location.href = 'e-ticket.html';
+                        saveAndRedirectTicket(ticketData);
                     } else {
                         notify('Payment verification failed: ' + verifyData.message, 'error');
                     }
