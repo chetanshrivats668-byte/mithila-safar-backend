@@ -1,7 +1,7 @@
-﻿import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
+import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
 import { memoryDb } from '../utils/firestoreFallback.js';
 
-function normalizeBusRecord(record) {
+export function normalizeBusRecord(record) {
   if (!record) return null;
 
   const routeCities = Array.isArray(record.routeCities)
@@ -9,6 +9,24 @@ function normalizeBusRecord(record) {
     : typeof record.route === 'string'
       ? record.route.split('→').map(city => city.trim()).filter(Boolean)
       : [];
+
+  let schedules = [];
+  if (Array.isArray(record.schedules)) {
+    schedules = record.schedules;
+  } else if (Array.isArray(record.schedule?.schedules)) {
+    schedules = record.schedule.schedules;
+  } else if (record.schedule) {
+    schedules = [record.schedule];
+  }
+
+  // Flatten nested schedules if any exist due to previous bugs
+  if (schedules.length > 0) {
+    let active = schedules[0];
+    while (active && active.schedules && Array.isArray(active.schedules) && active.schedules.length > 0) {
+      active = active.schedules[0];
+    }
+    schedules = [active];
+  }
 
   return {
     ...record,
@@ -21,7 +39,7 @@ function normalizeBusRecord(record) {
     pricePerKm: record.pricePerKm ?? record.price_per_km ?? record.fare ?? 0,
     driverName: record.driverName ?? record.driver_name ?? '',
     busPhotos: record.busPhotos ?? [],
-    schedules: record.schedules ?? (record.schedule ? [record.schedule] : []),
+    schedules,
     source: record.source ?? routeCities[0] ?? '',
     destination: record.destination ?? routeCities[routeCities.length - 1] ?? ''
   };
@@ -46,6 +64,7 @@ function toDbBusPayload(data, busId) {
     fare: data.pricePerKm,
     amenities: data.busPhotos || [],
     schedule: {
+      busType: data.busType || '',
       seatLayout: data.seatLayout || '2x2',
       driverName: data.driverName || '',
       routeCities,
@@ -156,6 +175,17 @@ export async function getBusesByCollaborator(db, collaboratorId) {
 export async function updateBus(db, busId, updates) {
   updates.updatedAt = new Date().toISOString();
 
+  // If schedules array is updated, sync departure/arrival times
+  if (updates.schedules && Array.isArray(updates.schedules) && updates.schedules.length > 0) {
+    const activeSched = updates.schedules[0];
+    if (updates.departureTime === undefined && activeSched.departureTime !== undefined) {
+      updates.departureTime = activeSched.departureTime;
+    }
+    if (updates.arrivalTime === undefined && activeSched.arrivalTime !== undefined) {
+      updates.arrivalTime = activeSched.arrivalTime;
+    }
+  }
+
   if (!isSupabaseAvailable()) {
     const bus = memoryDb.buses.get(busId);
     if (!bus) return null;
@@ -164,7 +194,17 @@ export async function updateBus(db, busId, updates) {
     return { id: busId, ...updates };
   }
 
-  await dbUpdate('collaborator_buses', busId, toDbBusUpdates(updates));
+  const existing = await getBusById(db, busId);
+  const dbUpdates = toDbBusUpdates(updates);
+
+  if (dbUpdates.schedule && existing) {
+    dbUpdates.schedule = {
+      ...(existing.schedule || {}),
+      ...dbUpdates.schedule
+    };
+  }
+
+  await dbUpdate('collaborator_buses', busId, dbUpdates);
   return { id: busId, ...updates };
 }
 
@@ -181,12 +221,13 @@ export async function deleteBus(db, busId) {
 export async function addBusSchedule(db, busId, schedule) {
   const bus = await getBusById(db, busId);
   if (!bus) return null;
-  const schedules = bus.schedules || [];
-  schedules.push({
+
+  // We set/overwrite the active schedule at index 0 to avoid endless nested arrays
+  const schedules = [{
     id: 'SCH' + Date.now().toString(36).toUpperCase(),
     ...schedule,
     createdAt: new Date().toISOString()
-  });
+  }];
 
   if (!isSupabaseAvailable()) {
     const updated = { ...bus, schedules, updatedAt: new Date().toISOString() };
@@ -194,7 +235,20 @@ export async function addBusSchedule(db, busId, schedule) {
     return schedules;
   }
 
-  await dbUpdate('collaborator_buses', busId, toDbBusUpdates({ schedules }));
+  const dbUpdates = toDbBusUpdates({
+    schedules,
+    departureTime: schedule.departureTime,
+    arrivalTime: schedule.arrivalTime
+  });
+
+  if (dbUpdates.schedule && bus) {
+    dbUpdates.schedule = {
+      ...(bus.schedule || {}),
+      ...dbUpdates.schedule
+    };
+  }
+
+  await dbUpdate('collaborator_buses', busId, dbUpdates);
   return schedules;
 }
 

@@ -1,6 +1,6 @@
 // ========== CONFIGURATION ==========
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://localhost:3001' 
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3001'
     : window.location.origin;
 let GOOGLE_CLIENT_ID = '';
 let RAZORPAY_KEY_ID = '';
@@ -126,7 +126,7 @@ function handleHashAction() {
     if (!isIndexPage()) return;
     const hash = window.location.hash;
     if (!hash) return;
-    
+
     const action = hash.substring(1);
     if (action === 'login') {
         navigateTo('home');
@@ -403,11 +403,11 @@ function renderCollaboratorRoleSelector(roles) {
         btn.type = 'button';
         btn.style.cssText = 'text-align:left;padding:1rem;border:1px solid #ddd;border-radius:12px;background:#fff;cursor:pointer';
         btn.innerHTML = '<strong>' + ((role.type || 'business').toUpperCase()) + '</strong><div style="font-size:.9rem;color:#666;margin-top:.25rem">' + (role.businessName || role.name || 'Collaborator Profile') + '</div>';
-        btn.onclick = async function() { await activateCollaboratorRole(role.id); };
+        btn.onclick = async function () { await activateCollaboratorRole(role.id); };
         list.appendChild(btn);
 
     });
-    document.getElementById('closeCollabSelector').onclick = function() { box.remove(); };
+    document.getElementById('closeCollabSelector').onclick = function () { box.remove(); };
 }
 
 
@@ -562,7 +562,7 @@ function initGoogleSignIn() {
         cancel_on_tap_outside: false
     });
 
-    GOOGLE_BUTTON_CONTAINERS.forEach(function(containerId) {
+    GOOGLE_BUTTON_CONTAINERS.forEach(function (containerId) {
         var container = document.getElementById(containerId);
         if (container) {
             container.innerHTML = '';
@@ -618,12 +618,17 @@ async function handleCredentialResponse(response) {
         }
 
         saveSession(data.token, data.user, data.refreshToken);
+        applyCollaboratorLoginContext(data);
 
         closeModal('loginModal');
         closeModal('signupModal');
 
         hideTempSessionBanner();
         notify('Welcome ' + (data.user.name || data.user.email || '') + '!', 'success');
+        if (data.redirectTo === '/collaborator-dashboard') {
+            window.location.href = '/collaborator-dashboard.html';
+            return;
+        }
         await checkAndRedirectCollaborator();
     } catch (err) {
         if (err.name === 'AbortError' || err.message === 'Failed to fetch' || err.message === 'NetworkError') {
@@ -635,13 +640,26 @@ async function handleCredentialResponse(response) {
 }
 
 // ========== EMAIL/PASSWORD LOGIN ==========
+function applyCollaboratorLoginContext(data) {
+    const context = data?.collaboratorContext || null;
+    if (!context?.collaboratorId) {
+        return false;
+    }
+
+    selectedCollaboratorId = context.collaboratorId;
+    selectedCollaboratorRole = context.partnerCollabStatus || selectedCollaboratorRole || 'approved';
+    localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
+    localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+    return true;
+}
+
 async function handleLogin(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const email = document.getElementById('loginEmail').value.trim();
     const pass = document.getElementById('loginPassword').value;
     if (!email || !pass) return notify('Please fill all fields', 'error');
-    
+
     setButtonLoading(btn, true, 'Login');
     try {
         const res = await fetch(API_URL + '/api/auth/login', {
@@ -664,8 +682,13 @@ async function handleLogin(e) {
             return;
         }
         saveSession(data.token, data.user, data.refreshToken);
+        applyCollaboratorLoginContext(data);
         closeModal('loginModal');
         notify('Welcome back ' + (data.user.name || '') + '!', 'success');
+        if (data.redirectTo === '/collaborator-dashboard') {
+            window.location.href = '/collaborator-dashboard.html';
+            return;
+        }
         await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Login failed: ' + (err.message || 'network error'), 'error');
@@ -683,7 +706,7 @@ async function handleSignup(e) {
     const phone = document.getElementById('signupPhone').value.trim();
     const password = document.getElementById('signupPassword').value;
     if (!name || !email || !phone || !password) return notify('Please fill all fields', 'error');
-    
+
     setButtonLoading(btn, true, 'Create Account');
     try {
         const res = await fetch(API_URL + '/api/auth/signup', {
@@ -698,6 +721,11 @@ async function handleSignup(e) {
         closeModal('signupModal');
         if (data.token && data.user) {
             saveSession(data.token, data.user, data.refreshToken);
+            applyCollaboratorLoginContext(data);
+            if (data.redirectTo === '/collaborator-dashboard') {
+                window.location.href = '/collaborator-dashboard.html';
+                return;
+            }
         }
         notify('Account created successfully!', 'success');
         await checkAndRedirectCollaborator();
@@ -736,6 +764,11 @@ async function confirmEmailOTP() {
         closeModal('emailOtpModal');
         if (data.token && data.user) {
             saveSession(data.token, data.user, data.refreshToken);
+            applyCollaboratorLoginContext(data);
+            if (data.redirectTo === '/collaborator-dashboard') {
+                window.location.href = '/collaborator-dashboard.html';
+                return;
+            }
             await checkAndRedirectCollaborator();
         }
         notify('Email verified successfully!', 'success');
@@ -760,7 +793,7 @@ async function resendEmailOTP() {
         if (link) link.style.pointerEvents = 'none';
         if (link) link.style.opacity = '0.5';
         if (emailOtpTimerInterval) clearInterval(emailOtpTimerInterval);
-        emailOtpTimerInterval = setInterval(function() {
+        emailOtpTimerInterval = setInterval(function () {
             emailOtpCooldownTime--;
             if (emailOtpCooldownTime <= 0) {
                 clearInterval(emailOtpTimerInterval);
@@ -800,9 +833,9 @@ const CITIES = ['Madhubani', 'Darbhanga', 'Patna', 'Jaynagar', 'Basopatti', 'Ben
 
 // ========== LOCATION SELECTS ==========
 function populateLocationSelects() {
-    document.querySelectorAll('.location-select').forEach(function(select) {
+    document.querySelectorAll('.location-select').forEach(function (select) {
         select.innerHTML = '<option value="">' + (select.dataset.placeholder || 'Select City...') + '</option>';
-        CITIES.forEach(function(city) {
+        CITIES.forEach(function (city) {
             var opt = document.createElement('option');
             opt.value = city;
             opt.textContent = city;
@@ -825,8 +858,8 @@ function toggleFilter(el) {
 
 // ========== TAB SWITCHING ==========
 function switchTab(type, btn) {
-    document.querySelectorAll('.booking-form').forEach(function(f) { f.classList.remove('active'); });
-    document.querySelectorAll('.booking-tabs button').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.booking-form').forEach(function (f) { f.classList.remove('active'); });
+    document.querySelectorAll('.booking-tabs button').forEach(function (b) { b.classList.remove('active'); });
     var form = document.getElementById(type + 'Form');
     if (form) form.classList.add('active');
     if (btn) btn.classList.add('active');
@@ -851,19 +884,13 @@ async function searchBuses(e) {
         });
         var data = await res.json();
         if (!data.success || !data.buses || data.buses.length === 0) return notify('No buses found for this route', 'error');
-        
+
         ALL_SEARCHED_BUSES = data.buses;
         currentBooking = { type: 'bus', from, to, date, passengers, buses: data.buses };
-        
-        // Show sorting and filters elements
-        document.getElementById('busFiltersSidebar').style.display = 'block';
-        document.getElementById('busSortingBar').style.display = 'flex';
-        
-        // Render dynamic checkboxes for operators
-        renderOperatorsFilterList(data.buses);
-        
-        // Sort and apply filters
-        applyBusFiltersAndSort();
+
+        // Sort buses by price low by default and render
+        let sorted = [...data.buses].sort((a, b) => a.startingPrice - b.startingPrice);
+        renderBusResults(sorted);
     } catch (err) {
         notify('No buses found for this route', 'error');
     }
@@ -887,9 +914,9 @@ function triggerFilterUpdate() {
 function triggerSort(sortBy) {
     ACTIVE_SORT_BY = sortBy;
     document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
-    
+
     let id = '';
-    switch(sortBy) {
+    switch (sortBy) {
         case 'price_low': id = 'sortPriceLow'; break;
         case 'price_high': id = 'sortPriceHigh'; break;
         case 'dep_earliest': id = 'sortDepEarliest'; break;
@@ -911,7 +938,7 @@ function updatePriceFilterVal(val) {
 function resetAllFilters() {
     document.getElementById('filterPriceRange').value = 3000;
     document.getElementById('priceRangeMaxDisplay').textContent = 'Max: ₹3000';
-    
+
     document.querySelectorAll('.bus-type-checkbox').forEach(cb => cb.checked = false);
     document.querySelectorAll('.depart-time-checkbox').forEach(cb => cb.checked = false);
     document.querySelectorAll('.operator-checkbox').forEach(cb => cb.checked = false);
@@ -919,16 +946,16 @@ function resetAllFilters() {
     document.querySelectorAll('input[name="filterRating"]').forEach(radio => {
         if (radio.value === '0') radio.checked = true;
     });
-    
+
     triggerFilterUpdate();
 }
 
 function applyBusFiltersAndSort() {
     let filtered = [...ALL_SEARCHED_BUSES];
-    
+
     const maxPrice = parseFloat(document.getElementById('filterPriceRange').value) || 3000;
     filtered = filtered.filter(b => b.startingPrice <= maxPrice);
-    
+
     const activeTypes = [...document.querySelectorAll('.bus-type-checkbox:checked')].map(cb => cb.value.toLowerCase());
     if (activeTypes.length > 0) {
         filtered = filtered.filter(b => {
@@ -936,7 +963,7 @@ function applyBusFiltersAndSort() {
             return activeTypes.some(t => bType.includes(t));
         });
     }
-    
+
     const activeSlots = [...document.querySelectorAll('.depart-time-checkbox:checked')].map(cb => cb.value);
     if (activeSlots.length > 0) {
         filtered = filtered.filter(b => {
@@ -946,8 +973,8 @@ function applyBusFiltersAndSort() {
                 const [hStr, mStr] = timeStr.replace(/(AM|PM)/i, '').split(':').map(Number);
                 const isPm = /PM/i.test(timeStr);
                 hour = (hStr % 12) + (isPm ? 12 : 0);
-            } catch(e) {}
-            
+            } catch (e) { }
+
             return activeSlots.some(slot => {
                 if (slot === 'morning') return hour >= 6 && hour < 12;
                 if (slot === 'afternoon') return hour >= 12 && hour < 18;
@@ -957,18 +984,18 @@ function applyBusFiltersAndSort() {
             });
         });
     }
-    
+
     const activeOperators = [...document.querySelectorAll('.operator-checkbox:checked')].map(cb => cb.value);
     if (activeOperators.length > 0) {
         filtered = filtered.filter(b => activeOperators.includes(b.operatorName));
     }
-    
+
     const minRatingRadio = document.querySelector('input[name="filterRating"]:checked');
     const minRating = minRatingRadio ? parseFloat(minRatingRadio.value) : 0;
     if (minRating > 0) {
         filtered = filtered.filter(b => b.operatorRating >= minRating);
     }
-    
+
     const activeAmenities = [...document.querySelectorAll('.amenity-checkbox:checked')].map(cb => cb.value.toLowerCase());
     if (activeAmenities.length > 0) {
         filtered = filtered.filter(b => {
@@ -976,35 +1003,35 @@ function applyBusFiltersAndSort() {
             return activeAmenities.every(a => bAmenities.includes(a));
         });
     }
-    
+
     filtered.sort((a, b) => {
         if (ACTIVE_SORT_BY === 'price_low') return a.startingPrice - b.startingPrice;
         if (ACTIVE_SORT_BY === 'price_high') return b.startingPrice - a.startingPrice;
         if (ACTIVE_SORT_BY === 'rating') return b.operatorRating - a.operatorRating;
-        
+
         if (ACTIVE_SORT_BY === 'dep_earliest' || ACTIVE_SORT_BY === 'dep_latest') {
             const getMin = (timeStr) => {
                 try {
                     const [h, m] = timeStr.replace(/(AM|PM)/i, '').split(':').map(Number);
                     const pm = /PM/i.test(timeStr);
                     return (h % 12 + (pm ? 12 : 0)) * 60 + (m || 0);
-                } catch(e) { return 480; }
+                } catch (e) { return 480; }
             };
             return ACTIVE_SORT_BY === 'dep_earliest' ? getMin(a.departureTime) - getMin(b.departureTime) : getMin(b.departureTime) - getMin(a.departureTime);
         }
-        
+
         if (ACTIVE_SORT_BY === 'duration') {
             const getMin = (durStr) => {
                 try {
                     const [h, m] = durStr.split(' ');
                     return parseInt(h) * 60 + parseInt(m || 0);
-                } catch(e) { return 240; }
+                } catch (e) { return 240; }
             };
             return getMin(a.duration) - getMin(b.duration);
         }
         return 0;
     });
-    
+
     renderBusResults(filtered);
 }
 
@@ -1012,11 +1039,11 @@ function renderBusResults(buses) {
     const container = document.getElementById('resultsContainer');
     const header = document.getElementById('resultsHeader');
     if (!container) return;
-    
+
     const from = currentBooking.from || '';
     const to = currentBooking.to || '';
     header.innerHTML = `${from} &rarr; ${to} | ${currentBooking.date || ''} (${buses.length} Buses Available)`;
-    
+
     if (buses.length === 0) {
         container.innerHTML = `
             <div class="result-card" style="text-align:center; padding:3rem; display:flex; flex-direction:column; justify-content:center; width:100%;">
@@ -1028,9 +1055,9 @@ function renderBusResults(buses) {
         navigateTo('results');
         return;
     }
-    
+
     let html = '';
-    buses.forEach(function(bus) {
+    buses.forEach(function (bus) {
         const rating = parseFloat(bus.operatorRating || 4.2).toFixed(1);
         const verifiedBadge = bus.operatorVerified ? `
             <span class="verified-badge-pill">
@@ -1043,7 +1070,7 @@ function renderBusResults(buses) {
         `).join('');
 
         html += `
-            <div class="enriched-bus-card" id="bus-card-${bus.id}">
+            <div class="enriched-bus-card" id="bus-card-${bus.id}" onclick="openBusDetailsModal('${bus.id}')">
                 <div class="bus-card-header">
                     <div class="operator-info-block">
                         <span class="operator-name">${bus.operatorName} ${verifiedBadge}</span>
@@ -1078,7 +1105,7 @@ function renderBusResults(buses) {
                     <div class="price-booking-cell">
                         <span class="price"><small>Starts from</small><br>₹${bus.startingPrice}</span>
                         <div style="display:flex; gap:6px;">
-                            <button class="book-btn" style="background:var(--primary);" onclick="openBusSeats('${bus.id}')">Select Seats</button>
+                            <button class="book-btn" style="background:var(--primary);" onclick="event.stopPropagation(); openBusSeats('${bus.id}')">Select Seats</button>
                         </div>
                     </div>
                 </div>
@@ -1087,12 +1114,12 @@ function renderBusResults(buses) {
                     <div class="amenity-icons-list">
                         ${amenitiesHtml}
                     </div>
-                    <a href="#" style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase;" onclick="openBusDetailsModal('${bus.id}'); return false;">View Full Details &amp; Policies &rarr;</a>
+                    <span style="font-size:0.75rem; font-weight:700; color:var(--primary); text-transform:uppercase;">View Full Details &amp; Policies &rarr;</span>
                 </div>
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
     navigateTo('results');
 }
@@ -1139,14 +1166,14 @@ function openBusDetailsModal(busId) {
 async function openBusSeats(busId) {
     const bus = currentBooking.buses.find(b => b.id === busId);
     if (!bus) return notify('Bus not found', 'error');
-    
+
     currentBooking.selectedBus = bus;
     selectedSeats = [];
-    
+
     document.getElementById('seatBusName').textContent = `${bus.operatorName} (${bus.busType})`;
     document.getElementById('seatCount').textContent = `0/${currentBooking.passengers}`;
     document.getElementById('seatTotal').textContent = '0';
-    
+
     const seatGrid = document.getElementById('seatGrid');
     seatGrid.innerHTML = `
         <div style="grid-column:1/-1; text-align:center; padding:2rem;">
@@ -1154,21 +1181,21 @@ async function openBusSeats(busId) {
             <p style="color:var(--gray); font-size:0.8rem; margin-top:8px;">Loading visual seat map...</p>
         </div>
     `;
-    
+
     openModal('seatModal');
-    
+
     try {
         const travelDate = currentBooking.date || new Date().toISOString().split('T')[0];
         const res = await fetch(`${API_URL}/api/buses/${busId}/seats?date=${travelDate}`, {
             headers: authHeaders()
         });
         const data = await res.json();
-        
+
         if (!data.success) {
             seatGrid.innerHTML = `<p style="grid-column:1/-1; color:var(--primary); text-align:center; padding:1.5rem;">Failed to load visual seats.</p>`;
             return;
         }
-        
+
         renderCabinSeats(data.seats, bus);
     } catch (err) {
         seatGrid.innerHTML = `<p style="grid-column:1/-1; color:var(--primary); text-align:center; padding:1.5rem;">Error loading seats.</p>`;
@@ -1179,7 +1206,7 @@ function renderCabinSeats(seats, bus) {
     const grid = document.getElementById('seatGrid');
     if (!grid) return;
     grid.innerHTML = '';
-    
+
     let seatHtml = '';
     seats.forEach((seat, idx) => {
         const seatNum = seat.seatNumber || (idx + 1);
@@ -1188,7 +1215,7 @@ function renderCabinSeats(seats, bus) {
         const status = seat.status || 'available';
         const isVip = seat.seatType === 'VIP';
         const isLadies = seat.ladiesOnly === true;
-        
+
         let cellClass = 'seat-cell';
         if (status === 'available') {
             cellClass += ' available';
@@ -1201,31 +1228,31 @@ function renderCabinSeats(seats, bus) {
         } else {
             cellClass += ' blocked';
         }
-        
+
         seatHtml += `
             <div class="${cellClass}" data-id="${seat.id}" data-price="${price}" data-label="${label}" data-number="${seatNum}" onclick="toggleCabinSeat(this)">
                 <span>${label}</span>
             </div>
         `;
-        
+
         if (idx % 4 === 1) {
             seatHtml += `<div class="seat-aisle-spacer"></div>`;
         }
     });
-    
+
     grid.innerHTML = seatHtml;
 }
 
 function toggleCabinSeat(el) {
     if (el.classList.contains('booked') || el.classList.contains('blocked')) return;
-    
+
     const maxPass = currentBooking.passengers || 1;
     const seatId = el.dataset.id;
     const price = parseFloat(el.dataset.price) || 599;
     const label = el.dataset.label;
-    
+
     const idx = selectedSeats.indexOf(seatId);
-    
+
     if (el.classList.contains('selected')) {
         el.classList.remove('selected');
         if (idx > -1) selectedSeats.splice(idx, 1);
@@ -1233,14 +1260,14 @@ function toggleCabinSeat(el) {
         if (selectedSeats.length >= maxPass) return notify(`Max ${maxPass} seat(s) allowed for this booking`, 'error');
         el.classList.add('selected');
         selectedSeats.push(seatId);
-        
+
         if (el.classList.contains('vip')) {
             notify(`You selected a VIP Seat (${label})! Special priority boarding applies.`, 'info');
         } else if (el.classList.contains('ladies')) {
             notify(`Ladies Preferred Seat (${label}) selected.`, 'info');
         }
     }
-    
+
     document.getElementById('seatCount').textContent = `${selectedSeats.length}/${maxPass}`;
     document.getElementById('seatTotal').textContent = (selectedSeats.length * price).toLocaleString();
 }
@@ -1248,7 +1275,7 @@ function toggleCabinSeat(el) {
 function confirmSeatSelection() {
     if (selectedSeats.length === 0) return notify('Please select at least one seat', 'error');
     if (selectedSeats.length > (currentBooking.passengers || 1)) return notify('Too many seats selected', 'error');
-    
+
     let total = 0;
     selectedSeats.forEach(id => {
         const el = document.querySelector(`.seat-cell[data-id="${id}"]`);
@@ -1256,7 +1283,7 @@ function confirmSeatSelection() {
             total += parseFloat(el.dataset.price) || 599;
         }
     });
-    
+
     currentBooking.seats = selectedSeats;
     currentBooking.amount = total;
     closeModal('seatModal');
@@ -1287,7 +1314,7 @@ function confirmPassengers(e) {
     var ages = document.querySelectorAll('.pAge');
     var passengers = [];
     var valid = true;
-    names.forEach(function(n, i) {
+    names.forEach(function (n, i) {
         var name = n.value.trim();
         var age = ages[i]?.value;
         if (!name || !age) { valid = false; return; }
@@ -1329,12 +1356,12 @@ function renderHotelResults(hotels) {
     if (!container) return;
     header.innerHTML = 'Hotels in ' + currentBooking.location;
     var html = '';
-    hotels.forEach(function(h) {
+    hotels.forEach(function (h) {
         var name = h.hotelname || h.hotelName || h.name || 'Hotel';
         var city = h.city || h.location || '';
         var rating = h.rating || '4.0';
         var rooms = h.rooms || [];
-        var lowestPrice = rooms.length > 0 ? Math.min.apply(null, rooms.map(function(r) { return parseFloat(r.price) || 999; })) : 999;
+        var lowestPrice = rooms.length > 0 ? Math.min.apply(null, rooms.map(function (r) { return parseFloat(r.price) || 999; })) : 999;
         html += '<div class="result-card">';
         html += '<h3>' + name + '</h3>';
         html += '<div class="result-details"><span>Rating: ' + rating + '</span><span>Location: ' + city + '</span></div>';
@@ -1349,7 +1376,7 @@ function renderHotelResults(hotels) {
 function openHotelRoom(hotelId) {
     var hotel = null;
     if (currentBooking.hotels) {
-        currentBooking.hotels.forEach(function(h) { if (h.id === hotelId) hotel = h; });
+        currentBooking.hotels.forEach(function (h) { if (h.id === hotelId) hotel = h; });
     }
     if (!hotel) return notify('Hotel not found', 'error');
     currentBooking.selectedHotel = hotel;
@@ -1363,7 +1390,7 @@ function openHotelRoom(hotelId) {
         html += '<p>No rooms available. Please contact the hotel directly.</p>';
     } else {
         html += '<div class="room-list">';
-        rooms.forEach(function(r) {
+        rooms.forEach(function (r) {
             var roomType = r.roomtype || r.roomType || r.type || 'Standard';
             var price = r.price || 'N/A';
             html += '<div class="room-item">';
@@ -1418,7 +1445,7 @@ function renderCabResults(cabs) {
     if (!container) return;
     header.innerHTML = 'Available Cabs in ' + currentBooking.city;
     var html = '';
-    cabs.forEach(function(c) {
+    cabs.forEach(function (c) {
         var name = c.drivername || c.driverName || c.cabname || c.cabName || 'Cab';
         var model = c.cabtype || c.cabType || c.cabname || c.cabName || 'Standard';
         var fare = c.fare || c.ratePerKm || 'N/A';
@@ -1437,7 +1464,7 @@ function renderCabResults(cabs) {
 function bookCab(cabId, fare) {
     var cab = null;
     if (currentBooking.cabs) {
-        currentBooking.cabs.forEach(function(c) { if (c.id === cabId) cab = c; });
+        currentBooking.cabs.forEach(function (c) { if (c.id === cabId) cab = c; });
     }
     if (!cab) return notify('Cab not found', 'error');
     currentBooking.selectedCab = cab;
@@ -1468,7 +1495,7 @@ async function loadCafes() {
             renderCafes(data.cafes || data.data);
             return;
         }
-    } catch (e) {}
+    } catch (e) { }
     var cafes = [];
     currentBooking.cafes = cafes;
     renderCafes(cafes);
@@ -1478,7 +1505,7 @@ function renderCafes(cafes) {
     var container = document.getElementById('cafeGrid');
     if (!container) return;
     var html = '';
-    cafes.forEach(function(c) {
+    cafes.forEach(function (c) {
         var name = c.cafename || c.cafeName || c.name || 'Cafe';
         var city = c.city || c.location || '';
         var rating = c.rating || '-';
@@ -1496,7 +1523,7 @@ function renderCafes(cafes) {
 
 function filterCafes() {
     var loc = document.getElementById('cafeLocation').value;
-    document.querySelectorAll('.cafe-card').forEach(function(card) {
+    document.querySelectorAll('.cafe-card').forEach(function (card) {
         if (!loc || card.dataset.location === loc) card.style.display = '';
         else card.style.display = 'none';
     });
@@ -1505,7 +1532,7 @@ function filterCafes() {
 function openCafeSeats(cafeId) {
     var cafe = null;
     var cafes = currentBooking.cafes || [];
-    cafes.forEach(function(c) { if (c.id === cafeId) cafe = c; });
+    cafes.forEach(function (c) { if (c.id === cafeId) cafe = c; });
     if (!cafe) return notify('Café not found', 'error');
     currentBooking.selectedCafe = cafe;
     selectedCafeSeats = [];
@@ -1536,7 +1563,7 @@ function openCafeSeats(cafeId) {
             seat.classList.add('taken');
         } else {
             seat.classList.add('avail');
-            seat.onclick = function() { toggleCafeSeat(this); };
+            seat.onclick = function () { toggleCafeSeat(this); };
         }
         grid.appendChild(seat);
     }
@@ -1583,46 +1610,46 @@ function openPhoneVerificationPopup(amount) {
         }
         phoneInput.value = userPhone;
     }
-    
+
     // Clear error
     var errorEl = document.getElementById('bookingPhoneError');
     if (errorEl) {
         errorEl.style.display = 'none';
         errorEl.textContent = '';
     }
-    
+
     var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
     if (verifyBtn) {
         verifyBtn.disabled = false;
         verifyBtn.textContent = 'Verify via OTP';
         verifyBtn.style.background = '';
     }
-    
+
     openModal('phoneVerificationModal');
 }
 
 async function verifyPhoneForBooking() {
     var phoneInput = document.getElementById('bookingPhoneInput');
     if (!phoneInput) return;
-    
+
     var phone = phoneInput.value.replace(/\D/g, '');
     if (phone.length !== 10) {
         notify('Please enter a valid 10-digit phone number', 'error');
         return;
     }
-    
+
     var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
     var errorEl = document.getElementById('bookingPhoneError');
-    
+
     if (verifyBtn) {
         verifyBtn.disabled = true;
         verifyBtn.textContent = 'Opening OTP Widget...';
     }
     if (errorEl) errorEl.style.display = 'none';
-    
+
     verifyPhoneWithMsg91(
         phone,
-        function() {
+        function () {
             if (currentUser) {
                 currentUser.phone = '+91' + phone;
                 currentUser.phoneVerified = true;
@@ -1630,14 +1657,14 @@ async function verifyPhoneForBooking() {
             }
             notify('Phone verified successfully! ✅', 'success');
             closeModal('phoneVerificationModal');
-            
+
             loadProfile();
-            
+
             if (pendingBookingAmount !== null) {
                 openPayment(pendingBookingAmount);
             }
         },
-        function(err) {
+        function (err) {
             var errMsg = typeof err === 'string' ? err : 'OTP verification failed. Please try again.';
             notify(errMsg, 'error');
             if (errorEl) {
@@ -1654,7 +1681,7 @@ async function verifyPhoneForBooking() {
 
 function openPayment(amount) {
     if (!requireAuth()) return;
-    
+
     // Check if phone number is verified
     if (!currentUser || !currentUser.phoneVerified) {
         openPhoneVerificationPopup(amount);
@@ -1753,7 +1780,7 @@ async function payViaRazorpay() {
             name: 'Yatri Point',
             description: currentBooking.type + ' booking',
             order_id: data.razorpayOrderId || data.orderId,
-            handler: async function(response) {
+            handler: async function (response) {
                 try {
                     notify('Verifying payment...', 'info');
                     var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
@@ -1769,7 +1796,7 @@ async function payViaRazorpay() {
                     if (verifyData.success) {
                         closePaymentPage();
                         notify('Booking confirmed! ID: ' + data.orderId, 'success');
-                        
+
                         // Generate ticket immediately
                         var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'Razorpay' };
                         localStorage.setItem('latestTicket', JSON.stringify(ticketData));
@@ -1787,10 +1814,10 @@ async function payViaRazorpay() {
                 contact: currentUser?.phone || ''
             },
             theme: { color: '#d84e55' },
-            modal: { ondismiss: function() { notify('Payment cancelled', 'info'); } }
+            modal: { ondismiss: function () { notify('Payment cancelled', 'info'); } }
         };
         var rzp = new Razorpay(options);
-        rzp.on('payment.failed', function(response) {
+        rzp.on('payment.failed', function (response) {
             notify('Payment failed: ' + response.error.description, 'error');
         });
         rzp.open();
@@ -1804,14 +1831,14 @@ function switchPayTab(tabId) {
     document.getElementById('razorpaySection').style.display = 'none';
     document.getElementById('upiIdSection').style.display = 'none';
     document.getElementById('upiSection').style.display = 'none';
-    
+
     // Deactivate all tab buttons
     document.querySelectorAll('.pay-tab-btn').forEach(btn => {
         btn.classList.remove('active');
         btn.style.background = 'transparent';
         btn.style.color = 'var(--gray)';
     });
-    
+
     // Get target button and section
     let activeBtn;
     if (tabId === 'card') {
@@ -1824,7 +1851,7 @@ function switchPayTab(tabId) {
         document.getElementById('upiSection').style.display = 'block';
         activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-qr\')"]');
     }
-    
+
     if (activeBtn) {
         activeBtn.classList.add('active');
         activeBtn.style.background = 'var(--card)';
@@ -1843,14 +1870,14 @@ async function payViaUpiId() {
         notify('Invalid UPI ID format (e.g. username@bank)', 'warning');
         return;
     }
-    
+
     if (typeof Razorpay === 'undefined') {
         notify('Payment gateway loading...', 'info');
         return;
     }
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
-    
+
     try {
         notify('Initiating UPI payment...', 'info');
         var payload = {
@@ -1865,14 +1892,14 @@ async function payViaUpiId() {
             userAge: '',
             passengerCount: currentBooking.passengers || 1
         };
-        
+
         var res = await fetch(API_URL + '/api/razorpay/create-order', {
             method: 'POST', headers: authHeaders(),
             body: JSON.stringify(payload)
         });
         var data = await res.json();
         if (!data.success) return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
-        
+
         var options = {
             key: RAZORPAY_KEY_ID,
             amount: amount,
@@ -1887,7 +1914,7 @@ async function payViaUpiId() {
                 method: 'upi',
                 vpa: upiId
             },
-            handler: async function(response) {
+            handler: async function (response) {
                 try {
                     notify('Verifying payment...', 'info');
                     var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
@@ -1903,7 +1930,7 @@ async function payViaUpiId() {
                     if (verifyData.success) {
                         closePaymentPage();
                         notify('Booking confirmed! ID: ' + data.orderId, 'success');
-                        
+
                         var ticketData = {
                             ...currentBooking,
                             orderId: data.orderId,
@@ -1922,13 +1949,13 @@ async function payViaUpiId() {
             },
             theme: { color: '#d84e55' },
             modal: {
-                ondismiss: function() {
+                ondismiss: function () {
                     notify('Payment cancelled. Ticket not generated.', 'info');
                 }
             }
         };
         var rzp = new Razorpay(options);
-        rzp.on('payment.failed', function(response) {
+        rzp.on('payment.failed', function (response) {
             notify('Payment failed: ' + response.error.description, 'error');
         });
         rzp.open();
@@ -1964,7 +1991,7 @@ async function confirmUpiPayment() {
         if (data.success) {
             closePaymentPage();
             notify(data.message || 'Payment submitted for verification. Ticket will be generated after payment confirmation.', 'success');
-            
+
             var pendingTicketData = {
                 ...currentBooking,
                 orderId: data.orderId || ('UPI_' + Date.now().toString(36).toUpperCase()),
@@ -2020,7 +2047,7 @@ function renderBookings(bookings) {
         return;
     }
     var html = '';
-    bookings.forEach(function(b) {
+    bookings.forEach(function (b) {
         var icons = { bus: 'Bus', hotel: 'Hotel', cab: 'Cab', cafe: 'Cafe' };
         var icon = icons[b.type] || 'Booking';
         html += '<div class="result-card" onclick="showBookingDetail(\'' + (b.id || b.bookingId) + '\')">';
@@ -2076,7 +2103,7 @@ function saveProfileName() {
     fetch(API_URL + '/api/auth/profile', {
         method: 'PUT', headers: authHeaders(),
         body: JSON.stringify({ name: name })
-    }).then(function(r) { return r.json(); }).then(function(data) {
+    }).then(function (r) { return r.json(); }).then(function (data) {
         if (data.success) {
             currentUser.name = name;
             localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -2088,7 +2115,7 @@ function saveProfileName() {
         } else {
             notify(data.message || 'Failed to update', 'error');
         }
-    }).catch(function() {
+    }).catch(function () {
         // Update locally even if API fails
         currentUser.name = name;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -2105,7 +2132,7 @@ function handlePhotoUpload(e) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return notify('Image too large (max 5MB)', 'error');
     var reader = new FileReader();
-    reader.onload = function(ev) {
+    reader.onload = function (ev) {
         var wrapper = document.getElementById('profilePhotoWrapper');
         if (wrapper) wrapper.innerHTML = '<img src="' + ev.target.result + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
         notify('Photo updated', 'success');
@@ -2140,7 +2167,7 @@ function loadMsg91Widget(callback) {
     function flushCallbacks() {
         var callbacks = msg91WidgetCallbacks.slice();
         msg91WidgetCallbacks = [];
-        callbacks.forEach(function(cb) {
+        callbacks.forEach(function (cb) {
             try { cb(); } catch (e) { console.warn('MSG91 callback error', e); }
         });
     }
@@ -2155,7 +2182,7 @@ function loadMsg91Widget(callback) {
         var script = document.createElement('script');
         script.src = urls[index];
         script.async = true;
-        script.onload = function() {
+        script.onload = function () {
             if (typeof window.initSendOTP === 'function') {
                 msg91WidgetReady = true;
                 msg91WidgetLoading = false;
@@ -2165,7 +2192,7 @@ function loadMsg91Widget(callback) {
                 attemptLoad();
             }
         };
-        script.onerror = function() {
+        script.onerror = function () {
             index++;
             attemptLoad();
         };
@@ -2178,10 +2205,10 @@ function loadMsg91Widget(callback) {
 function verifyPhoneWithMsg91(phone, onSuccess, onFailure) {
     if (typeof msg91OTP !== 'undefined') {
         msg91OTP.verify('+91' + phone)
-            .then(function(verifiedToken) {
+            .then(function (verifiedToken) {
                 if (typeof onSuccess === 'function') onSuccess({ accessToken: verifiedToken });
             })
-            .catch(function(err) {
+            .catch(function (err) {
                 if (typeof onFailure === 'function') onFailure(err);
             });
     } else {
@@ -2202,7 +2229,7 @@ async function markPhoneVerified(phone, sendBtn) {
                     phoneVerified: true
                 })
             });
-            var data = await res.json().catch(function() { return {}; });
+            var data = await res.json().catch(function () { return {}; });
             if (!res.ok || !data.success) {
                 throw new Error(data.message || 'Failed to save verified phone number');
             }
@@ -2224,7 +2251,10 @@ async function markPhoneVerified(phone, sendBtn) {
     } else if (currentUser) {
         currentUser.phone = formattedPhone;
         currentUser.phoneVerified = true;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        local
+        
+        
+    Storage.setItem('currentUser', JSON.stringify(currentUser));
     }
 
     var profilePhoneInput = document.getElementById('profilePhoneInput');
@@ -2236,9 +2266,9 @@ async function markPhoneVerified(phone, sendBtn) {
     var badge = document.getElementById('phoneVerifiedBadge');
     if (badge) badge.style.display = 'inline-block';
 
-    notify('Phone verified successfully! ✅', 'success');
+    notify('Phone verified successfully!', 'success');
     if (sendBtn) {
-        sendBtn.textContent = '✅ Verified';
+        sendBtn.textContent = 'Verified';
         sendBtn.style.background = '#28a745';
         sendBtn.disabled = false;
     }
@@ -2253,10 +2283,10 @@ function sendPhoneOTP() {
 
     verifyPhoneWithMsg91(
         phone,
-        function() {
+        function () {
             markPhoneVerified(phone, sendBtn);
         },
-        function(err) {
+        function (err) {
             notify(typeof err === 'string' ? err : 'OTP verification failed. Please try again.', 'error');
             if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send OTP'; }
         }
@@ -2273,7 +2303,7 @@ function toggleLiveLocation(cb) {
         document.getElementById('liveLocationStatus').style.display = 'none';
         return;
     }
-    
+
     if (!confirm("Would you like to share your live location from this device?")) {
         cb.checked = false;
         return;
@@ -2285,12 +2315,12 @@ function toggleLiveLocation(cb) {
         return;
     }
     navigator.geolocation.getCurrentPosition(
-        function(pos) {
+        function (pos) {
             document.getElementById('liveLocationStatus').style.display = 'block';
             currentBooking.liveLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             notify('Live location shared', 'success');
         },
-        function(err) {
+        function (err) {
             cb.checked = false;
             notify('Could not get location. Please enable GPS.', 'error');
         },
@@ -2311,13 +2341,13 @@ function fillLocationFromGPS(inputId) {
     if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
 
     navigator.geolocation.getCurrentPosition(
-        function(pos) {
+        function (pos) {
             var lat = pos.coords.latitude;
             var lng = pos.coords.longitude;
             // Reverse geocode using OpenStreetMap Nominatim (free, no API key)
             fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&zoom=18&addressdetails=1')
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
                     var addr = data.address || {};
                     // Build a short readable address
                     var parts = [
@@ -2330,17 +2360,17 @@ function fillLocationFromGPS(inputId) {
                     if (input) input.value = readable;
                     notify('📍 Location filled!', 'success');
                 })
-                .catch(function() {
+                .catch(function () {
                     // Fallback to raw coordinates
                     var input = document.getElementById(inputId);
                     if (input) input.value = lat.toFixed(6) + ', ' + lng.toFixed(6);
                     notify('📍 Location filled (coordinates)', 'success');
                 })
-                .finally(function() {
+                .finally(function () {
                     if (btn) { btn.textContent = originalText; btn.disabled = false; }
                 });
         },
-        function(err) {
+        function (err) {
             if (btn) { btn.textContent = originalText; btn.disabled = false; }
             if (err.code === err.PERMISSION_DENIED) {
                 notify('Location permission denied. Please allow location in browser settings.', 'error');
@@ -2355,23 +2385,23 @@ function fillLocationFromGPS(inputId) {
 // Pre-request location permission silently on page load
 function requestLocationPermissionSilently() {
     if (!navigator.geolocation) return;
-    navigator.permissions && navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+    navigator.permissions && navigator.permissions.query({ name: 'geolocation' }).then(function (result) {
         if (result.state === 'prompt') {
             // Trigger the permission dialog once so browser caches the decision
             navigator.geolocation.getCurrentPosition(
-                function(pos) {
+                function (pos) {
                     // Cache coordinates for later use
                     window._cachedUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 },
-                function() { /* user denied — that's OK */ },
+                function () { /* user denied — that's OK */ },
                 { enableHighAccuracy: false, timeout: 8000 }
             );
         } else if (result.state === 'granted') {
             navigator.geolocation.getCurrentPosition(
-                function(pos) {
+                function (pos) {
                     window._cachedUserLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 },
-                function() {},
+                function () { },
                 { enableHighAccuracy: false, timeout: 8000 }
             );
         }
@@ -2381,7 +2411,7 @@ function requestLocationPermissionSilently() {
 // ========== COLLABORATOR FORM ==========
 function showCollabForm() {
     var type = document.getElementById('collabType').value;
-    document.querySelectorAll('.collab-specific').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('.collab-specific').forEach(function (el) { el.style.display = 'none'; });
     document.getElementById('collab-common').style.display = 'none';
     if (type) {
         var specific = document.getElementById('collab-' + type);
@@ -2436,7 +2466,7 @@ async function submitCollab(e) {
         data.location = document.getElementById('hotelLocation')?.value?.trim();
         if (!data.hotelName || !data.general || !data.ac || !data.balcony || !data.location) return notify('Fill all hotel details', 'error');
     }
-    
+
     setButtonLoading(btn, true, '🚀 Submit Application');
     try {
         var res = await fetch(API_URL + '/api/submit-collab', {
@@ -2461,7 +2491,7 @@ async function submitCollab(e) {
 }
 
 // ========== INITIALIZATION ==========
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Restore session
     restoreSession();
     bootstrapAuthenticatedExperience();
@@ -2475,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set default dates
     var today = new Date().toISOString().split('T')[0];
     var dateInputs = document.querySelectorAll('input[type="date"]');
-    dateInputs.forEach(function(inp) { if (!inp.value) inp.value = today; });
+    dateInputs.forEach(function (inp) { if (!inp.value) inp.value = today; });
 
     // Set today's date for car
     var carDate = document.getElementById('carDate');
@@ -2492,8 +2522,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Fetch config and init Google Sign-In + MSG91 widget auth
     fetch(API_URL + '/api/config')
-        .then(function(r) { return r.json(); })
-        .then(function(config) {
+        .then(function (r) { return r.json(); })
+        .then(function (config) {
             if (config.googleClientId) {
                 GOOGLE_CLIENT_ID = config.googleClientId;
             }
@@ -2503,7 +2533,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Initialize Google Sign-In once config is ready
             initGoogleSignIn();
         })
-        .catch(function() {
+        .catch(function () {
             // Fallback: use hardcoded client ID
             GOOGLE_CLIENT_ID = '494833578713-r3tbr8e1bquphe3r84pbdeba5no7tqmj.apps.googleusercontent.com';
             RAZORPAY_KEY_ID = 'rzp_test_SrBhiCCTjRroIi';
@@ -2511,7 +2541,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     // Close dropdown on outside click
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         var menu = document.getElementById('dropdownMenu');
         var section = document.getElementById('userSection');
         if (menu && menu.classList.contains('active') && section && !section.contains(e.target)) {
@@ -2522,13 +2552,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle Enter key in OTP inputs
     var otpInput = document.getElementById('otpInput');
     if (otpInput) {
-        otpInput.addEventListener('keydown', function(e) {
+        otpInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') confirmOTP();
         });
     }
     var emailOtpInput = document.getElementById('emailOtpInput');
     if (emailOtpInput) {
-        emailOtpInput.addEventListener('keydown', function(e) {
+        emailOtpInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') confirmEmailOTP();
         });
     }

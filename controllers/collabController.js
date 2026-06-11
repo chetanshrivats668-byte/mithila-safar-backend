@@ -131,7 +131,14 @@ export async function loginCollaborator(req, res) {
       return res.status(400).json({ success: false, message: 'Email and password required' });
     }
 
-    const collab = await collabService.getCollaboratorByEmail(req.app.locals.db, email);
+    const identifier = email.trim();
+    let collab;
+    if (identifier.includes('@')) {
+      collab = await collabService.getCollaboratorByEmail(req.app.locals.db, identifier);
+    } else {
+      collab = await collabService.getCollaboratorByPhone(req.app.locals.db, identifier);
+    }
+
     if (!collab) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }

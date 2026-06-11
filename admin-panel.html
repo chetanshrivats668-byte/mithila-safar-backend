@@ -325,7 +325,7 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
     </div>
 
     <div class="pane" id="pane-collaborators">
-      <div class="sec-hdr">✅ Accepted Business Partners</div>
+      <div class="sec-hdr">🤝 Business Partners</div>
       <div class="search-bar">
         <input type="text" id="collabSearchInput" placeholder="🔍 Search by Partner ID or name..." onkeydown="if(event.key==='Enter')searchCollaborator()">
         <button onclick="searchCollaborator()">Search</button>
@@ -406,9 +406,9 @@ function switchTab(t) {
 /* -- Helpers -- */
   function typeIcon(t) { const m = { bus:'🚌', cab:'🚗', car:'🚗', hotel:'🏨', cafe:'☕' }; return m[t] || '📦'; }
 function badge(s) {
-  const map = { payment_pending:'pending', confirmed:'confirmed', payment_failed:'failed', approved:'approved', rejected:'rejected', pending:'pending', active:'confirmed', suspended:'failed' };
+  const map = { payment_pending:'pending', confirmed:'confirmed', payment_failed:'failed', approved:'approved', rejected:'rejected', pending:'pending', active:'confirmed', suspended:'failed', verified:'approved' };
   const cls = map[s] || 'failed';
-  const lbl = s==='payment_pending'?'⏳ Pending':s==='confirmed'?'✅ Confirmed':s==='payment_failed'?'❌ Failed':s==='approved'?'✅ Approved':s==='rejected'?'❌ Rejected':s==='active'?'✅ Active':s==='suspended'?'⛔ Suspended':s==='pending'?'⏳ Pending':'⏳ '+s;
+  const lbl = s==='payment_pending'?'⏳ Pending':s==='confirmed'?'✅ Confirmed':s==='payment_failed'?'❌ Failed':s==='approved'?'✅ Approved':s==='rejected'?'❌ Rejected':s==='active'?'✅ Active':s==='suspended'?'⛔ Suspended':s==='pending'?'⏳ Pending':s==='verified'?'✅ Verified':'⏳ '+s;
   return `<span class="badge ${cls}">${lbl}</span>`;
 }
 function fmt(d) { return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : 'N/A'; }
@@ -712,13 +712,11 @@ function clearCollabSearch() {
   loadCollaborators();
 }
 function renderCollaboratorsList(arr) {
-  // Only show verified (accepted) partners in this section
-  const verified = arr.filter(c => c.verification_status === 'verified' || c.status === 'verified');
-  if (!verified.length) { document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No accepted partners found</p></div>'; return; }
+  if (!arr.length) { document.getElementById('collaborators-list').innerHTML = '<div class="empty"><p>No partners found</p></div>'; return; }
   window._collabMap = {};
-  verified.forEach(c => window._collabMap[c.id] = c);
-  allCollaborators = verified;
-  document.getElementById('collaborators-list').innerHTML = verified.map(c => renderCollabCard(c)).join('');
+  arr.forEach(c => window._collabMap[c.id] = c);
+  allCollaborators = arr;
+  document.getElementById('collaborators-list').innerHTML = arr.map(c => renderCollabCard(c)).join('');
 }
 function renderCollabCard(c) {
   const shortId = (c.id || '').slice(0, 12).toUpperCase();

@@ -529,7 +529,7 @@ tr:hover td{background:var(--card2)}
 
       <!-- Password Login Fields -->
       <div id="loginPassFields">
-        <div class="form-group"><label>Email</label><input type="email" id="loginEmail" placeholder="your@email.com"></div>
+        <div class="form-group"><label>Email or Phone Number</label><input type="text" id="loginEmail" placeholder="email@example.com or 10-digit phone"></div>
         <div class="form-group"><label>Password</label><div style="position:relative"><input type="password" id="loginPassword" placeholder="Enter password" style="padding-right:44px"><button type="button" onclick="togglePassword('loginPassword',this)" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text2);cursor:pointer;font-size:.72rem;font-weight:700;padding:6px 10px;text-transform:uppercase;letter-spacing:.04em;font-family:inherit">Show</button></div></div>
         <div class="form-group" id="loginOtpGroup" style="display:none">
           <label>OTP Code <small style="color:var(--amber);font-weight:400">(sent to your email)</small></label>
@@ -1759,7 +1759,14 @@ async function loadOverview() {
 
 /* ─── Inventory ─── */
 function getScheduleForItem(item) {
-  return item?.schedule || item?.schedules?.[0] || {};
+  if (item?.schedules && Array.isArray(item.schedules) && item.schedules.length > 0) {
+    let active = item.schedules[0];
+    while (active && active.schedules && Array.isArray(active.schedules) && active.schedules.length > 0) {
+      active = active.schedules[0];
+    }
+    return active || {};
+  }
+  return item?.schedule || {};
 }
 
 function normalizeRunningDays(rawRunningDays) {
@@ -1990,7 +1997,7 @@ async function saveItem(e) { e.preventDefault();
       switchPane('inventory');
     }
     else alert(d.message || 'Failed to save');
-  } catch(e) { alert('Error saving item'); }
+  } catch(e) { alert(e?.message || 'Error saving item'); }
 }
 
 async function deleteItem(id) {

@@ -78,10 +78,18 @@ export async function submitApplication(req, res) {
 
 export async function checkApplicationStatus(req, res) {
   try {
-    const email = normalizeEmail(req.query.email);
-    if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
-    const app = await appService.getApplicationByGoogleEmail(req.app.locals.db, email)
-      || await appService.getApplicationByEmail(req.app.locals.db, email);
+    const queryVal = (req.query.email || '').trim();
+    if (!queryVal) return res.status(400).json({ success: false, message: 'Identifier is required' });
+
+    let app = null;
+    if (queryVal.includes('@')) {
+      const email = normalizeEmail(queryVal);
+      app = await appService.getApplicationByGoogleEmail(req.app.locals.db, email)
+        || await appService.getApplicationByEmail(req.app.locals.db, email);
+    } else {
+      app = await appService.getApplicationByPhone(req.app.locals.db, queryVal);
+    }
+
     if (!app) return res.json({ success: true, hasApplication: false });
 
     res.json({

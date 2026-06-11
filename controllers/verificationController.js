@@ -6,6 +6,7 @@ function n(c) {
   if (!c) return c;
   c.verification_status = c.verification_status || c.verificationStatus || c.verificationstatus || 'pending';
   c.partnerCollabStatus = c.partnerCollabStatus || c.partnercollabstatus || 'pending';
+  c.userId = c.userId || c.userid || null;
   c.submittedFrom = c.submittedFrom || c.submittedfrom || null;
   c.verifiedAt = c.verifiedAt || c.verifiedat || null;
   c.verifiedBy = c.verifiedBy || c.verifiedby || null;
@@ -158,9 +159,14 @@ export async function adminSuspendCollaborator(req, res) {
       return res.status(404).json({ success: false, message: 'Collaborator not found' });
     }
 
-    await collabService.deleteCollaborator(req.app.locals.db, collaboratorId);
+    await collabService.updateCollaborator(req.app.locals.db, collaboratorId, {
+      verificationStatus: 'suspended',
+      status: 'suspended',
+      suspendedAt: new Date().toISOString(),
+      suspendedBy: req.admin?.username || req.admin?.email || 'admin'
+    });
 
-    res.json({ success: true, message: 'Collaborator deleted.' });
+    res.json({ success: true, message: 'Collaborator suspended.' });
   } catch (e) {
     console.error('Suspend collaborator error:', e);
     res.status(500).json({ success: false, message: 'Suspension failed' });

@@ -9,6 +9,7 @@ function normalize(c) {
   c.email = normalizeEmail(c.email);
   c.verification_status = c.verificationStatus || c.verification_status || c.verificationstatus || 'pending';
   c.partnerCollabStatus = c.partnerCollabStatus || c.partnercollabstatus || 'pending';
+  c.userId = c.userId || c.userid || null;
   if (c.submittedfrom && !c.submittedFrom) c.submittedFrom = c.submittedfrom;
   if (c.approvedat && !c.approvedAt) c.approvedAt = c.approvedat;
   if (c.approvedby && !c.approvedBy) c.approvedBy = c.approvedby;
@@ -48,7 +49,7 @@ function normalize(c) {
   delete c.suspendedby; delete c.unsuspendedat; delete c.unsuspendedby;
   delete c.totalbookings; delete c.totalearnings;
   delete c.verificationstatus; delete c.googleemail;
-  delete c.partnercollabstatus; delete c.submittedfrom;
+  delete c.partnercollabstatus; delete c.submittedfrom; delete c.userid;
   delete c.approvedat; delete c.approvedby;
   delete c.partnercollabrejectedat; delete c.partnercollabreapplyafter;
   delete c.routecities; delete c.operatingcity;
@@ -172,7 +173,7 @@ export async function createCollaborator(db, data) {
       status: data.status || 'pending'
     };
     delete record.verification_status;
-    await dbCreate('collaborators', collabId, record).catch(() => {});
+    await dbCreate('collaborators', collabId, record).catch((err) => console.error('[collabService] Supabase create failed:', err));
   }
   return { id: collabId, ...collabData };
 }
@@ -184,7 +185,7 @@ export async function updateCollaborator(db, collabId, updates) {
     Object.assign(existing, updates);
   }
   if (isSupabaseAvailable()) {
-    await dbUpdate('collaborators', collabId, updates).catch(() => {});
+    await dbUpdate('collaborators', collabId, updates).catch((err) => console.error('[collabService] Supabase update failed:', err));
   }
   return { id: collabId, ...updates };
 }
@@ -208,7 +209,7 @@ export async function getApprovedCollaboratorsByType(db, type) {
 export async function deleteCollaborator(db, collabId) {
   memoryDb.collabs.delete(collabId);
   if (isSupabaseAvailable()) {
-    await dbRemove('collaborators', collabId).catch(() => {});
+    await dbRemove('collaborators', collabId).catch((err) => console.error('[collabService] Supabase remove failed:', err));
   }
 }
 

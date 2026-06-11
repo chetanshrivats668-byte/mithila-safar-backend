@@ -23,6 +23,7 @@ import { memoryDb } from './utils/firestoreFallback.js';
 import { sendSMS } from './services/smsService.js';
 import * as applicationController from './controllers/applicationController.js';
 import * as collabService from './services/collabService.js';
+import { normalizeBusRecord } from './services/busService.js';
 
 // ========== ENVIRONMENT VALIDATION ==========
 const missing = [];
@@ -633,22 +634,23 @@ app.post('/api/buses/search', async (req, res) => {
     }
     
     const enrichedBuses = [];
-    for (const b of all) {
-      const rc = b.routeCities || b.routecities || [];
+    for (const rawB of all) {
+      const b = normalizeBusRecord(rawB);
+      const rc = b.routeCities;
       let isEligible = false;
       if (rc && Array.isArray(rc) && rc.length >= 2) {
         const fi = rc.findIndex(function(c) { return c.toLowerCase() === from.toLowerCase(); });
         const ti = rc.findIndex(function(c) { return c.toLowerCase() === to.toLowerCase(); });
         isEligible = fi !== -1 && ti !== -1 && ti > fi;
       } else {
-        const src = b.source || b.source || '';
-        const dest = b.destination || b.destination || '';
+        const src = b.source || '';
+        const dest = b.destination || '';
         isEligible = src.toLowerCase().includes(from.toLowerCase()) && dest.toLowerCase().includes(to.toLowerCase());
       }
       
       if (!isEligible) continue;
 
-      const collabId = b.collaboratorId || b.collaboratorid;
+      const collabId = b.collaboratorId;
       if (!collabId) continue;
       
       // Use collabService which normalizes key casing and checks memory first
@@ -660,10 +662,10 @@ app.post('/api/buses/search', async (req, res) => {
       const isApproved = status === 'approved' || status === 'active' || verificationStatus === 'verified';
       if (!isApproved) continue;
 
-      const busSchedules = b.schedules || b.schedule || [];
+      const busSchedules = b.schedules;
       let runsOnRequestedDay = true;
-      let departure = b.departureTime || b.departuretime || '08:00 AM';
-      let arrival = b.arrivalTime || b.arrivaltime || '12:00 PM';
+      let departure = b.departureTime || '08:00 AM';
+      let arrival = b.arrivalTime || '12:00 PM';
       
       if (Array.isArray(busSchedules) && busSchedules.length > 0) {
         const activeSched = busSchedules[0];

@@ -65,7 +65,9 @@ export async function list(table, opts = {}) {
 export async function create(table, id, data) {
   try {
     const clean = { ...data };
-    delete clean.userId;
+    if (table === 'users') {
+      delete clean.userId;
+    }
     const record = { id, ...clean };
     const { error } = await supabase.from(table).insert(record);
     if (error) {

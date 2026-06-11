@@ -90,6 +90,28 @@ export async function getApplicationByGoogleEmail(db, googleEmail) {
   return null;
 }
 
+export async function getApplicationByPhone(db, phone) {
+  const cleanPhone = typeof phone === 'string' ? phone.replace(/\D/g, '').slice(-10) : '';
+  if (!cleanPhone) return null;
+  const found = Array.from(memoryDb.collab_applications.values()).find(a => {
+    const cleanAppPhone = typeof a.phone === 'string' ? a.phone.replace(/\D/g, '').slice(-10) : '';
+    return cleanAppPhone === cleanPhone;
+  });
+  if (found) return normalize(found);
+  if (isSupabaseAvailable()) {
+    try {
+      let results = await dbList('collab_applications', { filters: [{ column: 'phone', op: 'eq', value: cleanPhone }] });
+      if (results.length > 0) return normalize(results[0]);
+      
+      results = await dbList('collab_applications', { filters: [{ column: 'phone', op: 'like', value: `%${cleanPhone}` }] });
+      if (results.length > 0) return normalize(results[0]);
+    } catch (err) {
+      console.warn('[APP] Supabase fetch by phone failed:', err?.message || err);
+    }
+  }
+  return null;
+}
+
 export async function getAllApplications(db) {
   const memApps = Array.from(memoryDb.collab_applications.values()).map(normalize);
   if (isSupabaseAvailable()) {
@@ -116,7 +138,7 @@ export async function updateApplication(db, id, updates) {
   const existing = memoryDb.collab_applications.get(id);
   if (existing) Object.assign(existing, updates);
   if (isSupabaseAvailable()) {
-    await dbUpdate('collab_applications', id, updates).catch(() => {});
+    await dbUpdate('collab_applications', id, updates).catch((err) => console.error('[APP] Supabase update failed:', err));
   }
   return { id, ...updates };
 }

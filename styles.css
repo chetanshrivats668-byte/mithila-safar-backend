@@ -2924,6 +2924,7 @@ footer {
     margin-bottom: 1.2rem;
     display: flex;
     flex-direction: column;
+    cursor: pointer;
 }
 
 .enriched-bus-card:hover {
