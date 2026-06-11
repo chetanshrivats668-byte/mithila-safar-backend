@@ -1,6 +1,20 @@
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
 import { memoryDb } from '../utils/firestoreFallback.js';
 
+const VALID_CAFE_COLUMNS = [
+  'id', 'collaboratorId', 'cafeName', 'address', 'city', 'status', 'createdAt', 'updatedAt'
+];
+
+function filterSupabaseColumns(data) {
+  const filtered = {};
+  for (const key of VALID_CAFE_COLUMNS) {
+    if (data[key] !== undefined) {
+      filtered[key] = data[key];
+    }
+  }
+  return filtered;
+}
+
 export async function createCafe(db, data) {
   const cafeId = 'CAF' + Date.now().toString(36).toUpperCase();
   const now = new Date().toISOString();
@@ -58,7 +72,10 @@ export async function updateCafe(db, cafeId, updates) {
     return { id: cafeId, ...updates };
   }
   
-  await dbUpdate('collaborator_cafes', cafeId, updates);
+  const sanitizedUpdates = filterSupabaseColumns(updates);
+  if (Object.keys(sanitizedUpdates).length > 0) {
+    await dbUpdate('collaborator_cafes', cafeId, sanitizedUpdates);
+  }
   return { id: cafeId, ...updates };
 }
 

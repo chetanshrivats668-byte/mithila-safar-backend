@@ -1119,7 +1119,7 @@ app.post('/api/admin/service/:type/approve', requireAdmin, async (req, res) => {
     const supabaseUpdates = { status: newStatus, updatedAt: now };
     await dbUpdate(tableName, serviceId, supabaseUpdates);
 
-    const auditService = (await import('../services/auditLogService.js')).logAction;
+    const auditService = (await import('./services/auditLogService.js')).logAction;
     await auditService(req.app.locals.db, {
       actorId: null,
       actorRole: 'admin',

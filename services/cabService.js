@@ -1,6 +1,21 @@
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
 import { memoryDb } from '../utils/firestoreFallback.js';
 
+const VALID_CAB_COLUMNS = [
+  'id', 'collaboratorId', 'cabName', 'cabNumber', 'driverName', 'driverPhone',
+  'cabType', 'fare', 'route', 'status', 'createdAt', 'updatedAt'
+];
+
+function filterSupabaseColumns(data) {
+  const filtered = {};
+  for (const key of VALID_CAB_COLUMNS) {
+    if (data[key] !== undefined) {
+      filtered[key] = data[key];
+    }
+  }
+  return filtered;
+}
+
 export async function createCab(db, data) {
   const cabId = 'CAB' + Date.now().toString(36).toUpperCase();
   const now = new Date().toISOString();
@@ -62,7 +77,10 @@ export async function updateCab(db, cabId, updates) {
     return { id: cabId, ...updates };
   }
   
-  await dbUpdate('collaborator_cabs', cabId, updates);
+  const sanitizedUpdates = filterSupabaseColumns(updates);
+  if (Object.keys(sanitizedUpdates).length > 0) {
+    await dbUpdate('collaborator_cabs', cabId, sanitizedUpdates);
+  }
   return { id: cabId, ...updates };
 }
 

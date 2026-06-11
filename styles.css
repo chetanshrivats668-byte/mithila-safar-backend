@@ -1962,7 +1962,7 @@ footer {
 }
 
 /* === RESPONSIVE === */
-@media(max-width:768px) {
+@media(max-width:1024px) {
     header {
         padding: .7rem 1rem;
         gap: .75rem;
@@ -2766,7 +2766,7 @@ footer {
     align-items: flex-start;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
     .search-discovery-layout {
         flex-direction: column;
     }

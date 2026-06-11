@@ -1,6 +1,20 @@
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, remove as dbRemove, isSupabaseAvailable } from '../utils/db.js';
 import { memoryDb } from '../utils/firestoreFallback.js';
 
+const VALID_HOTEL_COLUMNS = [
+  'id', 'collaboratorId', 'hotelName', 'address', 'city', 'amenities', 'status', 'createdAt', 'updatedAt'
+];
+
+function filterSupabaseColumns(data) {
+  const filtered = {};
+  for (const key of VALID_HOTEL_COLUMNS) {
+    if (data[key] !== undefined) {
+      filtered[key] = data[key];
+    }
+  }
+  return filtered;
+}
+
 export async function createHotel(db, data) {
   const hotelId = 'HTL' + Date.now().toString(36).toUpperCase();
   const now = new Date().toISOString();
@@ -57,7 +71,11 @@ export async function updateHotel(db, hotelId, updates) {
     return { id: hotelId, ...updates };
   }
   
-  return await dbUpdate('collaborator_hotels', hotelId, updates);
+  const sanitizedUpdates = filterSupabaseColumns(updates);
+  if (Object.keys(sanitizedUpdates).length > 0) {
+    await dbUpdate('collaborator_hotels', hotelId, sanitizedUpdates);
+  }
+  return { id: hotelId, ...updates };
 }
 
 export async function deleteHotel(db, hotelId) {

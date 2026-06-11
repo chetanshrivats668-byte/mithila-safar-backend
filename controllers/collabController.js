@@ -156,15 +156,9 @@ export async function loginCollaborator(req, res) {
 
     const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
     if (collab.password !== hashedPassword) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const key = `login:${email}`;
-      otpStore.set(key, { otp, collabId: collab.id, expires: Date.now() + 5 * 60 * 1000 });
-      console.log(`Login OTP for ${email}: ${otp}`);
       return res.status(401).json({
         success: false,
-        otpRequired: true,
-        email,
-        message: 'Wrong password. A verification code has been sent to your email.'
+        message: 'Invalid email or password'
       });
     }
 

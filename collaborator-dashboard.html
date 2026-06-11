@@ -2545,9 +2545,32 @@ async function loadPricing() {
 async function updatePrice(id) {
   const val = document.getElementById('price_' + id)?.value;
   if (!val) return;
+  const primary = getPrimaryServiceType();
+  let endpoint = '';
+  let body = {};
+  
+  if (primary === 'bus') {
+    endpoint = '/api/collaborator/bus/' + id;
+    body = { pricePerKm: parseFloat(val) };
+  } else if (primary === 'cab') {
+    endpoint = '/api/collaborator/cab/cab/' + id;
+    body = { fare: parseFloat(val) };
+  } else if (primary === 'hotel') {
+    endpoint = '/api/collaborator/hotel/hotel/' + id;
+    body = { price: parseFloat(val) };
+  } else if (primary === 'cafe') {
+    endpoint = '/api/collaborator/cafe/cafe/' + id;
+    body = { price: parseFloat(val) };
+  }
+
+  if (!endpoint) return;
+
   try {
-    const r = await fetch(API + '/api/collaborator/bus/' + id, { method:'PUT', headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
-      body: JSON.stringify({ pricePerKm: parseFloat(val) }) });
+    const r = await collaboratorFetch(endpoint, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
     const d = await r.json();
     if (d.success) { loadInventory(); alert('✅ Price updated'); }
     else alert(d.message || 'Update failed');

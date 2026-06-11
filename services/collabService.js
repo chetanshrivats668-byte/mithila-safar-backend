@@ -69,6 +69,24 @@ function normalizePhone(phone) {
   return typeof phone === 'string' ? phone.replace(/\D/g, '').slice(-10) : '';
 }
 
+const VALID_COLLABORATOR_COLUMNS = [
+  'id', 'name', 'email', 'phone', 'phoneVerified', 'password',
+  'businessName', 'businessType', 'businessDescription', 'serviceCategories',
+  'address', 'city', 'state', 'aadhaarUrl', 'panUrl', 'bankDetails', 'documents',
+  'verificationStatus', 'verifiedAt', 'verifiedBy', 'status', 'rating',
+  'totalBookings', 'totalEarnings', 'createdAt', 'updatedAt'
+];
+
+function filterSupabaseColumns(data) {
+  const filtered = {};
+  for (const key of VALID_COLLABORATOR_COLUMNS) {
+    if (data[key] !== undefined) {
+      filtered[key] = data[key];
+    }
+  }
+  return filtered;
+}
+
 export async function getCollaboratorById(db, collabId) {
   const mem = memoryDb.collabs.get(collabId);
   if (mem) return normalize(mem);
@@ -173,7 +191,8 @@ export async function createCollaborator(db, data) {
       status: data.status || 'pending'
     };
     delete record.verification_status;
-    await dbCreate('collaborators', collabId, record).catch((err) => console.error('[collabService] Supabase create failed:', err));
+    const sanitizedRecord = filterSupabaseColumns(record);
+    await dbCreate('collaborators', collabId, sanitizedRecord).catch((err) => console.error('[collabService] Supabase create failed:', err));
   }
   return { id: collabId, ...collabData };
 }
@@ -185,7 +204,10 @@ export async function updateCollaborator(db, collabId, updates) {
     Object.assign(existing, updates);
   }
   if (isSupabaseAvailable()) {
-    await dbUpdate('collaborators', collabId, updates).catch((err) => console.error('[collabService] Supabase update failed:', err));
+    const sanitizedUpdates = filterSupabaseColumns(updates);
+    if (Object.keys(sanitizedUpdates).length > 0) {
+      await dbUpdate('collaborators', collabId, sanitizedUpdates).catch((err) => console.error('[collabService] Supabase update failed:', err));
+    }
   }
   return { id: collabId, ...updates };
 }
