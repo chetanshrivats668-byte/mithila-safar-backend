@@ -598,7 +598,9 @@
             <h2>🙏 Welcome Back</h2>
             <p class="subtitle">Login to Yatri Point</p>
             
-
+            <div class="login-tabs" style="display:flex;margin-bottom:1rem;border-bottom:2px solid var(--border);">
+                <button type="button" class="login-tab active" data-tab="email" style="flex:1;padding:.7rem;background:none;border:none;color:var(--gold);font-weight:700;border-bottom:2px solid var(--gold);cursor:default;font-family:inherit;font-size:.9rem;text-align:center;">📧 Email/Password</button>
+            </div>
 
             <form class="modal-form" id="loginEmailForm" onsubmit="handleLogin(event)" style="display:block">
                 <input type="text" id="loginEmail" placeholder="Email or Phone Number" required>
