@@ -101,8 +101,11 @@ if (RedisClientClass && redisUrl) {
   }
 } else {
   if (isProd) {
-    console.error('FATAL: REDIS_URL is required in production environment.');
-    process.exit(1);
+    if (!redisUrl) {
+      console.warn('⚠️ [REDIS] WARNING: REDIS_URL is not configured in production. Falling back to MockRedis.');
+    } else {
+      console.warn('⚠️ [REDIS] WARNING: ioredis package not loaded. Falling back to MockRedis.');
+    }
   }
   redisClient = new MockRedis();
 }
