@@ -624,16 +624,81 @@ tr:hover td{background:var(--card2)}
     .chart-container{height:100px}
   }
 
-  /* SVG Gradient for Analytics Chart */
-  <svg style="display:none;">
-    <defs>
-      <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#f5c518" stop-opacity="0.6"/>
-        <stop offset="100%" stop-color="#f5c518" stop-opacity="0"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  /* ── CAB MANAGEMENT LIST ── */
+  .cab-list {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+  .cab-card-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    background: var(--card2);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: .9rem 1.1rem;
+    transition: border-color .2s, background .2s;
+    overflow: hidden;
+  }
+  .cab-card-item:hover {
+    border-color: rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+  }
+  .cab-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  .cab-card-name {
+    font-weight: 700;
+    font-size: .92rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cab-card-sub {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+    font-size: .76rem;
+    color: var(--text2);
+  }
+  .cab-card-sub span { white-space: nowrap; }
+  .cab-card-right {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-shrink: 0;
+  }
+  .cab-status-badge {
+    padding: .22rem .65rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+  @media(max-width:480px){
+    .cab-card-item { flex-wrap: wrap; }
+    .cab-card-right { width: 100%; justify-content: flex-end; }
+  }
 </style>
+
+<!-- SVG Gradient for Analytics Chart -->
+<svg style="display:none;">
+  <defs>
+    <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5c518" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#f5c518" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+</svg>
 </head>
 <body>
 
@@ -1146,10 +1211,10 @@ tr:hover td{background:var(--card2)}
             <button class="btn-sec btn-sm" onclick="loadCabs()">Refresh</button>
           </div>
         </div>
-        <div class="grid-cards" id="cabList"><p style="color:var(--text2)">Loading...</p></div>
+        <div class="cab-list" id="cabList"><p style="color:var(--text2)">Loading...</p></div>
       </div>
       <div class="section" id="cabLayoutSection" style="display:none">
-        <div class="hdr"><h3>Cab Seat Layout</h3>
+        <div class="hdr"><h3>🚗 Cab Booking Info</h3>
           <div class="actions">
             <select id="cabLayoutSelector" onchange="loadCabSeatLayout()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
               <option value="">— Select cab —</option>
@@ -1158,17 +1223,10 @@ tr:hover td{background:var(--card2)}
         </div>
         <div id="cabLayoutContainer">
           <div class="kpi-bar" id="cabKpiContainer" style="display:none;"></div>
-          <div class="filter-bar" id="cabFilterContainer" style="display:none;"></div>
           <div id="cabSeatMapContainer" style="position:relative;">
             <div class="seat-layout">
-              <p style="color:var(--text2);text-align:center;padding:2rem">Select a cab above to view seat layout</p>
+              <p style="color:var(--text2);text-align:center;padding:2rem">Select a cab above to view details</p>
             </div>
-          </div>
-          <div class="seat-legend" id="cabLayoutLegend" style="margin-top:1.5rem;">
-            <span><span style="width:14px;height:14px;background:#10b981;border:1.5px solid #10b981;border-radius:4px;display:inline-block"></span> Available</span>
-            <span><span style="width:14px;height:14px;background:#3b82f6;border:1.5px solid #3b82f6;border-radius:4px;display:inline-block"></span> Booked (Male)</span>
-            <span><span style="width:14px;height:14px;background:#ec4899;border:1.5px solid #ec4899;border-radius:4px;display:inline-block"></span> Booked (Female)</span>
-            <span><span style="width:14px;height:14px;background:#475569;border:1.5px solid #475569;border-radius:4px;display:inline-block"></span> Blocked</span>
           </div>
         </div>
       </div>
@@ -1211,8 +1269,16 @@ const DEFAULT_RUNNING_DAYS = [true, true, true, true, true, true, true];
 
 /* ─── Auth ─── */
 function switchAuth(tab) {
-  document.querySelectorAll('.auth-tab').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(tab)));
-  ['loginForm','registerForm'].forEach(id => document.getElementById(id).classList.toggle('active', id.includes(tab)));
+  const mainTabs = document.querySelectorAll('.auth-box > .auth-tabs > .auth-tab');
+  mainTabs.forEach(b => {
+    const isLogin = tab === 'login' && b.textContent.toLowerCase().includes('login');
+    const isRegister = tab === 'register' && b.textContent.toLowerCase().includes('apply');
+    b.classList.toggle('active', isLogin || isRegister);
+  });
+  ['loginForm','registerForm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', id.includes(tab));
+  });
 }
 // Enter key submits naturally via form onsubmit; no extra dispatch needed
 
@@ -2453,8 +2519,8 @@ async function loadLayout() {
   if (!id) { document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Select an item to view layout</p>'; return; }
   const primary = getPrimaryServiceType();
 
-  if (primary !== 'bus' && primary !== 'cafe') {
-    document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Seat/table layout is not available for this service type.</p>';
+  if (primary !== 'bus' && primary !== 'cafe' && primary !== 'hotel') {
+    document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Seat/table/room layout is not available for this service type.</p>';
     document.getElementById('layoutSelector').value = '';
     return;
   }
@@ -2467,13 +2533,14 @@ async function loadLayout() {
     let seats = [];
     const item = INVENTORY.find(i => i.id === id);
 
-    const endpoint = primary === 'cafe' ? '/api/collaborator/cafe/' : '/api/collaborator/bus/';
-    const r = await collaboratorFetch(endpoint + id + '/seats?date=' + new Date().toISOString().split('T')[0]);
+    let endpoint = primary === 'cafe' ? '/api/collaborator/cafe/tables/tables/' : '/api/collaborator/bus/';
+    if (primary === 'hotel') endpoint = '/api/collaborator/hotel/rooms/rooms/';
+    const r = await collaboratorFetch(endpoint + id + '?date=' + new Date().toISOString().split('T')[0]);
     if (r.status === 401) return logout();
     const d = await r.json();
-    seats = d.seats || [];
+    seats = d.rooms || d.tables || d.seats || [];
 
-    const capacity = item?.totalSeats || item?.capacity || seats.length || 20;
+    const capacity = item?.totalSeats || item?.capacity || item?.totalRooms || item?.totalTables || seats.length || 20;
 
     SEATS_DATA = seats;
     FILTER_STATE = 'all';
@@ -2569,6 +2636,7 @@ function applySeatFilter(state) {
 
 function renderSeatMap(seats, capacity, type, item) {
   const isCafe = type === 'cafe';
+  const isHotel = type === 'hotel';
 
   if (isCafe) {
     document.getElementById('layoutTitle').textContent = 'Table Layout';
@@ -2582,6 +2650,26 @@ function renderSeatMap(seats, capacity, type, item) {
       const cls = s.status || 'available';
       html += `<div class="seat ${cls}" onclick="toggleSeat('${s.id}')" title="${s.number||s.id}: ${s.status}" style="width:auto;height:auto;padding:.8rem .4rem;flex-direction:column;gap:4px;font-size:.65rem;border-radius:12px">
         <span style="font-size:1.2rem">🍽️</span>
+        <span>${s.number||s.id}</span>
+      </div>`;
+    }
+    html += '</div>';
+    document.getElementById('seatMapContainer').innerHTML = html;
+    return;
+  }
+
+  if (isHotel) {
+    document.getElementById('layoutTitle').textContent = 'Room Layout';
+    document.getElementById('layoutActions').style.display = 'flex';
+    document.getElementById('layoutLegend').style.display = 'flex';
+    const cnt = Math.min(seats.length || capacity, 30);
+    const gridSize = Math.ceil(Math.sqrt(cnt));
+    let html = '<div style="display:grid;grid-template-columns:repeat(' + gridSize + ',1fr);gap:10px;max-width:400px;margin:0 auto">';
+    for (let i = 0; i < cnt; i++) {
+      const s = seats[i] || { id: 'RM' + (i + 1), status:'available', number:'Room ' + (i + 1) };
+      const cls = s.status || 'available';
+      html += `<div class="seat ${cls}" onclick="toggleSeat('${s.id}')" title="${s.number||s.id}: ${s.status}" style="width:auto;height:auto;padding:.8rem .4rem;flex-direction:column;gap:4px;font-size:.65rem;border-radius:12px">
+        <span style="font-size:1.2rem">🏨</span>
         <span>${s.number||s.id}</span>
       </div>`;
     }
@@ -3488,17 +3576,27 @@ async function loadCabs() {
       list.innerHTML = '<p style="color:var(--text2)">No cabs added yet. Click "+ Add Cab" to add one.</p>';
       return;
     }
-    list.innerHTML = cabs.map(c =>
-      '<div class="card-item" style="background:var(--card2);border-radius:12px;padding:1rem;border:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
-      '<div><strong>' + (c.name || c.cabName || c.title || 'Cab #'+c.id) + '</strong><br><span style="font-size:.78rem;color:var(--text2)">' +
-      (c.vehicleNumber ? '🚙 ' + c.vehicleNumber : '') +
-      (c.totalSeats ? ' | Seats: ' + c.totalSeats : '') +
-      '</span></div>' +
-      '<div style="display:flex;gap:.5rem;align-items:center">' +
-      '<span style="padding:.25rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;background:' + (c.status==='active'||c.status==='approved'?'rgba(16,185,129,.15);color:#6ee7b7':'rgba(100,100,100,.2);color:#aaa') + '">' + (c.status||'inactive') + '</span>' +
-      '<button class="btn-sec btn-sm" onclick="selectCab(\'' + c.id + '\')">View Seats</button>' +
-      '</div></div>'
-    ).join('');
+    list.innerHTML = cabs.map(c => {
+      const isActive = c.status === 'active' || c.status === 'approved';
+      const statusBg = isActive ? 'rgba(16,185,129,.15)' : 'rgba(100,100,100,.2)';
+      const statusColor = isActive ? '#6ee7b7' : '#aaa';
+      const cabName = c.name || c.cabName || c.title || 'Cab #' + c.id;
+      const vehicleNum = c.vehicleNumber || c.cabNumber || '';
+      const totalSeats = c.totalSeats || '';
+      return '<div class="cab-card-item">' +
+        '<div class="cab-card-left">' +
+          '<div class="cab-card-name">' + cabName + '</div>' +
+          '<div class="cab-card-sub">' +
+            (vehicleNum ? '<span>🚙 ' + vehicleNum + '</span>' : '') +
+            (totalSeats ? '<span>💺 ' + totalSeats + ' seats</span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="cab-card-right">' +
+          '<span class="cab-status-badge" style="background:' + statusBg + ';color:' + statusColor + '">' + (c.status || 'inactive') + '</span>' +
+          '<button class="btn-sec btn-sm" onclick="selectCab(\'' + c.id + '\')">View Details</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
     if (sel) {
       sel.innerHTML = '<option value="">— Select cab —</option>' + cabs.map(c => '<option value="' + c.id + '">' + (c.name || c.cabName || c.title || 'Cab #'+c.id) + '</option>').join('');
     }
@@ -3526,42 +3624,50 @@ async function loadCabSeatLayout() {
     const d = await r.json();
     if (!d.success) { throw new Error(d.message); }
     const cab = d.cab || d.data || {};
-    const seats = cab.seats || [];
-    const totalSeats = cab.totalSeats || seats.length || 4;
-    const maleBooked = seats.filter(s => s.gender === 'male' && s.status === 'booked').length;
-    const femaleBooked = seats.filter(s => s.gender === 'female' && s.status === 'booked').length;
-    const available = seats.filter(s => s.status === 'available' || !s.status).length;
-    const blocked = seats.filter(s => s.status === 'blocked').length;
+    const totalSeats = cab.totalSeats || 4;
+    const cabName = cab.cabName || cab.name || cab.vehicleModel || 'Cab';
+    const cabNumber = cab.cabNumber || cab.vehicleNumber || '';
+    const driverName = cab.driverName || '';
+    const driverPhone = cab.driverPhone || '';
+    const route = cab.route || cab.city || '';
+    const fare = cab.fare || cab.pricePerKm || '';
+    const status = cab.status || 'unknown';
+
+    // KPI bar — just show total seats since cab is booked as a whole unit
     document.getElementById('cabKpiContainer').style.display = 'flex';
     document.getElementById('cabKpiContainer').innerHTML =
-      '<div class="kpi"><span class="label">Seats</span><span class="val">' + totalSeats + '</span></div>' +
-      '<div class="kpi"><span class="label">Available</span><span class="val" style="color:#6ee7b7">' + available + '</span></div>' +
-      '<div class="kpi"><span class="label">Booked (M)</span><span class="val" style="color:#93c5fd">' + maleBooked + '</span></div>' +
-      '<div class="kpi"><span class="label">Booked (F)</span><span class="val" style="color:#f9a8d4">' + femaleBooked + '</span></div>' +
-      '<div class="kpi"><span class="label">Blocked</span><span class="val" style="color:#aaa">' + blocked + '</span></div>';
+      '<div class="kpi"><span class="label">Total Seats</span><span class="val">' + totalSeats + '</span></div>' +
+      '<div class="kpi"><span class="label">Status</span><span class="val" style="color:' + (status === 'active' || status === 'approved' ? '#6ee7b7' : '#aaa') + '">' + status + '</span></div>';
+
+    // Show cab info card instead of individual seat boxes
+    // The whole cab is booked as one unit — no seat-by-seat selection needed
     const container = document.querySelector('#cabSeatMapContainer .seat-layout');
-    if (seats.length) {
-      container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;max-width:320px;margin:0 auto">' +
-        seats.map(s => {
-          const st = s.status || 'available';
-          const g = s.gender || '';
-          let bg = '#10b981';
-          let label = 'A' + (s.seatNumber || s.number || '');
-          if (st === 'booked' && g === 'male') { bg = '#3b82f6'; label = 'M' + (s.seatNumber||s.number||''); }
-          else if (st === 'booked' && g === 'female') { bg = '#ec4899'; label = 'F' + (s.seatNumber||s.number||''); }
-          else if (st === 'blocked') { bg = '#475569'; label = 'X' + (s.seatNumber||s.number||''); }
-          return '<div style="background:'+bg+';border-radius:10px;padding:1rem .5rem;text-align:center;color:#fff;font-weight:700;font-size:.85rem;transition:.2s">'+label+'</div>';
-        }).join('') +
-        '</div>';
-    } else {
-      const seatCount = totalSeats || 4;
-      container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;max-width:320px;margin:0 auto">' +
-        Array.from({length:seatCount}, (_,i) => {
-          const seatNum = i + 1;
-          return '<div style="background:#10b981;border-radius:10px;padding:1rem .5rem;text-align:center;color:#fff;font-weight:700;font-size:.85rem">A'+seatNum+'</div>';
-        }).join('') +
-        '</div>';
-    }
+    container.innerHTML =
+      '<div style="background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;padding:1.5rem;max-width:420px;margin:0 auto">' +
+        '<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem">' +
+          '<div style="width:56px;height:56px;border-radius:12px;background:rgba(216,78,85,.15);display:flex;align-items:center;justify-content:center;font-size:2rem">🚗</div>' +
+          '<div>' +
+            '<div style="font-size:1.05rem;font-weight:700;color:#fff">' + cabName + '</div>' +
+            (cabNumber ? '<div style="font-size:.8rem;color:var(--text2);margin-top:2px">🚙 ' + cabNumber + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;font-size:.85rem">' +
+          '<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:.8rem;text-align:center">' +
+            '<div style="font-size:2rem;font-weight:800;color:#6ee7b7">' + totalSeats + '</div>' +
+            '<div style="color:var(--text2);font-size:.75rem;margin-top:2px">Total Seats</div>' +
+            '<div style="color:var(--text2);font-size:.7rem;margin-top:4px;opacity:.7">Entire cab booked per ride</div>' +
+          '</div>' +
+          '<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.8rem">' +
+            (route ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">📍 Route:</span> <span style="color:#fff;font-weight:600">' + route + '</span></div>' : '') +
+            (fare ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">💰 Fare:</span> <span style="color:#fff;font-weight:600">₹' + fare + '/km</span></div>' : '') +
+            (driverName ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">👤 Driver:</span> <span style="color:#fff;font-weight:600">' + driverName + '</span></div>' : '') +
+            (driverPhone ? '<div><span style="color:var(--text2)">📞 Phone:</span> <span style="color:#fff;font-weight:600">' + driverPhone + '</span></div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-top:1rem;padding:.7rem 1rem;background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:.78rem;color:#fcd34d">' +
+          'ℹ️ <strong>Cab Booking Policy:</strong> When a user books this cab, the <strong>entire cab is reserved</strong> exclusively for them — no shared seating.' +
+        '</div>' +
+      '</div>';
   } catch(e) { console.error(e); }
 }
 

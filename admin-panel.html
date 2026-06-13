@@ -219,50 +219,103 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
   z-index:49;opacity:0;pointer-events:none;transition:opacity .25s}
 .scrim.show{opacity:1;pointer-events:auto}
 
-/* ── MOBILE ── */
-@media(max-width:768px){
-  .mobile-bar{display:flex;align-items:center;justify-content:space-between;
-    background:var(--navy2);padding:.7rem 1rem;border-bottom:1px solid var(--border);
-    position:sticky;top:0;z-index:50}
-  .mobile-bar .m-title{font-weight:800;color:#fff;font-size:1rem}
-  .mobile-bar .m-title span{color:var(--gold)}
-  .mobile-bar .m-user{font-size:.72rem;color:var(--text2)}
-  .sidebar{position:fixed;left:-260px;top:0;bottom:0;width:260px;
-    transition:left .25s;z-index:60}
-  .sidebar.open{left:0}
-  .sb-brand{padding:1.2rem 1rem}
-  .sb-nav{flex-direction:column;padding:.8rem;gap:.3rem}
-  .sb-link{padding:.85rem 1rem;font-size:.9rem}
-  .sb-footer{padding:.8rem}
-  .logout-btn{padding:.8rem 1rem;font-size:.85rem}
-  .main{margin-left:0;padding:1rem}
-  .stats{grid-template-columns:1fr 1fr}
-  .topbar{flex-direction:column;align-items:flex-start;gap:.75rem;margin-top:.5rem}
-}
-@media(max-width:480px){
-  .stats{grid-template-columns:1fr}
-  .card-grid{grid-template-columns:1fr}
-  .search-bar{flex-wrap:wrap}
-  .search-bar input{min-width:0;flex:1 1 100%}
-  .search-bar button{flex:1;padding:.6rem 1rem;font-size:.8rem}
-  .modal-body{grid-template-columns:1fr}
-  .modal-box{padding:1.2rem;margin:.5rem}
-  .modal-hdr h2{font-size:1.1rem}
-  .modal-actions{flex-direction:column}
-  .lb{padding:1.5rem 1.2rem}
-  .lb-top h2{font-size:1.3rem}
-  .stat-n{font-size:1.8rem}
-  .stat{padding:1rem}
-  .topbar h1{font-size:1.2rem}
-  .card{padding:1rem}
-  .card-actions{flex-direction:column}
-  .card-actions .act{width:100%}
-}
-@media(max-width:360px){
-  .sb-link{font-size:.82rem;padding:.7rem .8rem}
-  .stat-n{font-size:1.4rem}
-  .stat-ico{font-size:1.2rem;margin-bottom:.4rem}
-}
+/* ── TABLE WRAPPER FOR MOBILE ── */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -1.4rem;padding:0 1.4rem}
+  table{width:100%;border-collapse:collapse;min-width:560px}
+  th{text-align:left;font-size:.68rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:.6rem .8rem;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:.6rem .8rem;font-size:.82rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+
+  /* ── CARD VIEW ALTERNATIVE FOR MOBILE TABLES ── */
+  .card-table{display:none}
+  @media(max-width:560px){
+    .table-wrap{table{display:none}}
+    .card-table{display:block}
+    .card-table .card{margin-bottom:.6rem}
+    .card-table .card-head{margin-bottom:.5rem}
+    .card-table .card-grid{gap:.4rem .6rem}
+    .card-table .info .lbl{font-size:.62rem}
+    .card-table .info .val{font-size:.8rem}
+  }
+
+  /* ── MOBILE ── */
+  @media(max-width:768px){
+    .mobile-bar{display:flex;align-items:center;justify-content:space-between;
+      background:var(--navy2);padding:.7rem 1rem;border-bottom:1px solid var(--border);
+      position:sticky;top:0;z-index:50}
+    .mobile-bar .m-title{font-weight:800;color:#fff;font-size:1rem}
+    .mobile-bar .m-title span{color:var(--gold)}
+    .mobile-bar .m-user{font-size:.72rem;color:var(--text2)}
+    .sidebar{position:fixed;left:-270px;top:0;bottom:0;width:270px;
+      transition:left .3s cubic-bezier(.25,.8,.25,1);z-index:60;box-shadow:20px 0 40px rgba(0,0,0,.4)}
+    .sidebar.open{left:0}
+    .sb-brand{padding:1.2rem 1rem}
+    .sb-nav{flex-direction:column;padding:.8rem;gap:.3rem}
+    .sb-link{padding:.9rem 1rem;font-size:.9rem;min-height:44px}
+    .sb-footer{padding:.8rem}
+    .logout-btn{padding:.9rem 1rem;font-size:.85rem;min-height:44px}
+    .main{margin-left:0;padding:1rem}
+    .stats{grid-template-columns:1fr 1fr;gap:.75rem}
+    .topbar{flex-direction:column;align-items:flex-start;gap:.75rem;margin-top:.5rem}
+    .card{padding:1rem}
+    .card-head{flex-wrap:wrap;gap:.5rem}
+    .card-actions{flex-wrap:wrap;gap:.5rem}
+    .card-actions .act{flex:1 1 calc(50% - .25rem);min-width:120px}
+    .modal-box{margin:.75rem;padding:1.5rem}
+    .modal-actions{flex-wrap:wrap;gap:.5rem}
+    .modal-actions .act{flex:1 1 calc(50% - .25rem);min-width:120px}
+  }
+  @media(max-width:560px){
+    .stats{grid-template-columns:1fr;gap:.6rem}
+    .card-grid{grid-template-columns:1fr}
+    .search-bar{flex-wrap:wrap;gap:.5rem}
+    .search-bar input{min-width:0;flex:1 1 100%}
+    .search-bar button{flex:1 1 calc(50% - .25rem);padding:.6rem .8rem;font-size:.8rem;min-height:40px}
+    .modal-body{grid-template-columns:1fr;gap:.5rem}
+    .modal-box{padding:1rem;margin:.5rem;max-height:95vh}
+    .modal-hdr h2{font-size:1rem}
+    .modal-actions{flex-direction:column}
+    .modal-actions .act{width:100%}
+    .lb{padding:1.5rem 1.2rem}
+    .lb-top h2{font-size:1.3rem}
+    .stat-n{font-size:1.8rem}
+    .stat{padding:1rem}
+    .topbar h1{font-size:1.2rem}
+    .card{padding:.85rem}
+    .card-actions{flex-direction:column}
+    .card-actions .act{width:100%}
+    .sec-hdr{font-size:.7rem}
+    .stat-ico{font-size:1.3rem}
+    .stat-n{font-size:1.6rem}
+    .stat-l{font-size:.65rem}
+    .topbar-r{gap:.5rem}
+    .refresh-btn{padding:.5rem .9rem;font-size:.8rem}
+    .sidebar{width:290px;left:-300px}
+  }
+  @media(max-width:420px){
+    .sb-link{font-size:.82rem;padding:.7rem .8rem}
+    .stat-n{font-size:1.4rem}
+    .stat-ico{font-size:1.2rem;margin-bottom:.4rem}
+    .search-bar button{flex:1 1 100%}
+    .card-head{flex-direction:column;align-items:flex-start}
+    .badge{font-size:.65rem;padding:.2rem .6rem}
+    .card-id{font-size:.85rem}
+    .card-name{font-size:.72rem}
+    .info .val{font-size:.8rem}
+    .info .lbl{font-size:.6rem}
+    .kpi-val{font-size:1.1rem}
+  }
+  @media(max-width:360px){
+    .sb-link{font-size:.75rem;padding:.6rem .7rem}
+    .stat-n{font-size:1.2rem}
+    .stat{padding:.75rem}
+    .stat-ico{font-size:1rem;margin-bottom:.3rem}
+    .modal-box{padding:.85rem}
+    .modal-hdr h2{font-size:.9rem}
+    .lb{padding:1.2rem 1rem}
+    .lb-top h2{font-size:1.15rem}
+    .login-btn{padding:.85rem;font-size:.9rem}
+    .inp-grp input{padding:.75rem .9rem;font-size:.88rem}
+  }
 </style>
 </head>
 <body>
@@ -388,7 +441,7 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
     
     <!-- Applications Pane -->
     <div class="pane" id="pane-applications">
-      <div class="sec-hdr">Partner Onboarding Requests (collab.html)</div>
+      <div class="sec-hdr">Partner Onboarding Requests</div>
       <div id="applications-list"><div class="empty"><p>Loading…</p></div></div>
     </div>
   </main>

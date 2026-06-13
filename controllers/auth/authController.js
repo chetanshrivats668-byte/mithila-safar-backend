@@ -65,6 +65,8 @@ import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.j
 import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
 import { memoryDb } from '../../utils/firestoreFallback.js';
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, isSupabaseAvailable } from '../../utils/db.js';
+import { savePhoneOTP, checkPhoneOTPRateLimit, verifyPhoneOTP as verifyPhoneOTPService } from '../../utils/otp/otpHelper.js';
+import { sendOTP as sendMsg91OTP } from '../../services/msg91/msg91Service.js';
 
 export async function verifyMsg91AccessToken(accessToken, phone = '') {
   if (accessToken === 'mock-otp-token' || accessToken === '123456' || accessToken === '111111') {
@@ -487,6 +489,193 @@ export async function verifyMsg91Token(req, res) {
       success: false,
       message: err?.payload?.message || err.message || 'Failed to verify MSG91 access token'
     });
+  }
+}
+
+export async function sendPhoneOTP(req, res) {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, message: 'Phone number is required' });
+
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number' });
+    }
+    const formattedPhone = `+91${cleanPhone}`;
+
+    const db = req.app.locals.db;
+    const isRateLimited = await checkPhoneOTPRateLimit(db, formattedPhone);
+    if (isRateLimited) return res.status(429).json({ success: false, message: 'Too many OTP requests. Please wait 60 seconds.' });
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    await savePhoneOTP(db, formattedPhone, otpCode);
+
+    // Send via MSG91 API
+    try {
+      await sendMsg91OTP(formattedPhone, otpCode);
+    } catch (smsErr) {
+      console.warn('[SEND PHONE OTP]: MSG91 send failed, OTP saved but not delivered via SMS:', smsErr.message);
+    }
+    // In development, always log OTP to console for testing
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV OTP for ${formattedPhone}]: ${otpCode}`);
+    }
+
+    return res.json({ success: true, message: 'OTP sent successfully to ' + formattedPhone });
+  } catch (err) {
+    console.error('[SEND PHONE OTP ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Failed to send OTP. Please try again.' });
+  }
+}
+
+export async function verifyPhoneOTP(req, res) {
+  try {
+    const { phone, otpCode } = req.body;
+    if (!phone || !otpCode) return res.status(400).json({ success: false, message: 'Phone and OTP code are required' });
+
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit Indian mobile number' });
+    }
+    const formattedPhone = `+91${cleanPhone}`;
+
+    const db = req.app.locals.db;
+    const verification = await verifyPhoneOTPService(db, formattedPhone, otpCode);
+    if (!verification.success) return res.status(400).json({ success: false, message: verification.message });
+
+    const useMemory = !isSupabaseAvailable();
+    let userData, docId;
+
+    if (useMemory) {
+      const foundUser = Array.from(memoryDb.users.entries()).find(([_, u]) => u.phone === formattedPhone);
+      if (foundUser) {
+        docId = foundUser[0];
+        userData = foundUser[1];
+      }
+    } else {
+      const users = await dbList('users', { filters: [{ column: 'phone', op: 'eq', value: formattedPhone }] });
+      if (users.length > 0) {
+        docId = users[0].id;
+        userData = users[0];
+      }
+    }
+
+    const isNewUser = !userData;
+    if (isNewUser) {
+      const userId = 'U' + Date.now().toString(36).toUpperCase() + crypto.randomBytes(3).toString('hex').toUpperCase();
+      userData = {
+        userId,
+        name: '',
+        email: '',
+        phone: formattedPhone,
+        password: null,
+        authProvider: 'phone',
+        role: 'user',
+        phoneVerified: true,
+        emailVerified: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      if (useMemory) memoryDb.users.set(userId, userData);
+      else await dbCreate('users', userId, userData);
+      docId = userId;
+    } else {
+      const updates = { phoneVerified: true, updatedAt: new Date().toISOString() };
+      if (useMemory) Object.assign(memoryDb.users.get(docId), updates);
+      else await dbUpdate('users', docId, updates);
+      Object.assign(userData, updates);
+    }
+
+    const { password: _, ...safeUser } = userData;
+    safeUser.id = docId;
+
+    if (isNewUser || !safeUser.name) {
+      // New user needs to complete profile (name, location)
+      return res.json({
+        success: true,
+        needsProfile: true,
+        userId: docId,
+        phone: formattedPhone,
+        message: 'Phone verified! Please complete your profile.'
+      });
+    }
+
+    // Existing user with complete profile - login directly
+    const tokenPayload = { userId: docId, email: safeUser.email, name: safeUser.name, role: safeUser.role || 'user' };
+    const token = generateAccessToken(tokenPayload, true);
+    const refreshToken = generateRefreshToken(tokenPayload, true);
+    const redirect = await getPartnerCollabRedirect(db, safeUser);
+
+    return res.json({
+      success: true,
+      token,
+      refreshToken,
+      user: safeUser,
+      redirectTo: redirect?.redirectTo || null,
+      collaboratorContext: redirect?.collaboratorContext || null,
+      message: 'Phone verified successfully! Welcome back.'
+    });
+  } catch (err) {
+    console.error('[VERIFY PHONE OTP ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Verification failed. Please try again.' });
+  }
+}
+
+export async function completePhoneProfile(req, res) {
+  try {
+    const { userId, name, city, state } = req.body;
+    if (!userId || !name?.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+
+    const db = req.app.locals.db;
+    const useMemory = !isSupabaseAvailable();
+
+    if (useMemory) {
+      const user = memoryDb.users.get(userId);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      user.name = name.trim();
+      user.city = city?.trim() || '';
+      user.state = state?.trim() || '';
+      user.updatedAt = new Date().toISOString();
+    } else {
+      const user = await dbGet('users', userId);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      await dbUpdate('users', userId, {
+        name: name.trim(),
+        city: city?.trim() || '',
+        state: state?.trim() || '',
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    // Fetch updated user
+    let safeUser;
+    if (useMemory) {
+      safeUser = { ...memoryDb.users.get(userId) };
+    } else {
+      safeUser = await dbGet('users', userId);
+    }
+    delete safeUser.password;
+    safeUser.id = userId;
+
+    const tokenPayload = { userId, email: safeUser.email, name: safeUser.name, role: safeUser.role || 'user' };
+    const token = generateAccessToken(tokenPayload, true);
+    const refreshToken = generateRefreshToken(tokenPayload, true);
+    const redirect = await getPartnerCollabRedirect(db, safeUser);
+
+    return res.json({
+      success: true,
+      token,
+      refreshToken,
+      user: safeUser,
+      redirectTo: redirect?.redirectTo || null,
+      collaboratorContext: redirect?.collaboratorContext || null,
+      message: 'Profile completed! Welcome to Yatri Point.'
+    });
+  } catch (err) {
+    console.error('[COMPLETE PHONE PROFILE ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Failed to complete profile. Please try again.' });
   }
 }
 

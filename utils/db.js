@@ -1,4 +1,6 @@
 import { supabase, isSupabaseAvailable } from './supabaseClient.js';
+import { memoryDb } from './firestoreFallback.js';
+
 
 const TABLE_NOT_FOUND_CODES = ['42P01', 'PGRST205', 'PGRST301'];
 
@@ -13,10 +15,78 @@ function mapRow(row) {
   return { id: row.id, ...data };
 }
 
+function mapTableToMemoryStore(table) {
+  const tableMap = {
+    users: 'users',
+    collabs: 'collabs',
+    orders: 'orders',
+    bookings: 'bookings',
+    email_otps: 'email_otps',
+    collab_applications: 'collab_applications',
+    audit_logs: 'audit_logs',
+    collaborator_buses: 'buses',
+    collaborator_hotels: 'hotels',
+    collaborator_cabs: 'cabs',
+    collaborator_cafes: 'cafes',
+    collaborator_seats: 'seats',
+    hotel_rooms: 'room_layouts',
+    cafe_tables: 'table_layouts'
+  };
+  return tableMap[table] || null;
+}
+
+function getMemoryStore(table) {
+  const key = mapTableToMemoryStore(table);
+  return key ? memoryDb[key] : null;
+}
+
+function applyFilters(rows, filters = []) {
+  if (!Array.isArray(filters) || filters.length === 0) return rows;
+  return rows.filter((row) => filters.every((f) => {
+    const val = row?.[f.column];
+    switch (f.op) {
+      case 'eq': return val === f.value;
+      case 'neq': return val !== f.value;
+      case 'gt': return val > f.value;
+      case 'gte': return val >= f.value;
+      case 'lt': return val < f.value;
+      case 'lte': return val <= f.value;
+      case 'like': return String(val || '').includes(String(f.value || '').replace(/%/g, ''));
+      case 'ilike': return String(val || '').toLowerCase().includes(String(f.value || '').replace(/%/g, '').toLowerCase());
+      default: return true;
+    }
+  }));
+}
+
+function applyOrderAndLimit(rows, opts = {}) {
+  let out = [...rows];
+  if (opts.orderBy?.column) {
+    const { column, ascending } = opts.orderBy;
+    out.sort((a, b) => {
+      const av = a?.[column];
+      const bv = b?.[column];
+      if (av == null && bv == null) return 0;
+      if (av == null) return ascending === false ? 1 : -1;
+      if (bv == null) return ascending === false ? -1 : 1;
+      if (av > bv) return ascending === false ? -1 : 1;
+      if (av < bv) return ascending === false ? 1 : -1;
+      return 0;
+    });
+  }
+  if (opts.limit) out = out.slice(0, opts.limit);
+  return out;
+}
+
 // NOTE: Do NOT lowercase column keys – Supabase schema uses quoted camelCase
 // identifiers that are case-sensitive in PostgREST.
 
 export async function get(table, id) {
+  if (!isSupabaseAvailable()) {
+    const store = getMemoryStore(table);
+    if (!store) return null;
+    return store.get(id) || null;
+  }
+
   try {
     const { data, error } = await supabase.from(table).select('*').eq('id', id).maybeSingle();
     if (error) {
@@ -31,6 +101,13 @@ export async function get(table, id) {
 }
 
 export async function list(table, opts = {}) {
+  if (!isSupabaseAvailable()) {
+    const store = getMemoryStore(table);
+    if (!store) return [];
+    const rows = Array.from(store.values());
+    return applyOrderAndLimit(applyFilters(rows, opts.filters), opts);
+  }
+
   try {
     let q = supabase.from(table).select('*');
     if (opts.filters) {

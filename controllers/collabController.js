@@ -3,6 +3,7 @@ import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
 import { verifyMsg91AccessToken } from './auth/authController.js';
+import redisClient from '../utils/redisClient.js';
 
 function isCollaboratorApproved(collab) {
   const verificationStatus = collab?.verification_status || collab?.verificationStatus || '';
@@ -76,8 +77,6 @@ function buildCollaboratorSessionResponse(collab, token) {
     collaborator: serializeCollaborator(collab)
   };
 }
-
-const otpStore = new Map();
 
 export async function registerCollaborator(req, res) {
   try {
@@ -177,16 +176,18 @@ export async function loginWithOTP(req, res) {
       return res.status(400).json({ success: false, message: 'Email and OTP required' });
     }
 
-
     const key = `login:${email}`;
-    const stored = otpStore.get(key);
+    const storedStr = await redisClient.get(key);
 
-    if (!stored) {
+    if (!storedStr) {
       return res.status(400).json({ success: false, message: 'OTP not found. Request new OTP.' });
     }
 
-    if (Date.now() > stored.expires) {
-      otpStore.delete(key);
+    const stored = JSON.parse(storedStr);
+
+    const expiresAtMs = typeof stored.expires === 'string' ? new Date(stored.expires).getTime() : stored.expires;
+    if (Date.now() > expiresAtMs) {
+      await redisClient.del(key);
       return res.status(400).json({ success: false, message: 'OTP expired. Request new OTP.' });
     }
 
@@ -194,7 +195,7 @@ export async function loginWithOTP(req, res) {
       return res.status(401).json({ success: false, message: 'Invalid OTP' });
     }
 
-    otpStore.delete(key);
+    await redisClient.del(key);
 
     const collab = await collabService.getCollaboratorById(req.app.locals.db, stored.collabId);
     if (!collab) {

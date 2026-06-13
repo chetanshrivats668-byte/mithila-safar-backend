@@ -26,6 +26,7 @@ import * as collabService from './services/collabService.js';
 import { normalizeBusRecord } from './services/busService.js';
 import { cacheResponse, cacheResponseByBody, invalidate as cacheInvalidate } from './utils/cache.js';
 import { validate, schemas as validateSchemas, sanitizeInput } from './middleware/validator.js';
+import redisClient from './utils/redisClient.js';
 
 // ========== ENVIRONMENT VALIDATION ==========
 const missing = [];
@@ -59,10 +60,7 @@ const razorpay = new Razorpay({
 });
 
 // ========== IN-MEMORY STORES & CONFIG ==========
-const otpStore = new Map();
 const OTP_MAX_ATTEMPTS = 3;
-const apiRateLimits = new Map();
-const loginAttempts = new Map();
 const ADMIN_LOGIN_MAX_ATTEMPTS = 5;
 const API_RATE_WINDOW = 15 * 60 * 1000;
 const LOCKOUT_TIME = 15 * 60 * 1000;
@@ -111,17 +109,22 @@ async function sendPartnerNotification(orderData) {
 }
 
 // ========== RATE LIMITER ==========
-function checkAdminLoginRateLimit(ip) {
-  const attempt = loginAttempts.get(ip);
-  if (!attempt) return { allowed: true, remaining: ADMIN_LOGIN_MAX_ATTEMPTS };
+async function checkAdminLoginRateLimit(ip) {
+  const key = `lockout:admin:${ip}`;
+  const attemptStr = await redisClient.get(key).catch(() => null);
+  if (!attemptStr) return { allowed: true, remaining: ADMIN_LOGIN_MAX_ATTEMPTS };
+  const attempt = JSON.parse(attemptStr);
   if (attempt.count >= ADMIN_LOGIN_MAX_ATTEMPTS && Date.now() - attempt.lastAttempt < LOCKOUT_TIME) { return { allowed: false, remaining: 0 }; }
-  if (Date.now() - attempt.lastAttempt >= LOCKOUT_TIME) { loginAttempts.delete(ip); return { allowed: true, remaining: ADMIN_LOGIN_MAX_ATTEMPTS }; }
+  if (Date.now() - attempt.lastAttempt >= LOCKOUT_TIME) { await redisClient.del(key).catch(() => {}); return { allowed: true, remaining: ADMIN_LOGIN_MAX_ATTEMPTS }; }
   return { allowed: true, remaining: ADMIN_LOGIN_MAX_ATTEMPTS - attempt.count };
 }
-function recordAdminLoginAttempt(ip, success) {
-  if (success) { loginAttempts.delete(ip); return; }
-  const attempt = loginAttempts.get(ip) || { count: 0, lastAttempt: 0 };
-  attempt.count++; attempt.lastAttempt = Date.now(); loginAttempts.set(ip, attempt);
+async function recordAdminLoginAttempt(ip, success) {
+  const key = `lockout:admin:${ip}`;
+  if (success) { await redisClient.del(key).catch(() => {}); return; }
+  const attemptStr = await redisClient.get(key).catch(() => null);
+  const attempt = attemptStr ? JSON.parse(attemptStr) : { count: 0, lastAttempt: 0 };
+  attempt.count++; attempt.lastAttempt = Date.now();
+  await redisClient.set(key, JSON.stringify(attempt), 'PX', LOCKOUT_TIME).catch(() => {});
 }
 
 // ========== AUTH MIDDLEWARE ==========
@@ -547,7 +550,7 @@ app.post('/api/msg91/webhook', validate(validateSchemas.msg91Webhook), async (re
 app.post('/api/admin/login', validate(validateSchemas.adminLogin), async (req, res) => {
   const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
   const { username, password } = req.body;
-  const rateLimit = checkAdminLoginRateLimit(ip);
+  const rateLimit = await checkAdminLoginRateLimit(ip);
   if (!rateLimit.allowed) return res.status(429).json({ success: false, message: 'Too many login attempts. Try again later.' });
   if (!username || !password) return res.status(400).json({ success: false, message: 'Credentials required' });
   if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) { recordAdminLoginAttempt(ip, true); res.json({ success: true, token: jwt.sign({ admin: true, username, tokenType: 'access' }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY }) }); }

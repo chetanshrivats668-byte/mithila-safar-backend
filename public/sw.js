@@ -7,7 +7,6 @@ const CACHE_NAME = 'ms-booking-v3';
 const OFFLINE_ASSETS = [
     '/',
     '/index.html',
-    '/collab.html',
     '/collab-routes.html',
     '/collaborator-dashboard.html',
     '/styles.css',

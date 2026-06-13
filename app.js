@@ -714,6 +714,226 @@ async function handleLogin(e) {
     }
 }
 
+// ========== PHONE OTP LOGIN ==========
+let phoneLoginState = 'send'; // 'send' or 'verify'
+let pendingPhoneLogin = null;
+
+function switchLoginTab(tab) {
+    console.log('[switchLoginTab] Switching to:', tab);
+    document.querySelectorAll('.login-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+        btn.style.borderBottomColor = btn.dataset.tab === tab ? 'var(--gold)' : 'transparent';
+        btn.style.color = btn.dataset.tab === tab ? 'var(--gold)' : 'var(--gray)';
+    });
+    document.getElementById('loginEmailForm').style.display = tab === 'email' ? 'block' : 'none';
+    document.getElementById('loginPhoneForm').style.display = tab === 'phone' ? 'block' : 'none';
+    console.log('[switchLoginTab] Phone form display:', document.getElementById('loginPhoneForm').style.display);
+    // Reset phone form when switching away
+    if (tab === 'email') resetPhoneLoginForm();
+}
+
+function resetPhoneLoginForm() {
+    phoneLoginState = 'send';
+    pendingPhoneLogin = null;
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('loginPhoneOtp').value = '';
+    document.getElementById('phoneOtpSection').style.display = 'none';
+    document.getElementById('phoneLoginSubmitBtn').textContent = 'Send OTP';
+    document.getElementById('resendPhoneOtpBtn').disabled = false;
+    document.getElementById('resendPhoneOtpBtn').textContent = 'Resend';
+    document.getElementById('resendTimer').style.display = 'none';
+    document.getElementById('resendTimer').textContent = '';
+}
+
+async function handlePhoneLogin(e) {
+    console.log('[handlePhoneLogin] Called', e);
+    console.log('[handlePhoneLogin] phoneLoginState:', phoneLoginState);
+    console.log('[handlePhoneLogin] pendingPhoneLogin:', pendingPhoneLogin);
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    console.log('[handlePhoneLogin] Button:', btn);
+    console.log('[handlePhoneLogin] Form:', e.target);
+    
+    if (phoneLoginState === 'send') {
+        const phone = document.getElementById('loginPhone').value.trim().replace(/\D/g, '');
+        if (phone.length !== 10 || !/^[6-9]\d{9}$/.test(phone)) {
+            return notify('Please enter a valid 10-digit Indian mobile number', 'error');
+        }
+        
+        console.log('[handlePhoneLogin] Sending OTP for phone:', phone);
+        setButtonLoading(btn, true, 'Send OTP');
+        try {
+            const res = await fetch(API_URL + '/api/auth/send-phone-otp', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: '+91' + phone })
+            });
+            console.log('[handlePhoneLogin] Response status:', res.status);
+            const data = await res.json();
+            console.log('[handlePhoneLogin] Response data:', data);
+            if (!data.success) {
+                notify(data.message || 'Failed to send OTP', 'error');
+                return;
+            }
+            
+            // Switch to verify state
+            phoneLoginState = 'verify';
+            pendingPhoneLogin = phone;
+            document.getElementById('phoneOtpSection').style.display = 'block';
+            document.getElementById('phoneLoginSubmitBtn').textContent = 'Verify OTP';
+            document.getElementById('loginPhoneOtp').focus();
+            notify('OTP sent to +91 ' + phone, 'success');
+            startResendTimer();
+        } catch (err) {
+            console.error('[handlePhoneLogin] Error:', err);
+            notify('Failed to send OTP: ' + (err.message || 'network error'), 'error');
+        } finally {
+            setButtonLoading(btn, false, 'Send OTP');
+        }
+    } else {
+        // Verify OTP
+        const otp = document.getElementById('loginPhoneOtp').value.trim();
+        if (otp.length !== 6) {
+            return notify('Please enter the 6-digit OTP', 'error');
+        }
+        
+        console.log('[handlePhoneLogin] Verifying OTP for phone:', pendingPhoneLogin, 'otp:', otp);
+        setButtonLoading(btn, true, 'Verify');
+        try {
+            const res = await fetch(API_URL + '/api/auth/verify-phone-otp', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: '+91' + pendingPhoneLogin, otpCode: otp })
+            });
+            console.log('[handlePhoneLogin] Verify response status:', res.status);
+            const data = await res.json();
+            console.log('[handlePhoneLogin] Verify response data:', data);
+            if (!data.success) {
+                notify(data.message || 'Invalid OTP', 'error');
+                return;
+            }
+            
+            if (data.needsProfile) {
+                // New user - show complete profile modal
+                closeModal('loginModal');
+                document.getElementById('completeProfileUserId').value = data.userId;
+                document.getElementById('completeProfilePhone').value = data.phone;
+                document.getElementById('completeProfileForm').reset();
+                openModal('completeProfileModal');
+                return;
+            }
+            
+            saveSession(data.token, data.user, data.refreshToken);
+            applyCollaboratorLoginContext(data);
+            closeModal('loginModal');
+            notify(data.message || 'Welcome!', 'success');
+            if (data.redirectTo === '/collaborator-dashboard') {
+                window.location.href = '/collaborator-dashboard.html';
+                return;
+            }
+            await checkAndRedirectCollaborator();
+            resetPhoneLoginForm();
+        } catch (err) {
+            notify('Verification failed: ' + (err.message || 'network error'), 'error');
+        } finally {
+            setButtonLoading(btn, false, 'Verify');
+        }
+    }
+}
+
+function startResendTimer() {
+    const resendBtn = document.getElementById('resendPhoneOtpBtn');
+    const timerEl = document.getElementById('resendTimer');
+    let seconds = 60;
+    resendBtn.disabled = true;
+    resendBtn.style.opacity = '0.5';
+    timerEl.style.display = 'inline';
+    timerEl.textContent = ` (${seconds}s)`;
+    
+    const interval = setInterval(() => {
+        seconds--;
+        timerEl.textContent = ` (${seconds}s)`;
+        if (seconds <= 0) {
+            clearInterval(interval);
+            resendBtn.disabled = false;
+            resendBtn.style.opacity = '1';
+            timerEl.style.display = 'none';
+        }
+    }, 1000);
+    
+    // Store interval ID for cleanup if needed
+    resendBtn._timerInterval = interval;
+}
+
+function resendPhoneOtp() {
+    if (!pendingPhoneLogin) return;
+    const btn = document.getElementById('resendPhoneOtpBtn');
+    if (btn.disabled) return;
+    
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    
+    fetch(API_URL + '/api/auth/send-phone-otp', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: '+91' + pendingPhoneLogin })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            notify('OTP resent successfully', 'success');
+            startResendTimer();
+        } else {
+            notify(data.message || 'Failed to resend OTP', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Resend';
+        }
+    })
+    .catch(err => {
+        notify('Failed to resend OTP: ' + (err.message || 'network error'), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Resend';
+    });
+}
+
+async function completePhoneProfile(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const userId = document.getElementById('completeProfileUserId').value;
+    const phone = document.getElementById('completeProfilePhone').value;
+    const name = document.getElementById('completeProfileName').value.trim();
+    const city = document.getElementById('completeProfileCity').value.trim();
+    const state = document.getElementById('completeProfileState').value.trim();
+    
+    if (!name) return notify('Please enter your name', 'error');
+    if (!city) return notify('Please enter your city', 'error');
+    if (!state) return notify('Please enter your state', 'error');
+    
+    setButtonLoading(btn, true, 'Continue');
+    try {
+        const res = await fetch(API_URL + '/api/auth/complete-phone-profile', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, name, city, state })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            notify(data.message || 'Failed to complete profile', 'error');
+            return;
+        }
+        
+        saveSession(data.token, data.user, data.refreshToken);
+        applyCollaboratorLoginContext(data);
+        closeModal('completeProfileModal');
+        notify(data.message || 'Welcome to Yatri Point!', 'success');
+        if (data.redirectTo === '/collaborator-dashboard') {
+            window.location.href = '/collaborator-dashboard.html';
+            return;
+        }
+        await checkAndRedirectCollaborator();
+    } catch (err) {
+        notify('Profile completion failed: ' + (err.message || 'network error'), 'error');
+    } finally {
+        setButtonLoading(btn, false, 'Continue');
+    }
+}
+
 // ========== SIGNUP ==========
 async function handleSignup(e) {
     e.preventDefault();
@@ -1467,10 +1687,11 @@ function renderCabResults(cabs) {
         var model = c.cabtype || c.cabType || c.cabname || c.cabName || 'Standard';
         var fare = c.fare || c.ratePerKm || 'N/A';
         var rating = c.rating || '-';
+        var totalSeats = c.totalSeats || c.totalseats || 4;
         html += '<div class="result-card">';
         html += '<h3>' + name + '</h3>';
         html += '<div class="result-details"><span>Car: ' + model + '</span><span>Rating: ' + rating + '</span></div>';
-        html += '<div class="result-details">Rs ' + fare + '/km</div>';
+        html += '<div class="result-details"><span>Rs ' + fare + '/km</span><span>💺 ' + totalSeats + ' seats (whole cab)</span></div>';
         html += '<button class="btn-primary" onclick="bookCab(\'' + c.id + '\', ' + fare + ')">Book Now</button>';
         html += '</div>';
     });
