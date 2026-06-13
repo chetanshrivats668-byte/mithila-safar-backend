@@ -76,10 +76,7 @@
 
     <link rel="stylesheet" href="styles.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-<!-- Firebase SDK (storage + auth for phone OTP) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <!-- ===== SERVICE WORKER (PWA offline support) ===== -->
@@ -416,24 +413,8 @@
                     <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:.6rem;">
                         <div style="font-size:1.4rem;">📱</div>
                         <div style="flex:1;">
-                            <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Mobile Number (India
-                                only)</div>
-                            <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not verified</div>
-                        </div>
-                        <span id="phoneVerifiedBadge"
-                            style="display:none;background:#d4edda;color:#155724;font-size:.72rem;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;">Verified</span>
-                    </div>
-                    <div id="phoneEditSection">
-                        <div style="display:flex;gap:.5rem;">
-                            <div
-                                style="display:flex;align-items:center;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:0 .6rem;font-weight:600;color:var(--gray);font-size:.9rem;">
-                                +91</div>
-                            <input id="profilePhoneInput" type="tel" placeholder="10-digit mobile number" maxlength="10"
-                                pattern="[6-9][0-9]{9}"
-                                style="flex:1;padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--bg);color:var(--text);"
-                                oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                            <button id="sendOtpBtn" class="btn-primary" style="padding:.6rem 1rem;white-space:nowrap;"
-                                onclick="sendPhoneOTP()">Send OTP</button>
+                            <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Mobile Number</div>
+                            <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not available</div>
                         </div>
                     </div>
                 </div>
@@ -587,46 +568,9 @@
     </div>
 
 
-    <!-- ===== PHONE VERIFICATION FOR BOOKING MODAL ===== -->
-    <div class="modal" id="phoneVerificationModal" onclick="closeOnOverlay(event,'phoneVerificationModal')">
-        <div class="modal-content" style="max-width:380px;">
-            <button class="close-modal" onclick="closeModal('phoneVerificationModal')">×</button>
-            <h2>📱 Verify Phone Number</h2>
-            <p class="subtitle">Please verify your 10-digit mobile number before booking.</p>
-            <div style="margin:1.2rem 0; display:flex; flex-direction:column; gap:0.8rem;">
-                <div style="display:flex; gap:.5rem;">
-                    <div style="display:flex; align-items:center; background:var(--bg); border:1.5px solid var(--border); border-radius:8px; padding:0 .6rem; font-weight:600; color:var(--gray); font-size:.9rem;">
-                        +91
-                    </div>
-                    <input id="bookingPhoneInput" type="tel" placeholder="10-digit mobile number" maxlength="10"
-                        pattern="[6-9][0-9]{9}"
-                        style="flex:1; padding:.6rem .8rem; border:1.5px solid var(--border); border-radius:8px; font-size:.9rem; background:var(--bg); color:var(--text);"
-                        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                </div>
-            </div>
-            <button id="btnVerifyPhoneBooking" class="btn-primary" style="width:100%;" onclick="verifyPhoneForBooking()">Verify via OTP</button>
-            <p id="bookingPhoneError" style="color:var(--danger); text-align:center; font-size:.85rem; margin-top:.5rem; display:none;"></p>
-        </div>
-    </div>
 
-    <!-- ===== OTP VERIFICATION MODAL ===== -->
-    <div class="modal" id="otpModal" onclick="closeOnOverlay(event,'otpModal')">
-        <div class="modal-content" style="max-width:380px;">
-            <button class="close-modal" onclick="closeModal('otpModal')">×</button>
-            <h2>📱 Verify Phone</h2>
-            <p class="subtitle" id="otpSubtitle">Enter OTP sent to +91 XXXXXXXXXX</p>
-            <div style="margin:1.2rem 0;">
-                <input id="otpInput" type="tel" maxlength="6" placeholder="6-digit OTP"
-                    style="width:100%;padding:1rem;border:2px solid var(--border);border-radius:10px;font-size:1.4rem;text-align:center;letter-spacing:.3rem;font-weight:700;background:var(--bg);color:var(--text);"
-                    oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-            </div>
-            <button class="btn-primary" style="width:100%;" onclick="confirmOTP()">✅ Verify OTP</button>
-            <p style="text-align:center;margin-top:.8rem;font-size:.85rem;color:var(--gray);">Didn't receive? <a
-                    href="#" onclick="resendOTP();return false;" style="color:var(--primary);">Resend OTP</a></p>
-            <p id="otpError"
-                style="color:var(--danger);text-align:center;font-size:.85rem;margin-top:.5rem;display:none;"></p>
-        </div>
-    </div>
+
+
 
     <!-- ===== EMAIL OTP VERIFICATION MODAL ===== -->
     <div class="modal" id="emailOtpModal" onclick="closeOnOverlay(event,'emailOtpModal')">
@@ -654,10 +598,7 @@
             <h2>🙏 Welcome Back</h2>
             <p class="subtitle">Login to Yatri Point</p>
             
-            <div class="login-tabs" style="display:flex;margin-bottom:1rem;border-bottom:2px solid var(--border);">
-                <button type="button" class="login-tab active" data-tab="email" onclick="switchLoginTab('email')" style="flex:1;padding:.7rem;background:none;border:none;color:var(--gold);font-weight:700;border-bottom:2px solid var(--gold);cursor:pointer;font-family:inherit;font-size:.9rem">📧 Email/Password</button>
-                <button type="button" class="login-tab" data-tab="phone" onclick="switchLoginTab('phone')" style="flex:1;padding:.7rem;background:none;border:none;color:var(--gray);font-weight:700;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;font-size:.9rem">📱 Phone OTP</button>
-            </div>
+
 
             <form class="modal-form" id="loginEmailForm" onsubmit="handleLogin(event)" style="display:block">
                 <input type="text" id="loginEmail" placeholder="Email or Phone Number" required>
@@ -668,21 +609,7 @@
                 <button type="submit" class="btn-primary">Login</button>
             </form>
 
-            <form class="modal-form" id="loginPhoneForm" onsubmit="handlePhoneLogin(event)" style="display:none">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem;">
-                    <span style="background:var(--card2);padding:.6rem 1rem;border-radius:8px;border:1px solid var(--border);color:var(--gold);font-weight:700">+91</span>
-                    <input type="tel" id="loginPhone" placeholder="10-digit Mobile Number" required maxlength="10" style="flex:1" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                </div>
-                <div id="phoneOtpSection" style="display:none">
-                    <input type="text" id="loginPhoneOtp" placeholder="Enter 6-digit OTP" maxlength="6" style="letter-spacing:4px;text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                    <div style="display:flex;gap:8px;margin-top:.5rem;font-size:.78rem;color:var(--gray)">
-                        <span>Didn't receive OTP? </span>
-                        <button type="button" class="btn-link" id="resendPhoneOtpBtn" onclick="resendPhoneOtp()" style="padding:0;font-size:inherit;color:var(--gold)">Resend</button>
-                        <span id="resendTimer" style="display:none"></span>
-                    </div>
-                </div>
-                <button type="submit" class="btn-primary" id="phoneLoginSubmitBtn">Send OTP</button>
-            </form>
+
 
             <div class="divider"><span>OR</span></div>
             <div id="googleSignInBtn" style="display:flex;justify-content:center;"></div>
@@ -713,24 +640,6 @@
         </div>
     </div>
 
-    <!-- ===== COMPLETE PHONE PROFILE MODAL ===== -->
-    <div class="modal" id="completeProfileModal" onclick="closeOnOverlay(event,'completeProfileModal')">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeModal('completeProfileModal')">×</button>
-            <h2>👤 Complete Your Profile</h2>
-            <p class="subtitle">Welcome! Please enter your details to continue.</p>
-            <form class="modal-form" id="completeProfileForm" onsubmit="completePhoneProfile(event)">
-                <input type="hidden" id="completeProfileUserId">
-                <input type="hidden" id="completeProfilePhone">
-                <input type="text" id="completeProfileName" placeholder="Full Name" required>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;">
-                    <input type="text" id="completeProfileCity" placeholder="City" required>
-                    <input type="text" id="completeProfileState" placeholder="State" required>
-                </div>
-                <button type="submit" class="btn-primary">Continue →</button>
-            </form>
-        </div>
-    </div>
 
     <!-- ===== SEAT SELECTION MODAL ===== -->
     <div class="modal" id="seatModal" onclick="closeOnOverlay(event,'seatModal')">
