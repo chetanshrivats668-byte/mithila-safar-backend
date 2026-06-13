@@ -24,6 +24,8 @@ import { sendSMS } from './services/smsService.js';
 import * as applicationController from './controllers/applicationController.js';
 import * as collabService from './services/collabService.js';
 import { normalizeBusRecord } from './services/busService.js';
+import { cacheResponse, cacheResponseByBody, invalidate as cacheInvalidate } from './utils/cache.js';
+import { validate, schemas as validateSchemas, sanitizeInput } from './middleware/validator.js';
 
 // ========== ENVIRONMENT VALIDATION ==========
 const missing = [];
@@ -137,7 +139,26 @@ app.use(cors({ origin: (origin, cb) => { if (!origin || origin === 'null' || all
 app.use(express.json({ limit: '50kb' }));
 
 // ========== SECURITY HEADERS ==========
-app.use((req, res, next) => { const reqId = crypto.randomBytes(6).toString('hex'); req.reqId = reqId; res.setHeader('X-Request-ID', reqId); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('X-XSS-Protection', '1; mode=block'); next(); });
+app.use((req, res, next) => { const reqId = crypto.randomBytes(6).toString('hex'); req.reqId = reqId; res.setHeader('X-Request-Id', reqId); next(); });
+
+// Invalidate public search caches whenever a collaborator mutation succeeds.
+// Keeps TTL caches from serving stale inventory after writes.
+app.use('/api/collaborator', (req, res, next) => {
+    if (req.method === 'GET' || req.method === 'HEAD') return next();
+    res.on('finish', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+            // Drop everything that could include the just-touched listing type.
+            cacheInvalidate('/api/listings');
+            cacheInvalidate('/api/cafes');
+            cacheInvalidate('/api/buses/search');
+            cacheInvalidate('/api/cabs/search');
+            cacheInvalidate('/api/hotels/search');
+            cacheInvalidate('/api/routes/buses');
+        }
+    });
+    next();
+});
+app.use((req, res, next) => { res.setHeader('X-Request-ID', req.reqId || ''); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('X-XSS-Protection', '1; mode=block'); next(); });
 
 // ========== ROUTES ==========
 app.use('/api/auth', authRoutes);
@@ -170,7 +191,7 @@ app.get('/api/config', (req, res) => {
 });
 
 // ========== RAZORPAY: Create Order ==========
-app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, async (req, res) => {
+app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayCreateOrder), async (req, res) => {
   try {
     const { amount, type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
     if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
@@ -196,7 +217,7 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, async
 });
 
 // ========== RAZORPAY: Verify Payment ==========
-app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, async (req, res) => {
+app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
   try {
     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId, liveLocationUrl } = req.body;
     if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
@@ -230,7 +251,7 @@ app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, asy
 });
 
 // ========== Create Order (legacy UPI fallback) ==========
-app.post('/api/create-order', requireAuth, blockTemporarySession, async (req, res) => {
+app.post('/api/create-order', requireAuth, blockTemporarySession, validate(validateSchemas.createOrder), async (req, res) => {
   try {
     const { type, itemName, amount, payNow, due, details, seats, roomType, userEmail, userPhone, userName, userAge, passengerCount } = req.body;
     if (!type || !itemName || !amount || !payNow) return res.status(400).json({ success: false, message: 'Missing fields' });
@@ -268,7 +289,7 @@ app.get('/api/order-status/:orderId', async (req, res) => {
 });
 
 // ========== UPI Payment Confirmation ==========
-app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, async (req, res) => {
+app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validate(validateSchemas.upiConfirm), async (req, res) => {
   try {
     const { orderId, amount, type, itemName, userName, userPhone, seats, details } = req.body;
     
@@ -365,7 +386,7 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, async (
 });
 
 // ========== Submit Collab ==========
-app.post('/api/submit-collab', requireAuth, blockTemporarySession, async (req, res) => {
+app.post('/api/submit-collab', requireAuth, blockTemporarySession, validate(validateSchemas.submitCollab), async (req, res) => {
   try {
     const collab = req.body;
     if (!collab.id) collab.id = 'CL' + Date.now().toString(36).toUpperCase();
@@ -385,7 +406,7 @@ app.post('/api/submit-collab', requireAuth, blockTemporarySession, async (req, r
 });
 
 // ========== User Bookings ==========
-app.post('/api/user/bookings', requireAuth, async (req, res) => {
+app.post('/api/user/bookings', requireAuth, validate(validateSchemas.bookings), async (req, res) => {
   try {
     const db = req.app.locals.db;
     const user = await db.get('users', req.user.userId);
@@ -408,7 +429,7 @@ app.post('/api/user/bookings', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/user/bookings/delete', requireAuth, blockTemporarySession, async (req, res) => {
+  app.post('/api/user/bookings/delete', requireAuth, blockTemporarySession, validate(validateSchemas.deleteBooking), async (req, res) => {
   try {
     const { orderId } = req.body;
     if (!orderId) return res.status(400).json({ success: false, message: 'Missing fields' });
@@ -439,7 +460,7 @@ app.post('/api/user/bookings/delete', requireAuth, blockTemporarySession, async 
 // ========== MSG91 OTP ==========
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
-app.post('/api/send-otp', async (req, res) => {
+app.post('/api/send-otp', validate(validateSchemas.sendOtp), async (req, res) => {
   try {
     const { phone } = req.body;
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
@@ -472,7 +493,7 @@ app.post('/api/send-otp', async (req, res) => {
   }
 });
 
-app.post('/api/verify-otp', (req, res) => {
+app.post('/api/verify-otp', validate(validateSchemas.verifyOtp), (req, res) => {
   try {
     const { phone, otp } = req.body;
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
@@ -511,7 +532,7 @@ app.post('/api/verify-otp', (req, res) => {
 });
 
 // ========== MSG91 WEBHOOK (Delivery Reports) ==========
-app.post('/api/msg91/webhook', async (req, res) => {
+app.post('/api/msg91/webhook', validate(validateSchemas.msg91Webhook), async (req, res) => {
   try {
     const dlrData = req.body;
     console.log('[MSG91 Webhook] DLR received:', JSON.stringify(dlrData));
@@ -523,7 +544,7 @@ app.post('/api/msg91/webhook', async (req, res) => {
 });
 
 // ========== Admin Login ==========
-app.post('/api/admin/login', async (req, res) => {
+app.post('/api/admin/login', validate(validateSchemas.adminLogin), async (req, res) => {
   const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
   const { username, password } = req.body;
   const rateLimit = checkAdminLoginRateLimit(ip);
@@ -554,7 +575,7 @@ app.get('/api/admin/orders', requireAdmin, async (req, res) => {
 });
 
 // Admin: Search Order by Booking ID
-app.get('/api/admin/search-order/:bookingId', requireAdmin, async (req, res) => {
+app.get('/api/admin/search-order/:bookingId', requireAdmin, validate(validateSchemas.adminSearchOrder, { source: 'params' }), async (req, res) => {
   try {
     const { bookingId } = req.params;
     if (!bookingId) return res.json({ success: false, message: 'Booking ID required' });
@@ -573,7 +594,7 @@ app.get('/api/admin/search-order/:bookingId', requireAdmin, async (req, res) => 
 });
 
 // Admin: Verify Payment (sends SMS to partner on approve)
-app.post('/api/admin/verify-payment', requireAdmin, async (req, res) => {
+app.post('/api/admin/verify-payment', requireAdmin, validate(validateSchemas.adminVerifyPayment), async (req, res) => {
   const { orderId, action } = req.body;
   try { const orderData = await dbGet('orders', orderId); if (!orderData) return res.status(404).json({ success: false, message: 'Order not found' }); const updates = { status: action === 'approve' ? 'confirmed' : 'payment_failed', verifiedAt: new Date().toISOString(), verifiedBy: req.admin?.username || ADMIN_USERNAME }; await dbUpdate('orders', orderId, updates); if (action === 'approve') { await sendPartnerNotification({ ...orderData, ...updates, orderId }); } res.json({ success: true }); }
   catch (e) { console.error('Verify error:', e); res.status(500).json({ success: false, message: 'Server error' }); }
@@ -596,24 +617,24 @@ app.get('/api/admin/collabs', requireAdmin, async (req, res) => {
   }
   catch (e) { res.status(500).json({ success: false, message: 'DB error' }); }
 });
-app.post('/api/admin/review-collab', requireAdmin, async (req, res) => {
+app.post('/api/admin/review-collab', requireAdmin, validate(validateSchemas.adminReviewCollab), async (req, res) => {
   const { collabId, action } = req.body;
   try { const collab = await dbGet('collabs', collabId); if (!collab) return res.status(404).json({ success: false, message: 'Not found' }); const updates = { status: action === 'approve' ? 'approved' : 'rejected', reviewedAt: new Date().toISOString(), reviewedBy: req.admin?.username || ADMIN_USERNAME }; await dbUpdate('collabs', collabId, updates); if (action === 'approve') { const allUsers = await dbList('users'); const user = allUsers.find(u => (collab.phone && u.phone === collab.phone) || (collab.email && u.email === collab.email)); if (user) await dbUpdate('users', user.id, { isVerifiedPartner: true, partnerType: collab.type, updatedAt: new Date().toISOString() }); } res.json({ success: true }); }
   catch (e) { res.status(500).json({ success: false }); }
 });
 
 // Public Listings
-app.get('/api/listings/:type', async (req, res) => {
+app.get('/api/listings/:type', cacheResponse({ ttl: 60_000 }), async (req, res) => {
   try { const list = await dbList('collabs'); const filtered = list.filter(c => c.status === 'approved' && c.type === req.params.type); res.json({ success: true, listings: filtered }); }
   catch (e) { res.json({ success: true, listings: [] }); }
 });
-app.get('/api/routes/buses', async (req, res) => {
+app.get('/api/routes/buses', cacheResponse({ ttl: 60_000 }), async (req, res) => {
   try { const list = await dbList('collabs'); const buses = list.filter(c => c.status === 'approved' && (c.type === 'bus' || c.type === 'bus-route')); res.json({ success: true, buses }); }
   catch (e) { res.json({ success: true, buses: [] }); }
 });
 
 // Bus search by route
-app.post('/api/buses/search', async (req, res) => {
+app.post('/api/buses/search', validate(validateSchemas.busSearch), cacheResponseByBody({ ttl: 45_000 }), async (req, res) => {
   try {
     const { from, to, date, passengers } = req.body;
     if (!from || !to) return res.status(400).json({ success: false, message: 'From and To cities required' });
@@ -845,7 +866,7 @@ app.get('/api/buses/:busId/seats', async (req, res) => {
 });
 
 // Cab search by city/route
-app.post('/api/cabs/search', async (req, res) => {
+app.post('/api/cabs/search', validate(validateSchemas.cabSearch), cacheResponseByBody({ ttl: 60_000 }), async (req, res) => {
   try {
     const { city, boarding, dropping } = req.body;
     let cabs = [];
@@ -865,7 +886,7 @@ app.post('/api/cabs/search', async (req, res) => {
 });
 
 // Hotel search by location
-app.post('/api/hotels/search', async (req, res) => {
+app.post('/api/hotels/search', validate(validateSchemas.hotelSearch), cacheResponseByBody({ ttl: 60_000 }), async (req, res) => {
   try {
     const { location } = req.body;
     let hotels = [];
@@ -890,7 +911,7 @@ app.post('/api/hotels/search', async (req, res) => {
 });
 
 // Cafe listing (frontend calls GET /api/cafes)
-app.get('/api/cafes', async (req, res) => {
+app.get('/api/cafes', cacheResponse({ ttl: 60_000 }), async (req, res) => {
   try {
     let cafes = [];
     if (isSupabaseAvailable()) {
@@ -1062,7 +1083,7 @@ app.get('/api/admin/services', requireAdmin, async (req, res) => {
 });
 
 // Admin: Search Collaborator by Name
-app.get('/api/admin/search-collaborator/:name', requireAdmin, async (req, res) => {
+app.get('/api/admin/search-collaborator/:name', requireAdmin, validate(validateSchemas.adminSearchCollaborator, { source: 'params' }), async (req, res) => {
   try {
     const { name } = req.params;
     if (!name) return res.json({ success: false, message: 'Name required' });
@@ -1082,7 +1103,7 @@ app.get('/api/admin/search-collaborator/:name', requireAdmin, async (req, res) =
 });
 
 // Admin: Approve / Reject any service (bus, hotel, cafe, cab)
-app.post('/api/admin/service/:type/approve', requireAdmin, async (req, res) => {
+app.post('/api/admin/service/:type/approve', requireAdmin, validate(validateSchemas.adminServiceAction), async (req, res) => {
   try {
     const { type } = req.params;
     const { serviceId, action } = req.body;

@@ -2577,4 +2577,165 @@ document.addEventListener('DOMContentLoaded', function () {
             if (e.key === 'Enter') confirmEmailOTP();
         });
     }
+
+    // ============================================================
+    // YP UTILITIES — skeleton, server-down UI, debounce, cache
+    // ============================================================
+    // All helpers live in public/js/yp-utils.js and are exposed as window.YP.
+    // The wiring below is non-invasive: it decorates the existing search
+    // functions without rewriting them.
+    (function wireYpUtils() {
+        if (!window.YP) return;
+        var YP = window.YP;
+        var api = YP.api;
+        var Skeleton = YP.Skeleton;
+        var ServerError = YP.ServerError;
+
+        // 1) Wrap search functions with skeleton + cached fetch.
+        //    The original handlers return a promise; we replace the body of
+        //    the work they do with a YP.api.post call that uses the in-memory
+        //    cache, and mount a skeleton in #resultsContainer first.
+        function withSkeleton(fn) {
+            return async function decorated() {
+                var container = document.getElementById('resultsContainer');
+                if (container) Skeleton.mount(container, 4);
+                try {
+                    return await fn.apply(this, arguments);
+                } finally {
+                    if (container) Skeleton.unmount(container);
+                }
+            };
+        }
+
+        // Patch the four search endpoints to use YP.api (caching + retry).
+        var _origSearchBuses = window.searchBuses;
+        if (typeof _origSearchBuses === 'function') {
+            window.searchBuses = withSkeleton(async function (e) {
+                e.preventDefault();
+                if (!requireAuth()) return;
+                var from = document.getElementById('busFrom').value;
+                var to = document.getElementById('busTo').value;
+                var date = document.getElementById('busDate').value;
+                var passengers = parseInt(document.getElementById('busPassengers').value);
+                if (from === to) return notify('From and To cannot be same', 'error');
+                try {
+                    var res = await api.post('/api/buses/search',
+                        { from: from, to: to, date: date, passengers: passengers },
+                        { headers: authHeaders(), cache: true, cacheTtl: 45_000, timeout: 15000 });
+                    var data = res.data;
+                    if (!data || !data.success || !data.buses || data.buses.length === 0)
+                        return notify('No buses found for this route', 'error');
+                    ALL_SEARCHED_BUSES = data.buses;
+                    currentBooking = { type: 'bus', from: from, to: to, date: date, passengers: passengers, buses: data.buses };
+                    var sorted = [].concat(data.buses).sort(function (a, b) { return a.startingPrice - b.startingPrice; });
+                    renderBusResults(sorted);
+                } catch (err) {
+                    console.error('Bus search error:', err);
+                    if (err && err.kind === 'NETWORK') return; // ServerError already shown
+                    notify('No buses found for this route', 'error');
+                }
+            });
+        }
+
+        var _origSearchHotels = window.searchHotels;
+        if (typeof _origSearchHotels === 'function') {
+            window.searchHotels = withSkeleton(async function (e) {
+                e.preventDefault();
+                if (!requireAuth()) return;
+                var location = document.getElementById('hotelLocation').value;
+                var checkin = document.getElementById('hotelCheckin').value;
+                var checkout = document.getElementById('hotelCheckout').value;
+                var guests = document.getElementById('hotelGuests').value;
+                if (!location) return notify('Please select a location', 'error');
+                try {
+                    var res = await api.post('/api/hotels/search',
+                        { location: location, checkin: checkin, checkout: checkout, guests: guests },
+                        { headers: authHeaders(), cache: true, cacheTtl: 60_000, timeout: 15000 });
+                    var data = res.data;
+                    if (!data || !data.success) return notify(data && data.message || 'No hotels found', 'error');
+                    currentBooking = { type: 'hotel', location: location, checkin: checkin, checkout: checkout, guests: guests, hotels: data.hotels || data.data || [] };
+                    renderHotelResults(data.hotels || data.data || []);
+                } catch (err) {
+                    console.error('Hotel search error:', err);
+                    if (err && err.kind === 'NETWORK') return;
+                    notify('No hotels found in ' + location, 'error');
+                }
+            });
+        }
+
+        var _origSearchCars = window.searchCars;
+        if (typeof _origSearchCars === 'function') {
+            window.searchCars = withSkeleton(async function (e) {
+                e.preventDefault();
+                if (!requireAuth()) return;
+                var city = document.getElementById('carCity').value;
+                var boarding = document.getElementById('carBoarding').value.trim();
+                var dropping = document.getElementById('carDropping').value.trim();
+                var date = document.getElementById('carDate').value;
+                var time = document.getElementById('carTime').value;
+                var passengers = document.getElementById('carPassengers').value;
+                if (!city) return notify('Please select a city', 'error');
+                try {
+                    var res = await api.post('/api/cabs/search',
+                        { city: city, boarding: boarding, dropping: dropping, date: date, time: time, passengers: passengers },
+                        { headers: authHeaders(), cache: true, cacheTtl: 60_000, timeout: 15000 });
+                    var data = res.data;
+                    if (!data || !data.success) return notify(data && data.message || 'No cabs available', 'error');
+                    currentBooking = { type: 'cab', city: city, boarding: boarding, dropping: dropping, date: date, time: time, passengers: passengers, cabs: data.cabs || data.data || [] };
+                    renderCabResults(data.cabs || data.data || []);
+                } catch (err) {
+                    console.error('Cab search error:', err);
+                    if (err && err.kind === 'NETWORK') return;
+                    notify('No cabs available in ' + city, 'error');
+                }
+            });
+        }
+
+        var _origLoadCafes = window.loadCafes;
+        if (typeof _origLoadCafes === 'function') {
+            window.loadCafes = withSkeleton(async function () {
+                var container = document.getElementById('cafeGrid') || document.getElementById('resultsContainer');
+                try {
+                    var res = await api.get('/api/cafes',
+                        { headers: authHeaders(), cache: true, cacheTtl: 60_000, timeout: 15000 });
+                    var data = res.data;
+                    if (data && data.success && (data.cafes || data.data)) {
+                        currentBooking.cafes = data.cafes || data.data;
+                        renderCafes(data.cafes || data.data);
+                        return;
+                    }
+                } catch (err) {
+                    if (err && err.kind === 'NETWORK') { currentBooking.cafes = []; renderCafes([]); return; }
+                    console.error('Cafe load error:', err);
+                }
+                currentBooking.cafes = [];
+                renderCafes([]);
+            });
+        }
+
+        // 2) Throttle the operator filter checkbox so flipping 5 boxes in a
+        //    row only triggers one re-render, not five.
+        if (typeof window.triggerFilterUpdate === 'function') {
+            window.triggerFilterUpdate = YP.throttle(window.triggerFilterUpdate, 120);
+        }
+
+        // 3) Debounce the hash/route search-as-you-type, if any input exists.
+        //    Skips gracefully if no element is present.
+        var busFrom = document.getElementById('busFrom');
+        if (busFrom) {
+            var debouncedRouteLookup = YP.debounce(function () {
+                // Hook for future autocomplete. Intentionally a no-op for now.
+            }, 250);
+            busFrom.addEventListener('input', debouncedRouteLookup);
+        }
+
+        // 4) Auto-hide the server-error overlay when the user retries and the
+        //    next request succeeds. We do that by listening on the global
+        //    retry event and probing /api/config.
+        window.addEventListener('yp:retry', function () {
+            api.get('/api/config', { timeout: 4000, showErrorOnFail: false })
+                .then(function () { ServerError.hide(); })
+                .catch(function () { ServerError.show(); });
+        });
+    })();
 });

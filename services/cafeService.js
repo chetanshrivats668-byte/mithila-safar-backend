@@ -2,7 +2,7 @@ import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, r
 import { memoryDb } from '../utils/firestoreFallback.js';
 
 const VALID_CAFE_COLUMNS = [
-  'id', 'collaboratorId', 'cafeName', 'address', 'city', 'status', 'createdAt', 'updatedAt'
+  'id', 'collaboratorId', 'cafeName', 'address', 'city', 'state', 'capacity', 'location', 'price', 'ownerAadhaarId', 'phone', 'schedule', 'costPerSeat', 'status', 'createdAt', 'updatedAt'
 ];
 
 function filterSupabaseColumns(data) {
@@ -24,6 +24,13 @@ export async function createCafe(db, data) {
     cafeName: data.cafeName || data.name || '',
     address: data.address || '',
     city: data.city || '',
+    state: data.state || '',
+    capacity: Number(data.capacity || 0),
+    location: data.location || '',
+    price: Number(data.price || 0),
+    ownerAadhaarId: data.ownerAadhaarId || '',
+    phone: data.phone || '',
+    schedule: data.schedule || {},
     status: 'pending_approval',
     createdAt: now,
     updatedAt: now

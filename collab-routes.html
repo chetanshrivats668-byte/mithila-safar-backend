@@ -184,6 +184,9 @@
                     <div class="form-group"><label>Number Plate (text) *</label><input type="text" id="cabPlate" placeholder="e.g. BR 01 AB 1234"></div>
                     <div class="form-group"><label>Number Plate Picture *</label><input type="file" id="cabPlatePic" accept="image/*" class="file-upload"></div>
                     <div class="form-group"><label>Rate per Km (₹) *</label><input type="number" id="cabRate" placeholder="e.g. 12"></div>
+                    <div class="form-group"><label>Total Number of Seats *</label><input type="number" id="cabSeats" placeholder="e.g. 4" min="1"></div>
+                    <div class="form-group"><label>Car Owner Aadhaar ID *</label><input type="text" id="cabOwnerAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+                    <div class="form-group"><label>Car driver Phone Number *</label><input type="tel" id="cabDriverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
                     <div class="form-group"><label>Driver Name *</label><input type="text" id="cabDriverName" placeholder="Driver's full name"></div>
                     <div class="form-group"><label>Running City *</label>
                         <select id="cabCity">
@@ -207,6 +210,9 @@
                     <div class="form-group"><label>Name of the Café *</label><input type="text" id="cafeName" placeholder="e.g. Mithila Café"></div>
                     <div class="form-group"><label>Booking Cost per Seat (₹) *</label><input type="number" id="cafeCost" placeholder="e.g. 50"></div>
                     <div class="form-group"><label>Exact Location / City *</label><input type="text" id="cafeLocation" placeholder="e.g. Station Road, Madhubani"></div>
+                    <div class="form-group"><label>Seating Capacity *</label><input type="number" id="cafeCapacity" placeholder="e.g. 40" min="1"></div>
+                    <div class="form-group"><label>Aadhaar ID of Café Owner/Manager *</label><input type="text" id="cafeAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+                    <div class="form-group"><label>Phone Number *</label><input type="tel" id="cafePhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
                     <div class="form-group"><label>Owner/Manager Name *</label><input type="text" id="cafeOwnerName" placeholder="Owner or manager full name"></div>
                     <div class="form-group"><label>Inside View Pics *</label><input type="file" id="cafePic" accept="image/*" class="file-upload" multiple></div>
                 </div>
@@ -220,6 +226,9 @@
                         <div><label style="font-size:12px;">AC Room (₹)*</label><input type="number" id="hotelAc" placeholder="1500"></div>
                     </div>
                     <div class="form-group"><label>Exact Location / City *</label><input type="text" id="hotelLocation" placeholder="e.g. NH-27, Darbhanga"></div>
+                    <div class="form-group"><label>Total Number of Rooms *</label><input type="number" id="hotelTotalRooms" placeholder="e.g. 25" min="1"></div>
+                    <div class="form-group"><label>Aadhaar ID of Hotel Owner/Manager *</label><input type="text" id="hotelAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+                    <div class="form-group"><label>Phone Number *</label><input type="tel" id="hotelPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
                     <div class="form-group"><label>Owner/Manager Name *</label><input type="text" id="hotelOwnerName" placeholder="Owner or manager full name"></div>
                     <div class="form-group"><label>Inside View Room Pics *</label><input type="file" id="hotelPic" accept="image/*" class="file-upload" multiple></div>
                 </div>
@@ -382,20 +391,56 @@
                 collab.routeCities = stations;
                 collab.city = stations.join(' → ');
             } else if (activeTab.includes('Cab')) {
+                const cabOwnerAadhaarId = document.getElementById('cabOwnerAadhaarId').value.trim();
+                const cabDriverPhone = document.getElementById('cabDriverPhone').value.trim();
+                if (!/^\d{12}$/.test(cabOwnerAadhaarId)) {
+                    alert('Valid 12-digit Car Owner Aadhaar ID is required');
+                    return;
+                }
+                if (!/^[6-9]\d{9}$/.test(cabDriverPhone)) {
+                    alert('Valid 10-digit driver phone is required');
+                    return;
+                }
                 collab.type = 'cab';
                 collab.numberPlate = document.getElementById('cabPlate').value;
                 collab.pricePerKm = parseFloat(document.getElementById('cabRate').value);
                 collab.city = document.getElementById('cabCity').value;
                 collab.carModel = document.getElementById('cabModel').value;
                 collab.driverName = document.getElementById('cabDriverName').value;
+                collab.totalSeats = parseInt(document.getElementById('cabSeats').value) || 4;
+                collab.ownerAadhaarId = cabOwnerAadhaarId;
+                collab.driverPhone = cabDriverPhone;
             } else if (activeTab.includes('Café')) {
+                const cafeAadhaarId = document.getElementById('cafeAadhaarId').value.trim();
+                const cafePhone = document.getElementById('cafePhone').value.trim();
+                if (!/^\d{12}$/.test(cafeAadhaarId)) {
+                    alert('Valid 12-digit Café Owner/Manager Aadhaar ID is required');
+                    return;
+                }
+                if (!/^[6-9]\d{9}$/.test(cafePhone)) {
+                    alert('Valid 10-digit Café phone is required');
+                    return;
+                }
                 collab.type = 'cafe';
                 collab.cafeName = document.getElementById('cafeName').value;
                 collab.seatCost = parseFloat(document.getElementById('cafeCost').value);
                 collab.location = document.getElementById('cafeLocation').value;
                 collab.city = document.getElementById('cafeLocation').value;
                 collab.ownerName = document.getElementById('cafeOwnerName').value;
+                collab.capacity = parseInt(document.getElementById('cafeCapacity').value) || 0;
+                collab.ownerAadhaarId = cafeAadhaarId;
+                collab.phone = cafePhone;
             } else if (activeTab.includes('Hotel')) {
+                const hotelAadhaarId = document.getElementById('hotelAadhaarId').value.trim();
+                const hotelPhone = document.getElementById('hotelPhone').value.trim();
+                if (!/^\d{12}$/.test(hotelAadhaarId)) {
+                    alert('Valid 12-digit Hotel Owner/Manager Aadhaar ID is required');
+                    return;
+                }
+                if (!/^[6-9]\d{9}$/.test(hotelPhone)) {
+                    alert('Valid 10-digit Hotel phone is required');
+                    return;
+                }
                 collab.type = 'hotel';
                 collab.hotelName = document.getElementById('hotelName').value;
                 collab.generalRate = parseFloat(document.getElementById('hotelGeneral').value);
@@ -403,6 +448,9 @@
                 collab.location = document.getElementById('hotelLocation').value;
                 collab.city = document.getElementById('hotelLocation').value;
                 collab.ownerName = document.getElementById('hotelOwnerName').value;
+                collab.totalRooms = parseInt(document.getElementById('hotelTotalRooms').value) || 0;
+                collab.ownerAadhaarId = hotelAadhaarId;
+                collab.phone = hotelPhone;
             }
 
             const btn = e.target.querySelector('button[type="submit"]');

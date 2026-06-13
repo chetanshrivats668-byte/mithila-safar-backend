@@ -2,7 +2,7 @@ import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, r
 import { memoryDb } from '../utils/firestoreFallback.js';
 
 const VALID_HOTEL_COLUMNS = [
-  'id', 'collaboratorId', 'hotelName', 'address', 'city', 'amenities', 'status', 'createdAt', 'updatedAt'
+  'id', 'collaboratorId', 'hotelName', 'address', 'city', 'state', 'totalRooms', 'ownerAadhaarId', 'phone', 'schedule', 'amenities', 'status', 'createdAt', 'updatedAt'
 ];
 
 function filterSupabaseColumns(data) {
@@ -24,6 +24,11 @@ export async function createHotel(db, data) {
     hotelName: data.hotelName || data.name || '',
     address: data.address || '',
     city: data.city || '',
+    state: data.state || '',
+    totalRooms: Number(data.totalRooms || 0),
+    ownerAadhaarId: data.ownerAadhaarId || '',
+    phone: data.phone || '',
+    schedule: data.schedule || {},
     amenities: Array.isArray(data.amenities) ? data.amenities : [],
     status: 'pending_approval',
     createdAt: now,

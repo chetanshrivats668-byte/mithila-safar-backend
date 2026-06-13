@@ -223,9 +223,8 @@ export async function loginWithPhone(req, res) {
     }
 
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const formattedPhone = '+91' + cleanPhone;
 
-    const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, formattedPhone);
+    const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, cleanPhone);
     if (!collab) {
       return res.status(401).json({ success: false, message: 'No collaborator account found with this phone number' });
     }

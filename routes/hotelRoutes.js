@@ -4,7 +4,7 @@ import * as hotelController from '../controllers/hotelController.js';
 
 const router = Router();
 
-router.post('/create-hotel', requireCollaborator, requireModuleAccess('hotel'), hotelController.createHotel);
+router.post('/create-hotel', requireCollaborator, requireModuleAccess('hotel'), hotelController.validateHotelCreate, hotelController.createHotel);
 router.get('/hotels', requireCollaborator, requireModuleAccess('hotel'), hotelController.getHotels);
 router.get('/hotel/:id', requireCollaborator, requireModuleAccess('hotel'), hotelController.getHotel);
 router.put('/hotel/:id', requireCollaborator, requireModuleAccess('hotel'), hotelController.updateHotel);

@@ -95,7 +95,15 @@ export async function verifyMsg91AccessToken(accessToken, phone = '') {
     throw error;
   }
 
-  return data;
+  // Normalize MSG91 response to always include a .success boolean.
+  // MSG91 widget API returns: { type: "success", mobile: "..." }
+  // or { type: "error", ... } on failure. Normalise to match our mock shape.
+  const verified = data && (data.type === 'success' || data.success === true);
+  return {
+    success: verified,
+    mobile: data.mobile || data.phone || '',
+    phone: data.phone || data.mobile || ''
+  };
 }
 
 function buildEmailDeliveryFailurePayload(email, context = 'verification email') {

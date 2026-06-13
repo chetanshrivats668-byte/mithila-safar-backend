@@ -3,6 +3,35 @@ import * as busService from '../services/busService.js';
 import * as seatService from '../services/seatService.js';
 import * as auditLogService from '../services/auditLogService.js';
 
+function normalizeTimeForBusSchedule(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  const match12 = trimmed.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s?(AM|PM)$/i);
+  if (match12) {
+    const hour = String(parseInt(match12[1], 10)).padStart(2, '0');
+    const minute = match12[2];
+    const period = match12[3].toUpperCase();
+    return `${hour}:${minute} ${period}`;
+  }
+  const match24 = trimmed.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match24) return trimmed;
+  let hour = parseInt(match24[1], 10);
+  const minute = match24[2];
+  const period = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${String(hour).padStart(2, '0')}:${minute} ${period}`;
+}
+
+function normalizeBusSchedulePayload(schedule) {
+  if (!schedule || typeof schedule !== 'object') return schedule;
+  return {
+    ...schedule,
+    departureTime: normalizeTimeForBusSchedule(schedule.departureTime),
+    arrivalTime: normalizeTimeForBusSchedule(schedule.arrivalTime)
+  };
+}
+
 export async function createBus(req, res) {
   try {
     const data = sanitizeInput(req.body);
@@ -62,14 +91,20 @@ export async function updateBus(req, res) {
     }
 
     const updated = await busService.updateBus(req.app.locals.db, id, updates);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'update_bus',
-      entityType: 'collaborator_buses',
-      entityId: id,
-      details: { updates }
-    });
+
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'update_bus',
+        entityType: 'collaborator_buses',
+        entityId: id,
+        details: { updates }
+      });
+    } catch (auditError) {
+      console.error('Bus update audit log error:', auditError);
+    }
+
     res.json({ success: true, message: 'Bus updated', bus: updated });
   } catch (e) {
     console.error('Update bus error:', e);
@@ -201,7 +236,7 @@ export async function bulkUpdateSeats(req, res) {
 export async function addSchedule(req, res) {
   try {
     const { busId } = req.params;
-    const schedule = sanitizeInput(req.body);
+    const schedule = normalizeBusSchedulePayload(sanitizeInput(req.body));
 
     const bus = await busService.getBusById(req.app.locals.db, busId);
     if (!bus || bus.collaboratorId !== req.collaborator.collaboratorId) {
@@ -209,14 +244,20 @@ export async function addSchedule(req, res) {
     }
 
     const schedules = await busService.addBusSchedule(req.app.locals.db, busId, schedule);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'add_bus_schedule',
-      entityType: 'collaborator_buses',
-      entityId: busId,
-      details: { schedule }
-    });
+
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'add_bus_schedule',
+        entityType: 'collaborator_buses',
+        entityId: busId,
+        details: { schedule }
+      });
+    } catch (auditError) {
+      console.error('Schedule audit log error (saved):', auditError);
+    }
+
     res.json({ success: true, message: 'Schedule added', schedules });
   } catch (e) {
     console.error('Add schedule error:', e);

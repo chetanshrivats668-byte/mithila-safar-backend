@@ -95,6 +95,20 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
 /* ── PANES ── */
 .pane{display:none}.pane.active{display:block}
 
+/* ── MOBILE NAV ── */
+.cd-mobile-bar{display:none;align-items:center;justify-content:space-between;
+  background:var(--navy2);padding:.7rem 1rem;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50}
+.cd-hamburger{width:42px;height:42px;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:1.3rem;color:#fff;transition:.2s;font-family:inherit}
+.cd-hamburger:hover{background:var(--gold-dim);border-color:rgba(245,197,24,.3)}
+.cd-mobile-title{font-weight:800;color:#fff;font-size:1rem;flex:1;margin-left:.7rem}
+.cd-mobile-title span{color:var(--gold)}
+.cd-scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);
+  z-index:55;opacity:0;pointer-events:none;transition:opacity .25s}
+.cd-scrim.show{opacity:1;pointer-events:auto}
+
 /* ── STAT CARDS ── */
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.8rem;margin-bottom:1.5rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.2rem;position:relative;overflow:hidden}
@@ -482,19 +496,59 @@ tr:hover td{background:var(--card2)}
 #regServiceFields .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:480px){#regServiceFields .grid-2{grid-template-columns:1fr}}
 #regServiceFields { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; }
 @media(max-width:768px){
-  .sidebar{width:100%;height:auto;position:sticky;top:0;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;padding:0;overflow-x:auto}
-  .sb-head{display:none}
-  .sb-nav{flex-direction:row;padding:.5rem;gap:.2rem}
-  .sb-link{white-space:nowrap;padding:.5rem .7rem;font-size:.75rem}
-  .sb-prof{display:none}
+  .sidebar{position:fixed;left:-260px;top:0;bottom:0;width:260px;
+    transition:left .25s;z-index:60;border-right:1px solid var(--border)}
+  .sidebar.open{left:0}
+  .sb-head{padding:1.2rem 1rem;display:flex}
+  .sb-nav{flex-direction:column;padding:.8rem;gap:.3rem}
+  .sb-link{padding:.85rem 1rem;font-size:.88rem;white-space:normal}
+  .sb-prof{padding:.8rem;display:flex}
   .main{margin-left:0;padding:1rem}
   .stats{grid-template-columns:repeat(2,1fr)}
   .grid-cards{grid-template-columns:1fr}
   .modal-box{margin:.5rem;padding:1.2rem}
+  .cd-mobile-bar{display:flex!important}
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
 }
 @media(max-width:480px){
-  .stats{grid-template-columns:1fr 1fr}
-  .seat{width:32px;height:32px;font-size:.55rem}
+  .stats{grid-template-columns:1fr}
+  .grid-cards{grid-template-columns:1fr}
+  .modal-box{padding:1rem;margin:.3rem}
+  .modal-box h2{font-size:.95rem}
+  .modal-box .close{font-size:1.2rem}
+  .bus-chassis{max-width:100%;padding:2.5rem .8rem 1rem .8rem}
+  .bus-grid{gap:6px;row-gap:10px}
+  .seat-icon-svg{width:32px;height:32px}
+  .seat-label-text{font-size:.5rem}
+  .seat-fare-text{font-size:.5rem}
+  .seat-popover{min-width:140px;right:4px;left:4px}
+  .sb-link{padding:.4rem .5rem;font-size:.7rem}
+  .kpi-bar{grid-template-columns:1fr 1fr}
+  .kpi-card{padding:.7rem}
+  .kpi-val{font-size:1.2rem}
+  .day-pill-btn{padding:6px 10px;font-size:.7rem}
+  #regServiceFields .grid-2{grid-template-columns:1fr}
+  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
+  .yatri-logo{max-width:200px!important}
+  .section{padding:1rem}
+  .item-card{padding:.8rem}
+  .auth-box{padding:1.5rem!important}
+}
+@media(max-width:360px){
+  .stats{grid-template-columns:1fr}
+  .stat{padding:.8rem}
+  .stat .num{font-size:1.3rem}
+  .stat .ico{font-size:1rem}
+  .kpi-bar{grid-template-columns:1fr}
+  .sb-link{font-size:.65rem;padding:.35rem .4rem}
+  .day-pill-btn{padding:5px 8px;font-size:.65rem;min-width:38px}
+  .bus-chassis{padding:2rem .5rem .8rem .5rem}
+  .bus-grid{gap:3px}
+  .seat-icon-svg{width:26px;height:26px}
+  .filter-chip{padding:4px 10px;font-size:.7rem}
+  .bus-cabin-header{height:2rem;font-size:.65rem;padding:0 10px}
 }
 </style>
 </head>
@@ -504,7 +558,7 @@ tr:hover td{background:var(--card2)}
 <div class="auth-screen" id="authScreen">
   <div class="auth-box">
       <div class="brand">
-        <img src="/yatri-logo.png" alt="Yatri Point Logo" style="height: 70px; width: auto; max-width: 280px; display: inline-block; object-fit: contain; background: #ffffff; padding: 6px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 1rem;">
+        <img class="yatri-logo" src="/yatri-logo.png" alt="Yatri Point Logo" style="height: 70px; width: auto; max-width: 280px; display: inline-block; object-fit: contain; background: #ffffff; padding: 6px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 1rem;">
         <h1>Partner Portal</h1>
         <p>YATRI POINT</p>
       </div>
@@ -580,7 +634,7 @@ tr:hover td{background:var(--card2)}
       
       <div class="form-group"><label>UPI ID for Payment *</label><input type="text" id="appUpiId" placeholder="yourname@upi" required></div>
       
-      <div class="form-group"><label>Aadhaar ID *</label><input type="text" id="appAadhaar" placeholder="12-digit Aadhaar number" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+      <div class="form-group"><label id="appAadhaarLabel">Aadhaar ID *</label><input type="text" id="appAadhaar" placeholder="12-digit Aadhaar number" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
       
       <div class="form-group"><label>Years of Experience</label><input type="number" id="appExperience" placeholder="e.g. 5" min="0" max="100"></div>
 
@@ -629,6 +683,10 @@ tr:hover td{background:var(--card2)}
             <input type="text" id="dashboardCabCity" placeholder="e.g. Patna, Ranchi, Delhi, Kolkata">
             <small style="color:var(--text2); font-size:.72rem; display:block; margin-top:4px;">City or list of cities where your cab service operates.</small>
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Total Seats *</label><input type="number" id="dashboardCabSeats" placeholder="e.g. 4" min="1"></div>
+            <div class="form-group"><label>Car driver Phone Number *</label><input type="tel" id="dashboardCabDriverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
         </div>
 
         <!-- HOTEL SECTION -->
@@ -645,6 +703,14 @@ tr:hover td{background:var(--card2)}
             <div class="form-group"><label>Landmark</label><input type="text" id="dashboardHotelLandmark" placeholder="Near..."></div>
             <div class="form-group"><label>Pin Code *</label><input type="text" id="dashboardHotelPincode" placeholder="6-digit PIN" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Total Number of Rooms *</label><input type="number" id="dashboardHotelTotalRooms" placeholder="e.g. 25" min="1"></div>
+            <div class="form-group"><label>Owner/Manager Mobile Number *</label><input type="tel" id="dashboardHotelPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Aadhaar ID of Owner/Manager *</label><input type="text" id="dashboardHotelAadhaar" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+            <div class="form-group"><label>Email ID of Hotel *</label><input type="email" id="dashboardHotelEmail" placeholder="hotel@example.com"></div>
+          </div>
         </div>
 
         <!-- CAFE SECTION -->
@@ -660,6 +726,14 @@ tr:hover td{background:var(--card2)}
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
             <div class="form-group"><label>Landmark</label><input type="text" id="dashboardCafeLandmark" placeholder="Near..."></div>
             <div class="form-group"><label>Pin Code *</label><input type="text" id="dashboardCafePincode" placeholder="6-digit PIN" maxlength="6" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Total Number of Tables *</label><input type="number" id="dashboardCafeCapacity" placeholder="e.g. 15" min="1"></div>
+            <div class="form-group"><label>Owner/Manager Mobile Number *</label><input type="tel" id="dashboardCafePhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label>Aadhaar ID of Owner/Manager *</label><input type="text" id="dashboardCafeAadhaar" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+            <div class="form-group"><label>Email ID of Cafe *</label><input type="email" id="dashboardCafeEmail" placeholder="cafe@example.com"></div>
           </div>
         </div>
 
@@ -678,8 +752,16 @@ tr:hover td{background:var(--card2)}
 <!-- ════════════ DASHBOARD ════════════ -->
 <div class="dboard" id="dboard">
 
+  <!-- MOBILE TOP BAR -->
+  <div class="cd-mobile-bar">
+    <button class="cd-hamburger" onclick="cdToggleSidebar()" aria-label="Open menu">☰</button>
+    <div class="cd-mobile-title">Yatri <span>Partner</span></div>
+    <button class="cd-hamburger" onclick="handleLogout()" aria-label="Logout" title="Logout">🚪</button>
+  </div>
+  <div class="cd-scrim" id="cdScrim" onclick="cdToggleSidebar()"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="cdSidebar">
       <div class="sb-head">
         <img src="/yatri-logo.png" alt="YP Logo" style="height: 36px; width: auto; background: #ffffff; padding: 3px 6px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0;">
         <div><h2>Yatri <span>Partner</span></h2><div class="small" id="sbBizType">Business Dashboard</div></div>
@@ -1209,33 +1291,55 @@ function onDashboardCategoryChange() {
   
   // Reset requirements
   document.getElementById('dashboardCabCity').required = false;
+  document.getElementById('dashboardCabSeats').required = false;
+  document.getElementById('dashboardCabDriverPhone').required = false;
+  
   document.getElementById('dashboardHotelAddress').required = false;
   document.getElementById('dashboardHotelCity').required = false;
   document.getElementById('dashboardHotelState').required = false;
   document.getElementById('dashboardHotelPincode').required = false;
+  document.getElementById('dashboardHotelTotalRooms').required = false;
+  document.getElementById('dashboardHotelPhone').required = false;
+  
   document.getElementById('dashboardCafeAddress').required = false;
   document.getElementById('dashboardCafeCity').required = false;
   document.getElementById('dashboardCafeState').required = false;
   document.getElementById('dashboardCafePincode').required = false;
+  document.getElementById('dashboardCafeCapacity').required = false;
+  document.getElementById('dashboardCafePhone').required = false;
+  
+  const aadhaarLabel = document.getElementById('appAadhaarLabel');
   
   // Toggle displays and requirements
   if (cat === 'bus') {
+    if (aadhaarLabel) aadhaarLabel.textContent = 'Aadhaar ID *';
     document.getElementById('section-bus-dashboard').style.display = 'block';
   } else if (cat === 'cab') {
+    if (aadhaarLabel) aadhaarLabel.textContent = 'Car Owner Aadhaar ID *';
     document.getElementById('section-cab-dashboard').style.display = 'block';
     document.getElementById('dashboardCabCity').required = true;
+    document.getElementById('dashboardCabSeats').required = true;
+    document.getElementById('dashboardCabDriverPhone').required = true;
   } else if (cat === 'hotel') {
+    if (aadhaarLabel) aadhaarLabel.textContent = 'Aadhaar ID of Hotel Owner/Manager *';
     document.getElementById('section-hotel-dashboard').style.display = 'block';
     document.getElementById('dashboardHotelAddress').required = true;
     document.getElementById('dashboardHotelCity').required = true;
     document.getElementById('dashboardHotelState').required = true;
     document.getElementById('dashboardHotelPincode').required = true;
+    document.getElementById('dashboardHotelTotalRooms').required = true;
+    document.getElementById('dashboardHotelPhone').required = true;
   } else if (cat === 'cafe') {
+    if (aadhaarLabel) aadhaarLabel.textContent = 'Aadhaar ID of Café Owner/Manager *';
     document.getElementById('section-cafe-dashboard').style.display = 'block';
     document.getElementById('dashboardCafeAddress').required = true;
     document.getElementById('dashboardCafeCity').required = true;
     document.getElementById('dashboardCafeState').required = true;
     document.getElementById('dashboardCafePincode').required = true;
+    document.getElementById('dashboardCafeCapacity').required = true;
+    document.getElementById('dashboardCafePhone').required = true;
+  } else {
+    if (aadhaarLabel) aadhaarLabel.textContent = 'Aadhaar ID *';
   }
 }
 
@@ -1339,6 +1443,11 @@ async function handleRegister(e) { e.preventDefault();
   let serviceState = '';
   let serviceLandmark = '';
   let servicePincode = '';
+  let totalRooms = 0;
+  let capacity = 0;
+  let totalSeats = 0;
+  let servicePhone = '';
+  let driverPhone = '';
 
   if (serviceCat === 'bus') {
     const inputs = document.querySelectorAll('.dashboard-route-city-input');
@@ -1362,8 +1471,16 @@ async function handleRegister(e) { e.preventDefault();
     }
   } else if (serviceCat === 'cab') {
     operatingCity = document.getElementById('dashboardCabCity').value.trim();
-    if (!operatingCity) {
-      err.textContent = 'Please enter operating city for cab service.';
+    const seatsInput = document.getElementById('dashboardCabSeats').value.trim();
+    driverPhone = document.getElementById('dashboardCabDriverPhone').value.trim();
+    if (!operatingCity || !seatsInput || !driverPhone) {
+      err.textContent = 'Please fill all cab fields (operating city, total seats, driver phone).';
+      err.style.display = 'block';
+      return;
+    }
+    totalSeats = parseInt(seatsInput, 10);
+    if (!/^[6-9]\d{9}$/.test(driverPhone)) {
+      err.textContent = 'Valid 10-digit driver phone number is required';
       err.style.display = 'block';
       return;
     }
@@ -1373,8 +1490,16 @@ async function handleRegister(e) { e.preventDefault();
     serviceState = document.getElementById('dashboardHotelState').value.trim();
     serviceLandmark = document.getElementById('dashboardHotelLandmark').value.trim();
     servicePincode = document.getElementById('dashboardHotelPincode').value.trim();
-    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode) {
-      err.textContent = 'Please fill all hotel address fields (address, city, state, pin code).';
+    const totalRoomsInput = document.getElementById('dashboardHotelTotalRooms').value.trim();
+    servicePhone = document.getElementById('dashboardHotelPhone').value.trim();
+    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode || !totalRoomsInput || !servicePhone) {
+      err.textContent = 'Please fill all hotel address fields (address, city, state, pin code, total rooms, phone).';
+      err.style.display = 'block';
+      return;
+    }
+    totalRooms = parseInt(totalRoomsInput, 10);
+    if (!/^[6-9]\d{9}$/.test(servicePhone)) {
+      err.textContent = 'Valid 10-digit hotel phone number is required';
       err.style.display = 'block';
       return;
     }
@@ -1384,8 +1509,16 @@ async function handleRegister(e) { e.preventDefault();
     serviceState = document.getElementById('dashboardCafeState').value.trim();
     serviceLandmark = document.getElementById('dashboardCafeLandmark').value.trim();
     servicePincode = document.getElementById('dashboardCafePincode').value.trim();
-    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode) {
-      err.textContent = 'Please fill all cafe address fields (address, city, state, pin code).';
+    const capacityInput = document.getElementById('dashboardCafeCapacity').value.trim();
+    servicePhone = document.getElementById('dashboardCafePhone').value.trim();
+    if (!serviceAddress || !serviceCity || !serviceState || !servicePincode || !capacityInput || !servicePhone) {
+      err.textContent = 'Please fill all cafe address fields (address, city, state, pin code, capacity, phone).';
+      err.style.display = 'block';
+      return;
+    }
+    capacity = parseInt(capacityInput, 10);
+    if (!/^[6-9]\d{9}$/.test(servicePhone)) {
+      err.textContent = 'Valid 10-digit cafe phone number is required';
       err.style.display = 'block';
       return;
     }
@@ -1396,7 +1529,8 @@ async function handleRegister(e) { e.preventDefault();
     upiId, aadhaarId, yearsOfExperience: experience,
     serviceCategory: serviceCat, documents,
     routeCities, operatingCity,
-    serviceAddress, serviceCity, serviceState, serviceLandmark, servicePincode
+    serviceAddress, serviceCity, serviceState, serviceLandmark, servicePincode,
+    totalRooms, capacity, totalSeats, servicePhone, driverPhone
   };
 
   btn.disabled = true; btn.textContent = 'Submitting...';
@@ -1674,7 +1808,7 @@ function getInventoryConfig() {
       itemName: item => item.busName || item.cabName || item.name || item.title || 'Unnamed Cab',
       itemType: item => item.busType || item.vehicleType || item.type || 'cab',
       itemRoute: item => item.operatingCity || item.city || 'N/A',
-      itemPrice: item => item.pricePerKm || item.price || 0,
+      itemPrice: item => item.fare || item.pricePerKm || item.price || 0,
       itemCapacity: item => item.totalSeats || item.capacity || 'N/A'
     },
     hotel: {
@@ -1700,7 +1834,7 @@ function getInventoryConfig() {
       itemName: item => item.name || item.cafeName || item.title || 'Unnamed Cafe',
       itemType: item => item.cuisine || item.type || 'cafe',
       itemRoute: item => [item.address, item.city].filter(Boolean).join(', ') || 'N/A',
-      itemPrice: item => item.pricePerPerson || item.price || 0,
+      itemPrice: item => item.costPerSeat || item.pricePerPerson || item.price || 0,
       itemCapacity: item => item.totalTables || item.capacity || 0
     }
   };
@@ -1737,7 +1871,28 @@ function switchPane(name) {
   const titles = { overview:'Dashboard', inventory:'Inventory', bookings:'Bookings', pricing:'Pricing', schedule:'Schedule', analytics:'Analytics', profile:'Profile' };
   document.getElementById('pageTitle').innerHTML = 'Welcome, <span>' + (COLLAB?.name||'Partner') + '</span>';
   document.getElementById('pageSub').textContent = titles[name] + ' — ' + (COLLAB?.businessName||'Business') + ' Management';
+  // Close mobile sidebar after navigation
+  const sb = document.getElementById('cdSidebar');
+  const sc = document.getElementById('cdScrim');
+  if (sb && sb.classList.contains('open')) { sb.classList.remove('open'); if (sc) sc.classList.remove('show'); }
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+
+/* ─── Mobile Sidebar Toggle ─── */
+function cdToggleSidebar() {
+  const sb = document.getElementById('cdSidebar');
+  const sc = document.getElementById('cdScrim');
+  if (sb) sb.classList.toggle('open');
+  if (sc) sc.classList.toggle('show');
+}
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    const sb = document.getElementById('cdSidebar');
+    const sc = document.getElementById('cdScrim');
+    if (sb) sb.classList.remove('open');
+    if (sc) sc.classList.remove('show');
+  }
+});
 
 /* ─── Overview ─── */
 async function loadOverview() {
@@ -1769,7 +1924,26 @@ function getScheduleForItem(item) {
   return item?.schedule || {};
 }
 
+function formatTimeForBusSchedule(value) {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  const match12 = trimmed.match(/^(0?[1-9]|1[0-2]):([0-5]\d)\s?(AM|PM)$/i);
+  if (match12) {
+    const hour = String(parseInt(match12[1], 10)).padStart(2, '0');
+    return `${hour}:${match12[2]} ${match12[3].toUpperCase()}`;
+  }
+  const match24 = trimmed.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match24) return trimmed;
+  let hour = parseInt(match24[1], 10);
+  const minute = match24[2];
+  const period = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  if (hour === 0) hour = 12;
+  return `${String(hour).padStart(2, '0')}:${minute} ${period}`;
+}
+
 function normalizeRunningDays(rawRunningDays) {
+
   if (Array.isArray(rawRunningDays) && rawRunningDays.length === 7) return rawRunningDays.map(Boolean);
   if (Array.isArray(rawRunningDays) && rawRunningDays.every(day => typeof day === 'string')) {
     const labels = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -1790,8 +1964,13 @@ async function persistItemSchedule(itemId, schedulePatch) {
 
   const currentSchedule = getScheduleForItem(item);
   const mergedSchedule = { ...currentSchedule, ...schedulePatch };
-  item.schedule = mergedSchedule;
-  item.schedules = [mergedSchedule];
+  if (primary === 'bus') {
+    item.schedule = { ...(item.schedule || {}), schedules: [mergedSchedule] };
+    item.schedules = [mergedSchedule];
+  } else {
+    item.schedule = mergedSchedule;
+    item.schedules = [mergedSchedule];
+  }
 
   const endpoint = getScheduleUpdateEndpoint(primary, itemId);
   if (endpoint) {
@@ -1831,6 +2010,7 @@ async function loadInventory() {
     INVENTORY = d[cfg.listKey] || d.services || d.listings || [];
     renderInventory();
     populateSelectors();
+    loadPricing();
     if (cfg.primary === 'hotel' && INVENTORY.length) {
       for (const hotel of INVENTORY) {
         HOTEL_ROOMS_CACHE[hotel.id] = HOTEL_ROOMS_CACHE[hotel.id] || [];
@@ -1849,9 +2029,9 @@ function renderInventory() {
   document.getElementById('inventoryList').innerHTML = INVENTORY.map(item => {
     const status = item.status || 'pending_approval';
     const chipCls = status === 'active' ? 'green' : status === 'pending_approval' ? 'amber' : 'red';
-    const actionButton = primary === 'hotel'
-      ? `<button class="btn-icon" onclick="viewLayout('${item.id}')" title="Room Layout">🏢</button>`
-      : `<button class="btn-icon" onclick="viewLayout('${item.id}')" title="Layout">🗺️</button>`;
+    const actionButton = primary === 'bus' || primary === 'cafe'
+      ? `<button class="btn-icon" onclick="viewLayout('${item.id}')" title="Layout">🗺️</button>`
+      : '';
     return `<div class="item-card">
       <div class="top">
         <div><div class="name">${cfg.itemName(item)}</div><div class="sub">${cfg.itemType(item)}</div></div>
@@ -1898,23 +2078,42 @@ function showAddItemModal() {
     <div class="form-group"><label>City</label><input type="text" id="f_city" placeholder="Patna" required></div>
     <div class="form-group"><label>State</label><input type="text" id="f_state" placeholder="Bihar" required></div>
     <div class="form-group"><label>Total Rooms</label><input type="number" id="f_totalRooms" placeholder="24" min="1" required></div>
+    <div class="form-group"><label>Aadhaar ID of Owner/Manager</label><input type="text" id="f_ownerAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Owner/Manager Mobile Number</label><input type="tel" id="f_phone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Email ID of Hotel</label><input type="email" id="f_email" placeholder="hotel@example.com" required></div>
     <div class="form-group"><label>Amenities</label><input type="text" id="f_amenities" placeholder="WiFi, AC, Breakfast, Parking"></div>
   ` : isCafe ? `
-    <div class="form-group"><label>Table Name/Number</label><input type="text" id="f_name" placeholder="e.g. Table A1" required></div>
-    <div class="form-group"><label>Seating Capacity</label><input type="number" id="f_capacity" placeholder="4" required></div>
+    <div class="form-group"><label>Cafe Name</label><input type="text" id="f_name" placeholder="e.g. Mithila Café" required></div>
+    <div class="form-group"><label>Total Number of Tables</label><input type="number" id="f_capacity" placeholder="15" required></div>
     <div class="form-group"><label>Location (Indoor/Outdoor)</label><select id="f_type"><option>Indoor</option><option>Outdoor</option><option>Rooftop</option></select></div>
+    <div class="form-group"><label>Address</label><input type="text" id="f_address" placeholder="e.g. Station Road" required></div>
+    <div class="form-group"><label>City</label><input type="text" id="f_city" placeholder="e.g. Madhubani" required></div>
+    <div class="form-group"><label>State</label><input type="text" id="f_state" placeholder="e.g. Bihar" required></div>
     <div class="form-group"><label>Price per Person (₹)</label><input type="number" id="f_price" placeholder="499" required></div>
+    <div class="form-group"><label>Aadhaar ID of Owner/Manager</label><input type="text" id="f_ownerAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Owner/Manager Mobile Number</label><input type="tel" id="f_phone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Email ID of Cafe</label><input type="email" id="f_email" placeholder="cafe@example.com" required></div>
   ` : isCab ? `
-    <div class="form-group"><label>Cab Name</label><input type="text" id="f_name" placeholder="e.g. Swift Dzire" required></div>
+    <div class="form-group"><label>Car Model name</label><input type="text" id="f_name" placeholder="e.g. Swift Dzire" required></div>
     <div class="form-group"><label>Vehicle Type</label><select id="f_type"><option>Sedan</option><option>SUV</option><option>Hatchback</option><option>Premium</option></select></div>
-    <div class="form-group"><label>Number Plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
-    <div class="form-group"><label>Total Seats</label><input type="number" id="f_seats" placeholder="4" required></div>
+    <div class="form-group"><label>Number plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
+    <div class="form-group"><label>Total Number of seat</label><input type="number" id="f_seats" placeholder="4" required></div>
+    <div class="form-group"><label>Car Owner Aadhaar ID</label><input type="text" id="f_ownerAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Car driver Phone Number</label><input type="tel" id="f_driverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
     <div class="form-group"><label>Operating City *</label><input type="text" id="f_cabCity" placeholder="e.g. Patna, Ranchi, Delhi"></div>
     <div class="form-group"><label>Price per Km (₹)</label><input type="number" id="f_price" placeholder="12" required></div>
   ` : `
     <div class="form-group"><label>Bus Name</label><input type="text" id="f_name" placeholder="e.g. Volvo AC Sleeper" required></div>
     <div class="form-group"><label>Bus Type</label><select id="f_type"><option>AC Sleeper</option><option>Semi Sleeper</option><option>Seater</option><option>Non-AC</option></select></div>
     <div class="form-group"><label>Number Plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
+    <div class="form-group">
+      <label>Seat Layout</label>
+      <select id="f_seatLayout" style="width:100%;padding:.7rem;background:rgba(255,255,255,.06);border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;color:#fff;outline:none;font-family:inherit">
+        <option value="2x2">2x2 Seater</option>
+        <option value="2x3">2x3 Seater</option>
+        <option value="1x2">1x2 Seater</option>
+      </select>
+    </div>
     <div class="form-group"><label>Total Seats</label><input type="number" id="f_seats" placeholder="40" required></div>
     <div class="form-group"><label>Bus Route *</label>
       <div id="dashRouteCities">
@@ -1936,6 +2135,29 @@ async function saveItem(e) { e.preventDefault();
   const primary = getPrimaryServiceType();
   const data = { collaboratorId: COLLAB.id, type: primary };
   let requestPath = '/api/collaborator/bus/';
+
+  const ownerAadhaarId = document.getElementById('f_ownerAadhaarId') ? document.getElementById('f_ownerAadhaarId').value.trim() : '';
+  const phone = document.getElementById('f_phone') ? document.getElementById('f_phone').value.trim() : '';
+  const email = document.getElementById('f_email') ? document.getElementById('f_email').value.trim() : '';
+  const driverPhone = document.getElementById('f_driverPhone') ? document.getElementById('f_driverPhone').value.trim() : '';
+
+  if (ownerAadhaarId && !/^\d{12}$/.test(ownerAadhaarId)) {
+    alert('Valid 12-digit Aadhaar ID is required');
+    return;
+  }
+  if (phone && !/^[6-9]\d{9}$/.test(phone)) {
+    alert('Valid 10-digit Indian phone number is required');
+    return;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Valid email address is required');
+    return;
+  }
+  if (driverPhone && !/^[6-9]\d{9}$/.test(driverPhone)) {
+    alert('Valid 10-digit Indian driver phone number is required');
+    return;
+  }
+
   if (primary === 'hotel') {
     data.name = document.getElementById('f_name').value.trim();
     data.description = document.getElementById('f_description').value.trim();
@@ -1943,6 +2165,9 @@ async function saveItem(e) { e.preventDefault();
     data.city = document.getElementById('f_city').value.trim();
     data.state = document.getElementById('f_state').value.trim();
     data.totalRooms = parseInt(document.getElementById('f_totalRooms').value, 10) || 0;
+    data.ownerAadhaarId = ownerAadhaarId;
+    data.phone = phone;
+    data.email = email;
     data.amenities = document.getElementById('f_amenities').value.split(',').map(s=>s.trim()).filter(Boolean);
     requestPath = '/api/collaborator/hotel/create-hotel';
   } else if (primary === 'cafe') {
@@ -1950,6 +2175,12 @@ async function saveItem(e) { e.preventDefault();
     data.capacity = parseInt(document.getElementById('f_capacity').value) || 4;
     data.location = document.getElementById('f_type').value;
     data.price = parseInt(document.getElementById('f_price').value) || 0;
+    data.address = document.getElementById('f_address').value.trim();
+    data.city = document.getElementById('f_city').value.trim();
+    data.state = document.getElementById('f_state').value.trim();
+    data.ownerAadhaarId = ownerAadhaarId;
+    data.phone = phone;
+    data.email = email;
     data.name = data.tableName;
     requestPath = '/api/collaborator/cafe/';
   } else if (primary === 'cab') {
@@ -1957,6 +2188,8 @@ async function saveItem(e) { e.preventDefault();
     data.busType = document.getElementById('f_type').value;
     data.numberPlate = document.getElementById('f_plate').value.trim();
     data.totalSeats = parseInt(document.getElementById('f_seats').value) || 4;
+    data.ownerAadhaarId = ownerAadhaarId;
+    data.driverPhone = driverPhone;
     data.operatingCity = document.getElementById('f_cabCity').value.trim();
     data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
     data.name = data.busName;
@@ -1966,6 +2199,7 @@ async function saveItem(e) { e.preventDefault();
     data.busType = document.getElementById('f_type').value;
     data.numberPlate = document.getElementById('f_plate').value.trim();
     data.totalSeats = parseInt(document.getElementById('f_seats').value) || 40;
+    data.seatLayout = document.getElementById('f_seatLayout').value;
     data.routeCities = dashGetRouteCities();
     data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
     data.name = data.busName;
@@ -1974,13 +2208,6 @@ async function saveItem(e) { e.preventDefault();
     const r = await collaboratorFetch(requestPath, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
     const d = await r.json();
     if (d.success) {
-      if (primary === 'hotel' && d.hotel?.id && data.totalRooms > 0) {
-        await collaboratorFetch('/api/collaborator/hotel/rooms/generate-room-layout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hotelId: d.hotel.id, totalRooms: data.totalRooms })
-        });
-      }
       closeModal('itemModal');
       await loadInventory();
       const createdItemId = d.hotel?.id || d.cafe?.id || d.cab?.id || d.bus?.id || d.id;
@@ -1989,7 +2216,7 @@ async function saveItem(e) { e.preventDefault();
         const scheduleSelector = document.getElementById('scheduleSelector');
         if (layoutSelector) layoutSelector.value = createdItemId;
         if (scheduleSelector) scheduleSelector.value = createdItemId;
-        if (primary === 'hotel') {
+        if (primary === 'bus' || primary === 'cafe') {
           await loadLayout();
         }
         await loadSchedule();
@@ -2048,6 +2275,13 @@ async function loadLayout() {
   const id = document.getElementById('layoutSelector').value;
   if (!id) { document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Select an item to view layout</p>'; return; }
   const primary = getPrimaryServiceType();
+
+  if (primary !== 'bus' && primary !== 'cafe') {
+    document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Seat/table layout is not available for this service type.</p>';
+    document.getElementById('layoutSelector').value = '';
+    return;
+  }
+
   try {
     SELECTED_ITEM = id;
     SELECTED_SEATS.clear();
@@ -2056,21 +2290,13 @@ async function loadLayout() {
     let seats = [];
     const item = INVENTORY.find(i => i.id === id);
 
-    if (primary === 'hotel') {
-      const r = await collaboratorFetch('/api/collaborator/hotel/rooms/rooms/' + id);
-      if (r.status === 401) return logout();
-      const d = await r.json();
-      seats = d.rooms || [];
-      HOTEL_ROOMS_CACHE[id] = seats;
-    } else {
-      const endpoint = primary === 'cab' ? '/api/collaborator/cab/' : primary === 'cafe' ? '/api/collaborator/cafe/' : '/api/collaborator/bus/';
-      const r = await collaboratorFetch(endpoint + id + '/seats?date=' + new Date().toISOString().split('T')[0]);
-      if (r.status === 401) return logout();
-      const d = await r.json();
-      seats = d.seats || [];
-    }
+    const endpoint = primary === 'cafe' ? '/api/collaborator/cafe/' : '/api/collaborator/bus/';
+    const r = await collaboratorFetch(endpoint + id + '/seats?date=' + new Date().toISOString().split('T')[0]);
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    seats = d.seats || [];
 
-    const capacity = item?.totalSeats || item?.capacity || item?.totalRooms || seats.length || 20;
+    const capacity = item?.totalSeats || item?.capacity || seats.length || 20;
 
     SEATS_DATA = seats;
     FILTER_STATE = 'all';
@@ -2165,49 +2391,7 @@ function applySeatFilter(state) {
 }
 
 function renderSeatMap(seats, capacity, type, item) {
-  const isHotel = type === 'hotel';
   const isCafe = type === 'cafe';
-  
-  if (isHotel) {
-    document.getElementById('layoutTitle').textContent = 'Room Layout';
-    document.getElementById('layoutActions').style.display = 'flex';
-    document.getElementById('layoutLegend').style.display = 'flex';
-
-    const floorsMap = {};
-    (seats || []).forEach((room, idx) => {
-      const fallbackFloor = Math.floor(idx / 10) + 1;
-      const floor = parseInt(room.floor || room.floorNumber || fallbackFloor, 10) || 1;
-      if (!floorsMap[floor]) floorsMap[floor] = [];
-      floorsMap[floor].push(room);
-    });
-
-    const floorEntries = Object.entries(floorsMap).sort((a, b) => Number(a[0]) - Number(b[0]));
-    if (!floorEntries.length) {
-      document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">No rooms generated yet for this hotel.</p>';
-      return;
-    }
-
-    const html = floorEntries.map(([floor, rooms]) => `
-      <div style="margin-bottom:1.25rem;padding:1rem;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.02)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.85rem">
-          <h4 style="margin:0;color:var(--gold);font-size:.9rem">Floor ${floor}</h4>
-          <span class="chip gold">${rooms.length} rooms</span>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">
-          ${rooms.map(room => `
-            <button type="button" class="seat ${room.status || 'available'}" onclick="updateHotelRoomStatus('${room.id}', '${room.status || 'available'}')" title="${room.roomNumber || room.id}: ${room.status || 'available'}" style="width:100%;height:auto;padding:.8rem .5rem;flex-direction:column;gap:4px;font-size:.72rem;border-radius:14px">
-              <span style="font-size:1.2rem">🛏️</span>
-              <span>Room ${room.roomNumber || room.id}</span>
-              <small style="opacity:.85">${room.roomType || 'Standard'}</small>
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
-
-    document.getElementById('seatMapContainer').innerHTML = html;
-    return;
-  }
 
   if (isCafe) {
     document.getElementById('layoutTitle').textContent = 'Table Layout';
@@ -2228,7 +2412,7 @@ function renderSeatMap(seats, capacity, type, item) {
     document.getElementById('seatMapContainer').innerHTML = html;
     return;
   }
-  
+
   if (type === 'bus') {
     document.getElementById('layoutTitle').textContent = 'Bus Seat Management';
     document.getElementById('layoutActions').style.display = 'none'; // Using popover actions
@@ -2310,33 +2494,11 @@ function renderSeatMap(seats, capacity, type, item) {
     document.getElementById('seatMapContainer').innerHTML = html;
     return;
   }
-  
-  // Cab seat layout fallback
+
   document.getElementById('layoutTitle').textContent = 'Seat Layout';
-  document.getElementById('layoutActions').style.display = 'flex';
-  document.getElementById('layoutLegend').style.display = 'flex';
-  const cols = (type === 'cab') ? 2 : (item?.seatLayout?.includes('2x2') ? 4 : 3);
-  const totalSeats = seats.length || capacity;
-  const pairs = cols === 2 ? 1 : 2;
-  let html = '';
-  const rows = Math.ceil(totalSeats / cols);
-  let idx = 0;
-  for (let r = 0; r < rows; r++) {
-    html += '<div class="seat-row">';
-    for (let c = 0; c < cols; c++) {
-      if (idx >= totalSeats) break;
-      if (c === pairs) html += '<div class="seat gap"></div>';
-      const s = seats[idx] || { id: 'S'+(idx+1), status:'available', number: (idx+1).toString() };
-      const cls = s.status || 'available';
-      const selected = SELECTED_SEATS.has(s.id) ? ';border-color:var(--gold);transform:scale(1.1)' : '';
-      html += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-        <div class="seat ${cls}" onclick="toggleSeat('${s.id}')" style="${selected}" title="${s.number||s.id}">${s.number||idx+1}</div>
-      </div>`;
-      idx++;
-    }
-    html += '</div>';
-  }
-  document.getElementById('seatMapContainer').innerHTML = html;
+  document.getElementById('layoutActions').style.display = 'none';
+  document.getElementById('layoutLegend').style.display = 'none';
+  document.getElementById('seatMapContainer').innerHTML = '<p style="color:var(--text2)">Seat/table layout is not available for this service type.</p>';
 }
 
 function toggleSeat(id) {
@@ -2528,18 +2690,50 @@ async function confirmBooking(id) {
 
 /* ─── Pricing ─── */
 async function loadPricing() {
-  const primary = (COLLAB?.serviceCategories || ['bus'])[0];
+  const primary = getPrimaryServiceType();
+  const cfg = getInventoryConfig();
   if (!INVENTORY.length) { document.getElementById('pricingItems').innerHTML = '<p style="color:var(--text2);grid-column:1/-1;text-align:center;padding:2rem">No items to manage pricing</p>'; return; }
-  document.getElementById('pricingItems').innerHTML = INVENTORY.map(item => `
-    <div class="item-card">
-      <div class="top"><div><div class="name">${item.busName || item.name || 'Item'}</div><div class="sub">Current: ₹${item.pricePerKm || item.price || 0}</div></div></div>
-      <div class="body" style="grid-template-columns:1fr">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="number" id="price_${item.id}" value="${item.pricePerKm || item.price || 0}" style="flex:1;padding:.5rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.85rem;outline:none;font-family:inherit">
-          <button class="btn-sec btn-sm" onclick="updatePrice('${item.id}')">💾 Update</button>
+  
+  let unit = '';
+  let label = 'Price';
+  let paddingRight = '2rem';
+  if (primary === 'bus' || primary === 'cab') {
+    unit = ' / km';
+    label = 'Price per Km';
+    paddingRight = '2.8rem';
+  } else if (primary === 'hotel') {
+    unit = ' / night';
+    label = 'Price per Night';
+    paddingRight = '3.5rem';
+  } else if (primary === 'cafe') {
+    unit = ' / seat';
+    label = 'Price per Seat';
+    paddingRight = '3.2rem';
+  }
+
+  document.getElementById('pricingItems').innerHTML = INVENTORY.map(item => {
+    const currentPrice = cfg.itemPrice(item);
+    return `
+      <div class="item-card">
+        <div class="top">
+          <div>
+            <div class="name">${cfg.itemName(item)}</div>
+            <div class="sub">Current: ₹${currentPrice}${unit}</div>
+          </div>
         </div>
-      </div>
-    </div>`).join('');
+        <div class="body" style="grid-template-columns:1fr; padding-top: 0.5rem;">
+          <div style="font-size:0.75rem; color:var(--text2); margin-bottom: 4px;">${label} (₹)</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="position:relative;flex:1;display:flex;align-items:center;">
+              <span style="position:absolute;left:10px;color:var(--text2);font-size:0.85rem;">₹</span>
+              <input type="number" id="price_${item.id}" value="${currentPrice}" style="width:100%;padding:.5rem ${paddingRight} .5rem 1.5rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.85rem;outline:none;font-family:inherit">
+              <span style="position:absolute;right:10px;color:var(--text2);font-size:0.8rem;">${unit.trim()}</span>
+            </div>
+            <button class="btn-sec btn-sm" onclick="updatePrice('${item.id}')" style="height:34px; white-space:nowrap;">💾 Update</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 async function updatePrice(id) {
@@ -2835,6 +3029,11 @@ async function saveUnifiedSchedule(id) {
     runningDays,
     ...timeFields
   };
+
+  if (primary === 'bus') {
+    payload.departureTime = formatTimeForBusSchedule(payload.departureTime);
+    payload.arrivalTime = formatTimeForBusSchedule(payload.arrivalTime);
+  }
 
   try {
     const btn = document.getElementById('saveScheduleBtn');

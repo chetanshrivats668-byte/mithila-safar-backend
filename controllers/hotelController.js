@@ -1,10 +1,14 @@
 import * as hotelService from '../services/hotelService.js';
 import * as auditLogService from '../services/auditLogService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+export const validateHotelCreate = validate(schemas.hotelCreate);
 
 export async function createHotel(req, res) {
   try {
     const data = req.body;
     data.collaboratorId = req.collaborator.collaboratorId;
+    data.totalRooms = Number(data.totalRooms);
     const hotel = await hotelService.createHotel(req.app.locals.db, data);
     try {
       await auditLogService.logAction(req.app.locals.db, {
@@ -65,14 +69,20 @@ export async function updateHotel(req, res) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     const updated = await hotelService.updateHotel(req.app.locals.db, id, updates);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'update_hotel',
-      entityType: 'collaborator_hotels',
-      entityId: id,
-      details: { updates }
-    });
+
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'update_hotel',
+        entityType: 'collaborator_hotels',
+        entityId: id,
+        details: { updates }
+      });
+    } catch (auditError) {
+      console.error('Hotel update audit log error:', auditError);
+    }
+
     res.json({ success: true, message: 'Hotel updated', hotel: updated });
   } catch (e) {
     console.error('Update hotel error:', e);

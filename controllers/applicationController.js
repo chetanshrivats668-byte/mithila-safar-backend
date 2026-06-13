@@ -55,7 +55,12 @@ export async function submitApplication(req, res) {
       serviceCity: data.serviceCity || '',
       serviceState: data.serviceState || '',
       serviceLandmark: data.serviceLandmark || '',
-      servicePincode: data.servicePincode || ''
+      servicePincode: data.servicePincode || '',
+      totalRooms: data.totalRooms || 0,
+      capacity: data.capacity || 0,
+      totalSeats: data.totalSeats || 0,
+      servicePhone: data.servicePhone || '',
+      driverPhone: data.driverPhone || ''
     });
 
     res.status(201).json({
@@ -163,6 +168,11 @@ export async function adminApproveApplication(req, res) {
       state: app.serviceState || '',
       landmark: app.serviceLandmark || '',
       pinCode: app.servicePincode || '',
+      totalRooms: app.totalRooms || 0,
+      capacity: app.capacity || 0,
+      totalSeats: app.totalSeats || 0,
+      servicePhone: app.servicePhone || '',
+      driverPhone: app.driverPhone || '',
       status: 'approved',
       verificationStatus: 'verified',
       verifiedAt: now,

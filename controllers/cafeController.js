@@ -1,10 +1,14 @@
 import * as cafeService from '../services/cafeService.js';
 import * as auditLogService from '../services/auditLogService.js';
+import { validate, schemas } from '../middleware/validator.js';
+
+export const validateCafeCreate = validate(schemas.cafeCreate);
 
 export async function createCafe(req, res) {
   try {
     const data = req.body;
     data.collaboratorId = req.collaborator.collaboratorId;
+    data.capacity = Number(data.capacity);
     const cafe = await cafeService.createCafe(req.app.locals.db, data);
     try {
       await auditLogService.logAction(req.app.locals.db, {
@@ -65,14 +69,20 @@ export async function updateCafe(req, res) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     const updated = await cafeService.updateCafe(req.app.locals.db, id, updates);
-    await auditLogService.logAction(req.app.locals.db, {
-      actorId: req.collaborator.collaboratorId,
-      actorRole: 'collaborator',
-      action: 'update_cafe',
-      entityType: 'collaborator_cafes',
-      entityId: id,
-      details: { updates }
-    });
+
+    try {
+      await auditLogService.logAction(req.app.locals.db, {
+        actorId: req.collaborator.collaboratorId,
+        actorRole: 'collaborator',
+        action: 'update_cafe',
+        entityType: 'collaborator_cafes',
+        entityId: id,
+        details: { updates }
+      });
+    } catch (auditError) {
+      console.error('Cafe update audit log error:', auditError);
+    }
+
     res.json({ success: true, message: 'Cafe updated', cafe: updated });
   } catch (e) {
     console.error('Update cafe error:', e);

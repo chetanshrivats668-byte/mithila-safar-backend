@@ -34,3 +34,8 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# IDE & Temporary Files
+.opencode/
+server.err
+scratch/

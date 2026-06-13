@@ -4,7 +4,8 @@ import * as cafeController from '../controllers/cafeController.js';
 
 const router = Router();
 
-router.post('/create-cafe', requireCollaborator, requireModuleAccess('cafe'), cafeController.createCafe);
+router.post('/', requireCollaborator, requireModuleAccess('cafe'), cafeController.validateCafeCreate, cafeController.createCafe);
+router.post('/create-cafe', requireCollaborator, requireModuleAccess('cafe'), cafeController.validateCafeCreate, cafeController.createCafe);
 router.get('/cafes', requireCollaborator, requireModuleAccess('cafe'), cafeController.getCafes);
 router.get('/cafe/:id', requireCollaborator, requireModuleAccess('cafe'), cafeController.getCafe);
 router.put('/cafe/:id', requireCollaborator, requireModuleAccess('cafe'), cafeController.updateCafe);

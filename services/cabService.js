@@ -3,7 +3,7 @@ import { memoryDb } from '../utils/firestoreFallback.js';
 
 const VALID_CAB_COLUMNS = [
   'id', 'collaboratorId', 'cabName', 'cabNumber', 'driverName', 'driverPhone',
-  'cabType', 'fare', 'route', 'status', 'createdAt', 'updatedAt'
+  'cabType', 'fare', 'route', 'totalSeats', 'ownerAadhaarId', 'schedule', 'status', 'createdAt', 'updatedAt'
 ];
 
 function filterSupabaseColumns(data) {
@@ -29,6 +29,9 @@ export async function createCab(db, data) {
     cabType: data.cabType || data.type || '',
     fare: Number(data.fare ?? data.pricePerKm ?? 0),
     route: data.route || data.city || '',
+    totalSeats: Number(data.totalSeats || 4),
+    ownerAadhaarId: data.ownerAadhaarId || '',
+    schedule: data.schedule || {},
     status: 'pending_approval',
     createdAt: now,
     updatedAt: now

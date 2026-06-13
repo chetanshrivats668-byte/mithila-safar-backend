@@ -222,23 +222,34 @@ export async function addBusSchedule(db, busId, schedule) {
   const bus = await getBusById(db, busId);
   if (!bus) return null;
 
-  // We set/overwrite the active schedule at index 0 to avoid endless nested arrays
+  const existingActiveSchedule = Array.isArray(bus.schedules) && bus.schedules.length > 0
+    ? bus.schedules[0]
+    : null;
+
+  // Overwrite the active schedule while preserving stable metadata when possible.
   const schedules = [{
-    id: 'SCH' + Date.now().toString(36).toUpperCase(),
+    ...(existingActiveSchedule || {}),
     ...schedule,
-    createdAt: new Date().toISOString()
+    id: existingActiveSchedule?.id || 'SCH' + Date.now().toString(36).toUpperCase(),
+    createdAt: existingActiveSchedule?.createdAt || new Date().toISOString()
   }];
 
   if (!isSupabaseAvailable()) {
-    const updated = { ...bus, schedules, updatedAt: new Date().toISOString() };
+    const updated = {
+      ...bus,
+      schedules,
+      departureTime: schedules[0].departureTime ?? bus.departureTime,
+      arrivalTime: schedules[0].arrivalTime ?? bus.arrivalTime,
+      updatedAt: new Date().toISOString()
+    };
     memoryDb.buses.set(busId, updated);
     return schedules;
   }
 
   const dbUpdates = toDbBusUpdates({
     schedules,
-    departureTime: schedule.departureTime,
-    arrivalTime: schedule.arrivalTime
+    departureTime: schedules[0].departureTime,
+    arrivalTime: schedules[0].arrivalTime
   });
 
   if (dbUpdates.schedule && bus) {
