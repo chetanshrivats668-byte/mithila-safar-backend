@@ -460,7 +460,7 @@
                 const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
                     ? 'http://localhost:3001' 
                     : window.location.origin;
-                await fetch(`${API_URL}/api/submit-collab`, {
+                await fetch(`${API_URL}/api/collab-applications`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(collab)

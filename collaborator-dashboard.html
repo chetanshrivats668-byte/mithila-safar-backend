@@ -490,66 +490,149 @@ tr:hover td{background:var(--card2)}
 .modal-box h2{font-size:1.1rem;font-weight:800;color:#fff;margin-bottom:1.2rem}
 .modal-box .close{float:right;background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;padding:0;line-height:1}
 
-/* ── MOBILE ── */
-.svc-label:has(input:checked){background:var(--gold-dim)!important;border-color:rgba(245,197,24,.3)!important;color:var(--gold)!important}
-#regServiceFields input{box-sizing:border-box;width:100%;max-width:100%}
-#regServiceFields .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}@media(max-width:480px){#regServiceFields .grid-2{grid-template-columns:1fr}}
-#regServiceFields { word-wrap: break-word; overflow-wrap: break-word; overflow: hidden; }
-@media(max-width:768px){
-  .sidebar{position:fixed;left:-260px;top:0;bottom:0;width:260px;
-    transition:left .25s;z-index:60;border-right:1px solid var(--border)}
-  .sidebar.open{left:0}
-  .sb-head{padding:1.2rem 1rem;display:flex}
-  .sb-nav{flex-direction:column;padding:.8rem;gap:.3rem}
-  .sb-link{padding:.85rem 1rem;font-size:.88rem;white-space:normal}
-  .sb-prof{padding:.8rem;display:flex}
-  .main{margin-left:0;padding:1rem}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .grid-cards{grid-template-columns:1fr}
-  .modal-box{margin:.5rem;padding:1.2rem}
-  .cd-mobile-bar{display:flex!important}
-  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
-  [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
-}
-@media(max-width:480px){
-  .stats{grid-template-columns:1fr}
-  .grid-cards{grid-template-columns:1fr}
-  .modal-box{padding:1rem;margin:.3rem}
-  .modal-box h2{font-size:.95rem}
-  .modal-box .close{font-size:1.2rem}
-  .bus-chassis{max-width:100%;padding:2.5rem .8rem 1rem .8rem}
-  .bus-grid{gap:6px;row-gap:10px}
-  .seat-icon-svg{width:32px;height:32px}
-  .seat-label-text{font-size:.5rem}
-  .seat-fare-text{font-size:.5rem}
-  .seat-popover{min-width:140px;right:4px;left:4px}
-  .sb-link{padding:.4rem .5rem;font-size:.7rem}
-  .kpi-bar{grid-template-columns:1fr 1fr}
-  .kpi-card{padding:.7rem}
-  .kpi-val{font-size:1.2rem}
-  .day-pill-btn{padding:6px 10px;font-size:.7rem}
-  #regServiceFields .grid-2{grid-template-columns:1fr}
-  [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
-  [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
-  .yatri-logo{max-width:200px!important}
-  .section{padding:1rem}
-  .item-card{padding:.8rem}
-  .auth-box{padding:1.5rem!important}
-}
-@media(max-width:360px){
-  .stats{grid-template-columns:1fr}
-  .stat{padding:.8rem}
-  .stat .num{font-size:1.3rem}
-  .stat .ico{font-size:1rem}
-  .kpi-bar{grid-template-columns:1fr}
-  .sb-link{font-size:.65rem;padding:.35rem .4rem}
-  .day-pill-btn{padding:5px 8px;font-size:.65rem;min-width:38px}
-  .bus-chassis{padding:2rem .5rem .8rem .5rem}
-  .bus-grid{gap:3px}
-  .seat-icon-svg{width:26px;height:26px}
-  .filter-chip{padding:4px 10px;font-size:.7rem}
-  .bus-cabin-header{height:2rem;font-size:.65rem;padding:0 10px}
-}
+/* ── TABLE WRAPPER FOR MOBILE ── */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -1.5rem;padding:0 1.5rem}
+  table{width:100%;border-collapse:collapse;min-width:560px}
+  th{text-align:left;font-size:.68rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:.6rem .8rem;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:.6rem .8rem;font-size:.82rem;color:var(--text);border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+
+  /* ── CHART CONTAINER ── */
+  .chart-container{height:200px;display:flex;align-items:flex-end;gap:8px;padding:1rem 0}
+  .chart-bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;background:linear-gradient(180deg,var(--gold),var(--gold2));border-radius:4px 4px 0 0;min-height:8px;transition:height .3s ease}
+  .chart-bar .val{font-size:.65rem;font-weight:700;color:var(--navy);transform:translateY(-1.2rem);white-space:nowrap}
+  .chart-bar .lbl{font-size:.55rem;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+
+  /* ── CARD TABLE ALTERNATIVE ── */
+  .card-table{display:none}
+  @media(max-width:560px){
+    .table-wrap table{display:none}
+    .card-table{display:block}
+    .card-table .card{margin-bottom:.6rem}
+    .card-table .card-grid{gap:.4rem .6rem}
+    .card-table .info .lbl{font-size:.62rem}
+    .card-table .info .val{font-size:.8rem}
+  }
+
+  /* ── SVG CHARTS ── */
+  .analytics-chart{width:100%;height:200px;overflow:visible}
+  .analytics-chart .y-axis{stroke:rgba(255,255,255,.1);stroke-width:1}
+  .analytics-chart .x-axis{stroke:rgba(255,255,255,.1);stroke-width:1}
+  .analytics-chart .grid-line{stroke:rgba(255,255,255,.05);stroke-width:1}
+  .analytics-chart .area{fill:url(#chartGradient);opacity:.4}
+  .analytics-chart .line{fill:none;stroke:var(--gold);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .analytics-chart .point{fill:var(--gold);stroke:var(--navy);stroke-width:2;cursor:pointer;transition:r .2s}
+  .analytics-chart .point:hover{r:6}
+
+  /* ── MOBILE ── */
+  @media(max-width:768px){
+    .sidebar{position:fixed;left:-270px;top:0;bottom:0;width:270px;
+      transition:left .3s cubic-bezier(.25,.8,.25,1);z-index:60;box-shadow:20px 0 40px rgba(0,0,0,.4)}
+    .sidebar.open{left:0}
+    .sb-head{padding:1.2rem 1rem;display:flex}
+    .sb-nav{flex-direction:column;padding:.8rem;gap:.3rem}
+    .sb-link{padding:.9rem 1rem;font-size:.88rem;white-space:normal;min-height:44px}
+    .sb-prof{padding:.8rem;display:flex}
+    .main{margin-left:0;padding:1rem}
+    .stats{grid-template-columns:repeat(2,1fr);gap:.75rem}
+    .grid-cards{grid-template-columns:1fr}
+    .modal-box{margin:.75rem;padding:1.5rem}
+    .cd-mobile-bar{display:flex!important}
+    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+    [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
+    .bus-chassis{max-width:100%;padding:2.5rem 1rem 1rem 1rem}
+    .bus-grid{gap:8px;row-gap:12px}
+    .seat-icon-svg{width:36px;height:36px}
+    .kpi-bar{grid-template-columns:1fr 1fr}
+    .filter-bar{flex-wrap:wrap}
+    .day-pills{flex-wrap:wrap}
+    .section .hdr{flex-wrap:wrap;gap:.5rem}
+    .section .hdr .actions{flex-wrap:wrap}
+    .chart-container{height:160px;gap:6px}
+    .chart-bar .val{font-size:.6rem}
+    .chart-bar .lbl{font-size:.5rem}
+  }
+  @media(max-width:560px){
+    .stats{grid-template-columns:1fr;gap:.6rem}
+    .grid-cards{grid-template-columns:1fr}
+    .modal-box{padding:1rem;margin:.5rem;max-height:95vh}
+    .modal-box h2{font-size:.95rem}
+    .modal-box .close{font-size:1.2rem}
+    .bus-chassis{max-width:100%;padding:2.5rem .8rem 1rem .8rem}
+    .bus-grid{gap:6px;row-gap:10px}
+    .seat-icon-svg{width:32px;height:32px}
+    .seat-label-text{font-size:.5rem}
+    .seat-fare-text{font-size:.5rem}
+    .seat-popover{min-width:140px;right:4px;left:4px}
+    .sb-link{padding:.4rem .5rem;font-size:.7rem}
+    .kpi-bar{grid-template-columns:1fr 1fr}
+    .kpi-card{padding:.7rem}
+    .kpi-val{font-size:1.2rem}
+    .day-pill-btn{padding:6px 10px;font-size:.7rem}
+    #regServiceFields .grid-2{grid-template-columns:1fr}
+    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+    [style*="display:flex"][style*="gap:8px"]{flex-wrap:wrap!important}
+    .yatri-logo{max-width:200px!important}
+    .section{padding:1rem}
+    .item-card{padding:.8rem}
+    .auth-box{padding:1.5rem!important}
+    .chart-container{height:140px;gap:4px}
+    .chart-bar .val{display:none}
+    .section .hdr{flex-direction:column;align-items:flex-start}
+    .section .hdr .actions{width:100%;justify-content:flex-start}
+    .topbar{flex-wrap:wrap;gap:.5rem}
+    .topbar-r{width:100%;justify-content:space-between}
+    .form-group{margin-bottom:.8rem}
+  }
+  @media(max-width:480px){
+    .stats{grid-template-columns:1fr}
+    .stat{padding:.8rem}
+    .stat .num{font-size:1.3rem}
+    .stat .ico{font-size:1rem}
+    .kpi-bar{grid-template-columns:1fr}
+    .sb-link{font-size:.65rem;padding:.35rem .4rem}
+    .day-pill-btn{padding:5px 8px;font-size:.65rem;min-width:38px}
+    .bus-chassis{padding:2rem .5rem .8rem .5rem}
+    .bus-grid{gap:3px}
+    .seat-icon-svg{width:26px;height:26px}
+    .filter-chip{padding:4px 10px;font-size:.7rem}
+    .bus-cabin-header{height:2rem;font-size:.65rem;padding:0 10px}
+    .seat-label-text{font-size:.45rem}
+    .seat-fare-text{font-size:.45rem}
+    .kpi-val{font-size:1rem}
+    .chart-container{height:120px}
+    .modal-box{padding:.85rem;margin:.3rem}
+    .modal-box h2{font-size:.9rem}
+    .auth-box{padding:1.2rem!important}
+    .cd-hamburger{width:38px;height:38px}
+  }
+  @media(max-width:360px){
+    .stats{grid-template-columns:1fr}
+    .stat{padding:.6rem}
+    .stat .num{font-size:1.1rem}
+    .stat .ico{font-size:.9rem}
+    .kpi-bar{grid-template-columns:1fr}
+    .sb-link{font-size:.6rem;padding:.3rem .35rem}
+    .day-pill-btn{padding:4px 6px;font-size:.6rem;min-width:34px}
+    .bus-chassis{padding:1.5rem .4rem .6rem .4rem}
+    .bus-grid{gap:2px}
+    .seat-icon-svg{width:22px;height:22px}
+    .filter-chip{padding:3px 8px;font-size:.65rem}
+    .bus-cabin-header{height:1.8rem;font-size:.6rem;padding:0 8px}
+    .seat-label-text{font-size:.4rem}
+    .seat-fare-text{font-size:.4rem}
+    .kpi-val{font-size:.9rem}
+    .chart-container{height:100px}
+  }
+
+  /* SVG Gradient for Analytics Chart */
+  <svg style="display:none;">
+    <defs>
+      <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f5c518" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#f5c518" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+  </svg>
 </style>
 </head>
 <body>
@@ -773,6 +856,9 @@ tr:hover td{background:var(--card2)}
         <button class="sb-link" onclick="switchPane('pricing')"><span class="ico">💰</span>Pricing</button>
         <button class="sb-link" onclick="switchPane('schedule')"><span class="ico">📅</span>Schedule</button>
         <button class="sb-link" onclick="switchPane('analytics')"><span class="ico">📈</span>Analytics</button>
+        <button class="sb-link" onclick="switchPane('hotel-rooms')"><span class="ico">🏨</span>Hotel Rooms</button>
+        <button class="sb-link" onclick="switchPane('cafe-tables')"><span class="ico">☕</span>Cafe Tables</button>
+        <button class="sb-link" onclick="switchPane('cab')"><span class="ico">🚗</span>Cab Management</button>
         <button class="sb-link" onclick="switchPane('profile')"><span class="ico">👤</span>Profile</button>
     </nav>
     <div class="sb-prof">
@@ -1009,6 +1095,81 @@ tr:hover td{background:var(--card2)}
           </span>
           <span class="chip amber" id="profStatusChip">⏳ Pending Verification</span>
           <button class="btn-sec btn-sm" onclick="logout()">🚪 Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE: HOTEL ROOMS -->
+    <div class="pane" id="pane-hotel-rooms">
+      <div class="section">
+        <div class="hdr"><h3>🏨 Hotel Room Layout</h3>
+          <div class="actions">
+            <select id="hotelRoomSelector" onchange="loadHotelRoomLayout()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
+              <option value="">— Select hotel —</option>
+            </select>
+            <button class="btn-sec btn-sm" onclick="syncHotelRoomCount()">Sync Room Count</button>
+          </div>
+        </div>
+        <div id="hotelRoomContent"><p style="color:var(--text2)">Select a hotel to manage rooms</p></div>
+      </div>
+      <div class="section" id="hotelRoomStatsSection" style="display:none">
+        <div class="hdr"><h3>Occupancy Stats</h3></div>
+        <div class="stats" id="hotelRoomStats"></div>
+      </div>
+    </div>
+
+    <!-- PANE: CAFE TABLES -->
+    <div class="pane" id="pane-cafe-tables">
+      <div class="section">
+        <div class="hdr"><h3>☕ Cafe Table Layout</h3>
+          <div class="actions">
+            <select id="cafeTableSelector" onchange="loadCafeTableLayout()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
+              <option value="">— Select cafe —</option>
+            </select>
+            <button class="btn-sec btn-sm" onclick="syncCafeTableCount()">Sync Table Count</button>
+          </div>
+        </div>
+        <div id="cafeTableContent"><p style="color:var(--text2)">Select a cafe to manage tables</p></div>
+      </div>
+      <div class="section" id="cafeTableStatsSection" style="display:none">
+        <div class="hdr"><h3>Occupancy Stats</h3></div>
+        <div class="stats" id="cafeTableStats"></div>
+      </div>
+    </div>
+
+    <!-- PANE: CAB MANAGEMENT -->
+    <div class="pane" id="pane-cab">
+      <div class="section">
+        <div class="hdr"><h3>🚗 Cab Management</h3>
+          <div class="actions">
+            <button class="btn-sec btn-sm" onclick="showAddCabModal()">+ Add Cab</button>
+            <button class="btn-sec btn-sm" onclick="loadCabs()">Refresh</button>
+          </div>
+        </div>
+        <div class="grid-cards" id="cabList"><p style="color:var(--text2)">Loading...</p></div>
+      </div>
+      <div class="section" id="cabLayoutSection" style="display:none">
+        <div class="hdr"><h3>Cab Seat Layout</h3>
+          <div class="actions">
+            <select id="cabLayoutSelector" onchange="loadCabSeatLayout()" style="padding:.4rem .8rem;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:#fff;font-size:.8rem;outline:none;font-family:inherit">
+              <option value="">— Select cab —</option>
+            </select>
+          </div>
+        </div>
+        <div id="cabLayoutContainer">
+          <div class="kpi-bar" id="cabKpiContainer" style="display:none;"></div>
+          <div class="filter-bar" id="cabFilterContainer" style="display:none;"></div>
+          <div id="cabSeatMapContainer" style="position:relative;">
+            <div class="seat-layout">
+              <p style="color:var(--text2);text-align:center;padding:2rem">Select a cab above to view seat layout</p>
+            </div>
+          </div>
+          <div class="seat-legend" id="cabLayoutLegend" style="margin-top:1.5rem;">
+            <span><span style="width:14px;height:14px;background:#10b981;border:1.5px solid #10b981;border-radius:4px;display:inline-block"></span> Available</span>
+            <span><span style="width:14px;height:14px;background:#3b82f6;border:1.5px solid #3b82f6;border-radius:4px;display:inline-block"></span> Booked (Male)</span>
+            <span><span style="width:14px;height:14px;background:#ec4899;border:1.5px solid #ec4899;border-radius:4px;display:inline-block"></span> Booked (Female)</span>
+            <span><span style="width:14px;height:14px;background:#475569;border:1.5px solid #475569;border-radius:4px;display:inline-block"></span> Blocked</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1281,8 +1442,12 @@ async function sendRegisterPhoneOtp() {
     });
 }
 
-// Legacy stub — widget handles OTP entry UI
-async function verifyRegisterPhoneOtp() { /* handled by MSG91 widget */ }
+// Verify button clicked — re-invokes the MSG91 OTP widget which handles full
+// OTP entry and confirmation internally. MSG91's promise resolution is handled
+// inside sendRegisterPhoneOtp() above, which auto-hides this button on success.
+async function verifyRegisterPhoneOtp() {
+  sendRegisterPhoneOtp();
+}
 
 /* ─── Visual Route Builder & Category Form Toggle ─── */
 function onDashboardCategoryChange() {
@@ -1868,14 +2033,26 @@ function switchPane(name) {
   document.querySelectorAll('.sb-link').forEach(b => b.classList.remove('active'));
   const btn = [...document.querySelectorAll('.sb-link')].find(b => b.textContent.trim().toLowerCase().includes(name));
   if (btn) btn.classList.add('active');
-  const titles = { overview:'Dashboard', inventory:'Inventory', bookings:'Bookings', pricing:'Pricing', schedule:'Schedule', analytics:'Analytics', profile:'Profile' };
+  const titles = { overview:'Dashboard', inventory:'Inventory', bookings:'Bookings', pricing:'Pricing', schedule:'Schedule', analytics:'Analytics', 'hotel-rooms':'Hotel Rooms', 'cafe-tables':'Cafe Tables', cab:'Cab Management', profile:'Profile' };
   document.getElementById('pageTitle').innerHTML = 'Welcome, <span>' + (COLLAB?.name||'Partner') + '</span>';
-  document.getElementById('pageSub').textContent = titles[name] + ' — ' + (COLLAB?.businessName||'Business') + ' Management';
+  document.getElementById('pageSub').textContent = (titles[name] || name) + ' — ' + (COLLAB?.businessName||'Business') + ' Management';
   // Close mobile sidebar after navigation
   const sb = document.getElementById('cdSidebar');
   const sc = document.getElementById('cdScrim');
   if (sb && sb.classList.contains('open')) { sb.classList.remove('open'); if (sc) sc.classList.remove('show'); }
   window.scrollTo({top:0,behavior:'smooth'});
+  
+  // Load pane-specific data
+  if (name === 'overview') loadOverview();
+  if (name === 'inventory') loadInventory();
+  if (name === 'bookings') loadBookings();
+  if (name === 'pricing') loadPricing();
+  if (name === 'schedule') loadSchedule();
+  if (name === 'analytics') loadAnalytics();
+  if (name === 'hotel-rooms') loadHotelRoomsPane();
+  if (name === 'cafe-tables') loadCafeTablesPane();
+  if (name === 'cab') loadCabs();
+  if (name === 'profile') loadProfile();
 }
 
 /* ─── Mobile Sidebar Toggle ─── */
@@ -2747,14 +2924,14 @@ async function updatePrice(id) {
     endpoint = '/api/collaborator/bus/' + id;
     body = { pricePerKm: parseFloat(val) };
   } else if (primary === 'cab') {
-    endpoint = '/api/collaborator/cab/cab/' + id;
+    endpoint = '/api/collaborator/cab/' + id;
     body = { fare: parseFloat(val) };
   } else if (primary === 'hotel') {
-    endpoint = '/api/collaborator/hotel/hotel/' + id;
-    body = { price: parseFloat(val) };
+    endpoint = '/api/collaborator/hotel/' + id;
+    body = { pricePerNight: parseFloat(val) };
   } else if (primary === 'cafe') {
-    endpoint = '/api/collaborator/cafe/cafe/' + id;
-    body = { price: parseFloat(val) };
+    endpoint = '/api/collaborator/cafe/' + id;
+    body = { costPerSeat: parseFloat(val) };
   }
 
   if (!endpoint) return;
@@ -3174,6 +3351,251 @@ async function saveProfile() {
     if (d.success) { COLLAB = { ...COLLAB, ...data }; alert('✅ Profile updated'); }
     else alert(d.message || 'Update failed');
   } catch(e) { alert('Error saving profile'); }
+}
+
+/* ─── Hotel Room Pane ─── */
+async function loadHotelRoomsPane() {
+  try {
+    const r = await collaboratorFetch('/api/collaborator/hotel/hotels');
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const hotels = d.hotels || d.success?.hotels || [];
+    const sel = document.getElementById('hotelRoomSelector');
+    sel.innerHTML = '<option value="">— Select hotel —</option>' + hotels.map(h => '<option value="' + h.id + '">' + (h.name || h.hotelName || h.title || 'Hotel #'+h.id) + '</option>').join('');
+    document.getElementById('hotelRoomContent').innerHTML = '<p style="color:var(--text2)">Select a hotel above to manage rooms</p>';
+    document.getElementById('hotelRoomStatsSection').style.display = 'none';
+  } catch(e) { console.error(e); }
+}
+
+async function loadHotelRoomLayout() {
+  const sel = document.getElementById('hotelRoomSelector');
+  const id = sel.value;
+  if (!id) {
+    document.getElementById('hotelRoomContent').innerHTML = '<p style="color:var(--text2)">Select a hotel to manage rooms</p>';
+    document.getElementById('hotelRoomStatsSection').style.display = 'none';
+    return;
+  }
+  try {
+    const r = await collaboratorFetch('/api/collaborator/hotel/rooms/rooms/' + id);
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const rooms = d.rooms || d.success?.rooms || [];
+    const totalCap = rooms.reduce((s,r) => s + (r.capacity || 0), 0);
+    const booked = rooms.filter(r => r.status === 'booked').length;
+    const avail = rooms.length - booked;
+    document.getElementById('hotelRoomContent').innerHTML = rooms.length ? rooms.map(r =>
+      '<div style="background:var(--card2);border-radius:12px;padding:.8rem;border:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">' +
+      '<div><strong>Room ' + (r.roomNumber || r.name || '#'+r.id) + '</strong><br><span style="font-size:.78rem;color:var(--text2)">Capacity: ' + (r.capacity||0) + ' | Type: ' + (r.type||'standard') + '</span></div>' +
+      '<span style="padding:.25rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;background:' + (r.status==='booked'?'rgba(239,68,68,.15);color:#fca5a5':r.status==='blocked'?'rgba(100,100,100,.2);color:#aaa':'rgba(16,185,129,.15);color:#6ee7b7') + '">' + (r.status||'available') + '</span>' +
+      '</div>'
+    ).join('') : '<p style="color:var(--text2)">No rooms found for this hotel</p>';
+    document.getElementById('hotelRoomStatsSection').style.display = 'block';
+    document.getElementById('hotelRoomStats').innerHTML =
+      '<div class="stat"><span class="label">Total Rooms</span><span class="val">' + rooms.length + '</span></div>' +
+      '<div class="stat"><span class="label">Available</span><span class="val" style="color:#6ee7b7">' + avail + '</span></div>' +
+      '<div class="stat"><span class="label">Booked</span><span class="val" style="color:#fca5a5">' + booked + '</span></div>' +
+      '<div class="stat"><span class="label">Total Capacity</span><span class="val">' + totalCap + '</span></div>';
+  } catch(e) { console.error(e); document.getElementById('hotelRoomContent').innerHTML = '<p style="color:#fca5a5">Error loading rooms</p>'; }
+}
+
+async function syncHotelRoomCount() {
+  const sel = document.getElementById('hotelRoomSelector');
+  const id = sel.value;
+  if (!id) return;
+  try {
+    const r = await collaboratorFetch('/api/collaborator/hotel/rooms/sync-room-count', {
+      method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotelId: id })
+    });
+    const d = await r.json();
+    if (d.success) { loadHotelRoomLayout(); }
+  } catch(e) { console.error(e); }
+}
+
+/* ─── Cafe Table Pane ─── */
+async function loadCafeTablesPane() {
+  try {
+    const r = await collaboratorFetch('/api/collaborator/cafe/cafes');
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const cafes = d.cafes || d.success?.cafes || [];
+    const sel = document.getElementById('cafeTableSelector');
+    sel.innerHTML = '<option value="">— Select cafe —</option>' + cafes.map(c => '<option value="' + c.id + '">' + (c.name || c.cafeName || c.title || 'Cafe #'+c.id) + '</option>').join('');
+    document.getElementById('cafeTableContent').innerHTML = '<p style="color:var(--text2)">Select a cafe above to manage tables</p>';
+    document.getElementById('cafeTableStatsSection').style.display = 'none';
+  } catch(e) { console.error(e); }
+}
+
+async function loadCafeTableLayout() {
+  const sel = document.getElementById('cafeTableSelector');
+  const id = sel.value;
+  if (!id) {
+    document.getElementById('cafeTableContent').innerHTML = '<p style="color:var(--text2)">Select a cafe to manage tables</p>';
+    document.getElementById('cafeTableStatsSection').style.display = 'none';
+    return;
+  }
+  try {
+    const r = await collaboratorFetch('/api/collaborator/cafe/tables/tables/' + id);
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const tables = d.tables || d.success?.tables || [];
+    const totalCap = tables.reduce((s,t) => s + (t.capacity || 0), 0);
+    const booked = tables.filter(t => t.status === 'booked').length;
+    const avail = tables.length - booked;
+    document.getElementById('cafeTableContent').innerHTML = tables.length ? tables.map(t =>
+      '<div style="background:var(--card2);border-radius:12px;padding:.8rem;border:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">' +
+      '<div><strong>Table ' + (t.tableNumber || t.name || '#'+t.id) + '</strong><br><span style="font-size:.78rem;color:var(--text2)">Capacity: ' + (t.capacity||0) + ' | Seats: ' + (t.seats||t.capacity||0) + '</span></div>' +
+      '<span style="padding:.25rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;background:' + (t.status==='booked'?'rgba(239,68,68,.15);color:#fca5a5':t.status==='blocked'?'rgba(100,100,100,.2);color:#aaa':'rgba(16,185,129,.15);color:#6ee7b7') + '">' + (t.status||'available') + '</span>' +
+      '</div>'
+    ).join('') : '<p style="color:var(--text2)">No tables found for this cafe</p>';
+    document.getElementById('cafeTableStatsSection').style.display = 'block';
+    document.getElementById('cafeTableStats').innerHTML =
+      '<div class="stat"><span class="label">Total Tables</span><span class="val">' + tables.length + '</span></div>' +
+      '<div class="stat"><span class="label">Available</span><span class="val" style="color:#6ee7b7">' + avail + '</span></div>' +
+      '<div class="stat"><span class="label">Booked</span><span class="val" style="color:#fca5a5">' + booked + '</span></div>' +
+      '<div class="stat"><span class="label">Total Capacity</span><span class="val">' + totalCap + '</span></div>';
+  } catch(e) { console.error(e); document.getElementById('cafeTableContent').innerHTML = '<p style="color:#fca5a5">Error loading tables</p>'; }
+}
+
+async function syncCafeTableCount() {
+  const sel = document.getElementById('cafeTableSelector');
+  const id = sel.value;
+  if (!id) return;
+  try {
+    const r = await collaboratorFetch('/api/collaborator/cafe/tables/sync-table-count', {
+      method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cafeId: id })
+    });
+    const d = await r.json();
+    if (d.success) { loadCafeTableLayout(); }
+  } catch(e) { console.error(e); }
+}
+
+/* ─── Cab Pane ─── */
+async function loadCabs() {
+  try {
+    const sel = document.getElementById('cabLayoutSelector');
+    if (sel) { sel.innerHTML = '<option value="">— Select cab —</option>'; }
+    document.getElementById('cabLayoutSection').style.display = 'none';
+    const r = await collaboratorFetch('/api/collaborator/cab/cabs');
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    const cabs = d.cabs || d.success?.cabs || d.listings || [];
+    const list = document.getElementById('cabList');
+    if (!cabs.length) {
+      list.innerHTML = '<p style="color:var(--text2)">No cabs added yet. Click "+ Add Cab" to add one.</p>';
+      return;
+    }
+    list.innerHTML = cabs.map(c =>
+      '<div class="card-item" style="background:var(--card2);border-radius:12px;padding:1rem;border:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">' +
+      '<div><strong>' + (c.name || c.cabName || c.title || 'Cab #'+c.id) + '</strong><br><span style="font-size:.78rem;color:var(--text2)">' +
+      (c.vehicleNumber ? '🚙 ' + c.vehicleNumber : '') +
+      (c.totalSeats ? ' | Seats: ' + c.totalSeats : '') +
+      '</span></div>' +
+      '<div style="display:flex;gap:.5rem;align-items:center">' +
+      '<span style="padding:.25rem .6rem;border-radius:20px;font-size:.72rem;font-weight:600;background:' + (c.status==='active'||c.status==='approved'?'rgba(16,185,129,.15);color:#6ee7b7':'rgba(100,100,100,.2);color:#aaa') + '">' + (c.status||'inactive') + '</span>' +
+      '<button class="btn-sec btn-sm" onclick="selectCab(\'' + c.id + '\')">View Seats</button>' +
+      '</div></div>'
+    ).join('');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Select cab —</option>' + cabs.map(c => '<option value="' + c.id + '">' + (c.name || c.cabName || c.title || 'Cab #'+c.id) + '</option>').join('');
+    }
+  } catch(e) { console.error(e); }
+}
+
+function selectCab(cabId) {
+  const sel = document.getElementById('cabLayoutSelector');
+  if (sel) { sel.value = cabId; }
+  document.getElementById('cabLayoutSection').style.display = 'block';
+  loadCabSeatLayout();
+}
+
+async function loadCabSeatLayout() {
+  const sel = document.getElementById('cabLayoutSelector');
+  const id = sel?.value;
+  if (!id) {
+    document.getElementById('cabLayoutSection').style.display = 'none';
+    return;
+  }
+  document.getElementById('cabLayoutSection').style.display = 'block';
+  try {
+    const r = await collaboratorFetch('/api/collaborator/cab/cab/' + id);
+    if (r.status === 401) return logout();
+    const d = await r.json();
+    if (!d.success) { throw new Error(d.message); }
+    const cab = d.cab || d.data || {};
+    const seats = cab.seats || [];
+    const totalSeats = cab.totalSeats || seats.length || 4;
+    const maleBooked = seats.filter(s => s.gender === 'male' && s.status === 'booked').length;
+    const femaleBooked = seats.filter(s => s.gender === 'female' && s.status === 'booked').length;
+    const available = seats.filter(s => s.status === 'available' || !s.status).length;
+    const blocked = seats.filter(s => s.status === 'blocked').length;
+    document.getElementById('cabKpiContainer').style.display = 'flex';
+    document.getElementById('cabKpiContainer').innerHTML =
+      '<div class="kpi"><span class="label">Seats</span><span class="val">' + totalSeats + '</span></div>' +
+      '<div class="kpi"><span class="label">Available</span><span class="val" style="color:#6ee7b7">' + available + '</span></div>' +
+      '<div class="kpi"><span class="label">Booked (M)</span><span class="val" style="color:#93c5fd">' + maleBooked + '</span></div>' +
+      '<div class="kpi"><span class="label">Booked (F)</span><span class="val" style="color:#f9a8d4">' + femaleBooked + '</span></div>' +
+      '<div class="kpi"><span class="label">Blocked</span><span class="val" style="color:#aaa">' + blocked + '</span></div>';
+    const container = document.querySelector('#cabSeatMapContainer .seat-layout');
+    if (seats.length) {
+      container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;max-width:320px;margin:0 auto">' +
+        seats.map(s => {
+          const st = s.status || 'available';
+          const g = s.gender || '';
+          let bg = '#10b981';
+          let label = 'A' + (s.seatNumber || s.number || '');
+          if (st === 'booked' && g === 'male') { bg = '#3b82f6'; label = 'M' + (s.seatNumber||s.number||''); }
+          else if (st === 'booked' && g === 'female') { bg = '#ec4899'; label = 'F' + (s.seatNumber||s.number||''); }
+          else if (st === 'blocked') { bg = '#475569'; label = 'X' + (s.seatNumber||s.number||''); }
+          return '<div style="background:'+bg+';border-radius:10px;padding:1rem .5rem;text-align:center;color:#fff;font-weight:700;font-size:.85rem;transition:.2s">'+label+'</div>';
+        }).join('') +
+        '</div>';
+    } else {
+      const seatCount = totalSeats || 4;
+      container.innerHTML = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;max-width:320px;margin:0 auto">' +
+        Array.from({length:seatCount}, (_,i) => {
+          const seatNum = i + 1;
+          return '<div style="background:#10b981;border-radius:10px;padding:1rem .5rem;text-align:center;color:#fff;font-weight:700;font-size:.85rem">A'+seatNum+'</div>';
+        }).join('') +
+        '</div>';
+    }
+  } catch(e) { console.error(e); }
+}
+
+function showAddCabModal() {
+  const modal = document.getElementById('itemModal');
+  const body = document.getElementById('modalBody');
+  body.innerHTML =
+    '<div class="form-group"><label>Cab Name *</label><input type="text" id="addCabName" placeholder="e.g. Swift Dzire"></div>' +
+    '<div class="form-group"><label>Vehicle Number *</label><input type="text" id="addCabVehicle" placeholder="e.g. MH-01-AB-1234"></div>' +
+    '<div class="form-group"><label>Total Seats *</label><input type="number" id="addCabSeats" placeholder="e.g. 4" min="1" max="8"></div>' +
+    '<div class="form-group"><label>Driver Phone *</label><input type="tel" id="addCabPhone" placeholder="10-digit phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"></div>';
+  document.getElementById('modalTitle').textContent = '🚗 Add New Cab';
+  document.getElementById('modalSaveBtn').onclick = async () => {
+    const name = document.getElementById('addCabName').value.trim();
+    const vehicle = document.getElementById('addCabVehicle').value.trim();
+    const seats = parseInt(document.getElementById('addCabSeats').value);
+    const phone = document.getElementById('addCabPhone').value.trim();
+    if (!name || !vehicle || !seats || !phone) return alert('Please fill all fields');
+    const saveBtn = document.getElementById('modalSaveBtn');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
+    try {
+      const r = await fetch(API + '/api/collaborator/cab/create-cab', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
+        body:JSON.stringify({name,vehicleNumber:vehicle,totalSeats:seats,driverPhone:phone})
+      });
+      const d = await r.json();
+      if (d.success) { modal.style.display = 'none'; loadCabs(); }
+      else { alert(d.message || 'Failed to add cab'); }
+    } catch(e) { alert('Error adding cab'); }
+    saveBtn.disabled = false; saveBtn.textContent = '💾 Save Cab';
+  };
+  document.getElementById('modalSaveBtn').textContent = '💾 Save Cab';
+  modal.style.display = 'flex';
 }
 
 /* ─── Init ─── */

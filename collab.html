@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-337K8N4N04"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-337K8N4N04');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Yatri Point">
+    <meta name="description" content="Partner with Yatri Point — List your bus, cab, hotel or café and earn with every booking. Join Bihar's #1 travel platform.">
+    <meta name="keywords" content="collaborate, partner, bus operator, hotel, café, cab, Yatri Point, Bihar, Mithila">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://yatripoint.onrender.com/collab.html">
+    <meta name="theme-color" content="#d84e55">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <title>Partner with Us | Yatri Point</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&family=Poppins:wght@400;600;700;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+    </script>
+    <style>
+        /* ── Collab landing page specific styles ── */
+        .collab-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #a83240 100%);
+            color: #fff;
+            padding: 4rem 1.5rem 3rem;
+            text-align: center;
+        }
+        .collab-hero h2 {
+            font-size: clamp(1.6rem, 5vw, 2.4rem);
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+        }
+        .collab-hero p {
+            font-size: 1.05rem;
+            opacity: 0.9;
+            max-width: 520px;
+            margin: 0 auto 1.5rem;
+            line-height: 1.6;
+        }
+        .collab-hero .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+        .collab-hero .stat-item {
+            text-align: center;
+        }
+        .collab-hero .stat-item .num {
+            font-size: 1.8rem;
+            font-weight: 800;
+            display: block;
+        }
+        .collab-hero .stat-item .lbl {
+            font-size: 0.78rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── How it works ── */
+        .how-section {
+            padding: 2.5rem 1.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .how-section h3 {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+        .step {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.2rem;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .step:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        .step .step-num {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+            margin: 0 auto 0.75rem;
+        }
+        .step h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+            color: var(--text);
+        }
+        .step p {
+            font-size: 0.78rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+        /* ── Partner options ── */
+        .options-section {
+            padding: 0 1.5rem 2.5rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .options-section h3 {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+        .partner-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.2rem;
+        }
+        .partner-card {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            padding: 1.8rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .partner-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 12px 32px rgba(216,78,85,0.15);
+            transform: translateY(-3px);
+        }
+        .partner-card .icon {
+            font-size: 2.4rem;
+            margin-bottom: 0.25rem;
+        }
+        .partner-card h4 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+        .partner-card p {
+            font-size: 0.82rem;
+            color: var(--gray);
+            line-height: 1.5;
+            flex: 1;
+        }
+        .partner-card .badge {
+            display: inline-block;
+            background: rgba(216,78,85,0.1);
+            color: var(--primary);
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.7rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(216,78,85,0.2);
+        }
+        .partner-card .card-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            margin-top: 0.5rem;
+            transition: gap 0.2s;
+        }
+        .partner-card .card-link:hover { gap: 0.7rem; }
+
+        /* ── Benefits strip ── */
+        .benefits-strip {
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 1.8rem 1.5rem;
+        }
+        .benefits-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .benefit {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .benefit .ico { font-size: 1.2rem; }
+
+        /* ── CTA banner ── */
+        .cta-banner {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+        }
+        .cta-banner h3 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        .cta-banner p {
+            font-size: 0.9rem;
+            opacity: 0.75;
+            margin-bottom: 1.5rem;
+        }
+        .cta-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn-cta-primary {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 0.85rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 6px 20px rgba(216,78,85,0.4);
+        }
+        .btn-cta-primary:hover { opacity: 0.92; transform: translateY(-2px); }
+        .btn-cta-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            border: 1.5px solid rgba(255,255,255,0.3);
+            padding: 0.85rem 2rem;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+        .btn-cta-secondary:hover { background: rgba(255,255,255,0.18); }
+
+        @media (max-width: 480px) {
+            .collab-hero { padding: 3rem 1rem 2rem; }
+            .how-section, .options-section { padding-left: 1rem; padding-right: 1rem; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="recaptcha-container"></div>
+
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'">
+            <h1><img src="/yatri-logo.png" alt="Yatri Point Logo" class="brand-logo" style="height: 100px; width: auto; max-width: 350px; object-fit: contain; vertical-align: middle; background: #ffffff; padding: 4px 12px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.25); margin: 0;"></h1>
+        </div>
+        <div class="header-right">
+            <ul class="nav-links" id="navLinksDesktop">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#help">Help</a></li>
+                <li><a href="index.html#about">About</a></li>
+                <li><a href="collab.html" class="active">Collab</a></li>
+                <li><a href="collab-routes.html">Routes</a></li>
+                <li><a href="terms.html">T&C</a></li>
+            </ul>
+
+            <div class="auth-btns" id="authBtns">
+                <button class="btn-login" onclick="openModal('loginModal')">Login</button>
+                <button class="btn-signup" onclick="openModal('signupModal')">Sign Up</button>
+            </div>
+
+            <div id="userSection" class="user-menu" style="display:none" onclick="toggleDropdown()">
+                <div class="user-avatar" id="userAvatar"><span id="userInitial">U</span></div>
+                <span class="user-name" id="userNameDisplay">User</span>
+                <span class="dropdown-arrow">▼</span>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+                    <a href="#" onclick="openProfile();return false">👤 Profile</a>
+                    <a href="#" onclick="logout();return false">🚪 Logout</a>
+                </div>
+            </div>
+
+            <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    </header>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="index.html">🏠 Home</a>
+        <a href="index.html#cafes">☕ Café</a>
+        <a href="index.html#help">❓ Help</a>
+        <a href="index.html#about">ℹ️ About</a>
+        <a href="collab.html" class="active">🤝 Collab</a>
+        <a href="collab-routes.html">🛣️ Routes</a>
+        <a href="terms.html">📜 T&C</a>
+        <a href="#" onclick="openBookings();closeMobileMenu();return false">📅 My Bookings</a>
+        <div class="mobile-auth" id="mobileAuth">
+            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();">🔑 Login</button>
+            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();">📝 Sign Up</button>
+        </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="collab-hero">
+        <h2>🤝 Partner with Yatri Point</h2>
+        <p>List your bus route, cab, hotel, or café on Bihar's #1 travel platform and earn with every booking — payments go directly to your UPI.</p>
+        <div class="hero-stats">
+            <div class="stat-item">
+                <span class="num">500+</span>
+                <span class="lbl">Active Partners</span>
+            </div>
+            <div class="stat-item">
+                <span class="num">₹0</span>
+                <span class="lbl">Platform Fee</span>
+            </div>
+            <div class="stat-item">
+                <span class="num">24h</span>
+                <span class="lbl">Review Time</span>
+            </div>
+            <div class="stat-item">
+                <span class="num">100%</span>
+                <span class="lbl">Direct UPI Payout</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-section">
+        <h3>How Partnering Works</h3>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <h4>Apply</h4>
+                <p>Fill out a short application with your service details and UPI ID.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <h4>Review</h4>
+                <p>Our team reviews your listing within 24 hours and activates it.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <h4>Go Live</h4>
+                <p>Your service appears to thousands of travelers searching on Yatri Point.</p>
+            </div>
+            <div class="step">
+                <div class="step-num">4</div>
+                <h4>Earn</h4>
+                <p>Every booking payment goes directly to your UPI — instantly.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- BENEFITS -->
+    <div class="benefits-strip">
+        <div class="benefits-inner">
+            <div class="benefit"><span class="ico">💸</span> Zero commission — 100% to your UPI</div>
+            <div class="benefit"><span class="ico">📊</span> Partner dashboard with real-time analytics</div>
+            <div class="benefit"><span class="ico">🔒</span> Verified badge for approved partners</div>
+            <div class="benefit"><span class="ico">📱</span> Mobile-first booking management</div>
+            <div class="benefit"><span class="ico">🎟️</span> Auto e-tickets sent to every customer</div>
+        </div>
+    </div>
+
+    <!-- PARTNER OPTIONS -->
+    <section class="options-section" style="margin-top: 2.5rem;">
+        <h3>Choose Your Category</h3>
+        <div class="partner-cards">
+            <!-- Bus Route Card -->
+            <div class="partner-card">
+                <div class="icon">🚌</div>
+                <span class="badge">Most Popular</span>
+                <h4>Bus Route Operator</h4>
+                <p>Add your bus route with station-by-station stops, seat count, and per-km pricing. Passengers book seats directly on your bus.</p>
+                <a href="collab-routes.html" class="card-link">List a Bus Route →</a>
+            </div>
+
+            <!-- Cab Card -->
+            <div class="partner-card">
+                <div class="icon">🚕</div>
+                <h4>Cab / Taxi Operator</h4>
+                <p>Register your cab with number plate, city, and per-km rate. Get bookings for local and outstation trips.</p>
+                <a href="collab-routes.html#cab" class="card-link">Register a Cab →</a>
+            </div>
+
+            <!-- Hotel Card -->
+            <div class="partner-card">
+                <div class="icon">🏨</div>
+                <h4>Hotel Owner</h4>
+                <p>List your hotel with room types (General, AC, Balcony), pricing, and photos. Start receiving verified hotel bookings.</p>
+                <a href="collaborator-dashboard.html" class="card-link">Apply as Hotel Partner →</a>
+            </div>
+
+            <!-- Café Card -->
+            <div class="partner-card">
+                <div class="icon">☕</div>
+                <h4>Café / Restaurant</h4>
+                <p>Add your café to the Yatri Point directory. Travelers in your area will find and book seats at your establishment.</p>
+                <a href="collab-routes.html#cafe" class="card-link">List Your Café →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="cta-banner">
+        <h3>Ready to grow your business?</h3>
+        <p>Apply today and start receiving bookings within 24 hours of approval.</p>
+        <div class="cta-btns">
+            <a href="collaborator-dashboard.html" class="btn-cta-primary">🚀 Apply as a Partner</a>
+            <a href="collab-routes.html" class="btn-cta-secondary">🛣️ List a Route / Service</a>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h4>Yatri Point</h4>
+                <p>Travel & Stay</p>
+                <p>Your trusted travel partner across Mithila Region.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Quick Links</h4>
+                <a href="index.html">Home</a>
+                <a href="index.html#about">About Us</a>
+                <a href="index.html#help">Help & Support</a>
+                <a href="terms.html">Terms & Conditions</a>
+            </div>
+            <div class="footer-col">
+                <h4>For Partners</h4>
+                <a href="collab.html">Partner with Us</a>
+                <a href="collab-routes.html">List a Route</a>
+                <a href="collaborator-dashboard.html">Partner Portal</a>
+            </div>
+            <div class="footer-col">
+                <h4>Contact</h4>
+                <p>📞 +91-72502 76840</p>
+                <p>📍 Madhubani, Bihar</p>
+            </div>
+        </div>
+        <div class="footer-bottom">© 2026 Yatri Point (Yatri Point). All rights reserved.</div>
+    </footer>
+
+    <script src="msg91-otp.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>

@@ -2308,9 +2308,23 @@ function sendPhoneOTP() {
     );
 }
 
-// Legacy stubs — widget handles all OTP UI internally
-function confirmOTP() { /* handled by MSG91 widget */ }
-function resendOTP() { /* handled by MSG91 widget */ }
+// OTP confirmation — re-invokes the MSG91 widget for the phone in profilePhoneInput.
+// The MSG91 widget manages its own OTP entry UI; calling verify() re-opens it.
+function confirmOTP() {
+    var phone = (document.getElementById('profilePhoneInput') || {}).value;
+    phone = (phone || '').replace(/\D/g, '');
+    if (phone.length === 10) {
+        sendPhoneOTP();
+    } else {
+        notify('Please enter your phone number first, then click Send OTP.', 'warning');
+    }
+}
+
+// Resend OTP — closes the stale modal (if open) and re-triggers MSG91 widget
+function resendOTP() {
+    closeModal('otpModal');
+    confirmOTP();
+}
 
 // ========== LIVE LOCATION ==========
 function toggleLiveLocation(cb) {
