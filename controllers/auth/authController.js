@@ -62,6 +62,11 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { generateOTPCode, saveEmailOTP, checkOTPRequestRateLimit, verifyEmailOTP as verifyEmailOTPService } from '../../utils/otp/otpHelper.js';
 import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/email/emailService.js';
 import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
+import {
+  sendOTP,
+  verifyOTP as verifyMsg91OTP,
+  verifyMsg91Token as verifyMsg91WidgetToken
+} from '../../services/msg91/msg91Service.js';
 import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
 import { memoryDb } from '../../utils/firestoreFallback.js';
 import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, isSupabaseAvailable } from '../../utils/db.js';
@@ -486,4 +491,48 @@ export async function refreshAccessToken(req, res) {
     return res.status(500).json({ success: false, message: 'Refresh process failed' });
   }
 }
+
+export async function markPhoneVerified(req, res) {
+  try {
+    const { phone, token } = req.body || {};
+    if (!phone || !token) {
+      return res.status(400).json({ success: false, message: 'Phone and token are required' });
+    }
+
+    const updates = { phone, phoneVerified: true, phone_verified: true };
+    await dbUpdate('users', req.user.userId, updates);
+    const userData = await dbGet('users', req.user.userId);
+    const { password: _, ...safeUser } = userData;
+
+    return res.json({ success: true, user: safeUser });
+  } catch (err) {
+    console.error('[MARK PHONE VERIFIED ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Failed to verify phone' });
+  }
+}
+
+export async function verifyMsg91Token(req, res) {
+  try {
+    const { phone, token } = req.body || {};
+    if (!phone || !token) {
+      return res.status(400).json({ success: false, message: 'Phone and token are required' });
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const normalizedPhone = `+91${cleanPhone}`;
+
+    const result = await verifyMsg91OTP(normalizedPhone, token);
+
+    if (result && result.status === 'success') {
+      return res.json({ success: true, message: 'Phone verified successfully' });
+    }
+
+    return res.status(400).json({ success: false, message: 'Phone verification failed' });
+  } catch (err) {
+    console.error('[VERIFY MSG91 TOKEN ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Verification failed' });
+  }
+}
+
+export const verifyMsg91AccessToken = verifyMsg91Token;
 

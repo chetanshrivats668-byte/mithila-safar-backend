@@ -296,6 +296,71 @@ function requireAuth(callback) {
     if (callback) callback();
     return true;
 }
+
+let pendingBookingAction = null;
+
+function verifyPhoneForBooking(callback) {
+    if (!requireAuth()) return false;
+    if (currentUser.phoneVerified) {
+        if (callback) callback();
+        return true;
+    }
+    pendingBookingAction = callback;
+    openPhoneVerificationModal();
+    return false;
+}
+
+function openPhoneVerificationModal() {
+    document.getElementById('verificationPhoneInput').value = currentUser.phone || '';
+    openModal('phoneVerificationModal');
+}
+
+async function sendPhoneVerificationOTP(e) {
+    e.preventDefault();
+    const phone = document.getElementById('verificationPhoneInput').value.trim();
+    if (!phone || phone.length < 10) return notify('Please enter a valid phone number', 'error');
+    
+    try {
+        setButtonLoading(document.getElementById('btnSendVerificationOTP'), true, 'Sending...');
+        // trigger the MSG91 widget
+        const token = await window.msg91OTP.verify(phone);
+        
+        // Once verified by widget, tell backend
+        const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({ phone, token })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            notify('Phone number verified successfully!', 'success');
+            // update local storage
+            currentUser.phone = phone;
+            currentUser.phoneVerified = true;
+            saveSession(authToken, currentUser, refreshToken);
+            closeModal('phoneVerificationModal');
+            
+            if (typeof loadProfile === 'function') loadProfile();
+            
+            // Resume pending action
+            if (pendingBookingAction) {
+                const action = pendingBookingAction;
+                pendingBookingAction = null;
+                action();
+            }
+        } else {
+            notify(data.message || 'Verification failed on server', 'error');
+        }
+    } catch (err) {
+        notify(err.message || 'Phone verification failed', 'error');
+    } finally {
+        setButtonLoading(document.getElementById('btnSendVerificationOTP'), false, 'Send OTP');
+    }
+}
 function getStoredCollaboratorSession() {
     return {
         roles: JSON.parse(localStorage.getItem('collaboratorRoles') || '[]'),
@@ -1510,6 +1575,7 @@ function toggleCabinSeat(el) {
 }
 
 function confirmSeatSelection() {
+    if (!verifyPhoneForBooking(() => confirmSeatSelection())) return;
     if (selectedSeats.length === 0) return notify('Please select at least one seat', 'error');
     if (selectedSeats.length > (currentBooking.passengers || 1)) return notify('Too many seats selected', 'error');
 
@@ -1547,6 +1613,7 @@ function openPassengerForm() {
 
 function confirmPassengers(e) {
     e.preventDefault();
+    if (!verifyPhoneForBooking(() => confirmPassengers(e))) return;
     var names = document.querySelectorAll('.pName');
     var ages = document.querySelectorAll('.pAge');
     var passengers = [];
@@ -1643,6 +1710,7 @@ function openHotelRoom(hotelId) {
 }
 
 function confirmRoom(type, price) {
+    if (!verifyPhoneForBooking(() => confirmRoom(type, price))) return;
     if (!price) return notify('Invalid room type', 'error');
     closeModal('roomModal');
     currentBooking.roomType = type;
@@ -1826,6 +1894,7 @@ function toggleCafeSeat(el) {
 }
 
 function confirmCafeSeats() {
+    if (!verifyPhoneForBooking(() => confirmCafeSeats())) return;
     if (selectedCafeSeats.length === 0) return notify('Please select at least one seat', 'error');
     var amount = selectedCafeSeats.length * (currentBooking.selectedCafe?.costPerSeat || 0);
     currentBooking.seats = selectedCafeSeats;
@@ -1835,96 +1904,8 @@ function confirmCafeSeats() {
 }
 
 // ========== PAYMENT ==========
-let pendingBookingAmount = null;
-
-function openPhoneVerificationPopup(amount) {
-    pendingBookingAmount = amount;
-    var phoneInput = document.getElementById('bookingPhoneInput');
-    if (phoneInput && currentUser) {
-        // Pre-fill user's phone, stripping +91 prefix
-        var userPhone = (currentUser.phone || '').replace(/\D/g, '');
-        if (userPhone.startsWith('91') && userPhone.length > 10) {
-            userPhone = userPhone.substring(2);
-        }
-        phoneInput.value = userPhone;
-    }
-
-    // Clear error
-    var errorEl = document.getElementById('bookingPhoneError');
-    if (errorEl) {
-        errorEl.style.display = 'none';
-        errorEl.textContent = '';
-    }
-
-    var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
-    if (verifyBtn) {
-        verifyBtn.disabled = false;
-        verifyBtn.textContent = 'Verify via OTP';
-        verifyBtn.style.background = '';
-    }
-
-    openModal('phoneVerificationModal');
-}
-
-async function verifyPhoneForBooking() {
-    var phoneInput = document.getElementById('bookingPhoneInput');
-    if (!phoneInput) return;
-
-    var phone = phoneInput.value.replace(/\D/g, '');
-    if (phone.length !== 10) {
-        notify('Please enter a valid 10-digit phone number', 'error');
-        return;
-    }
-
-    var verifyBtn = document.getElementById('btnVerifyPhoneBooking');
-    var errorEl = document.getElementById('bookingPhoneError');
-
-    if (verifyBtn) {
-        verifyBtn.disabled = true;
-        verifyBtn.textContent = 'Opening OTP Widget...';
-    }
-    if (errorEl) errorEl.style.display = 'none';
-
-    verifyPhoneWithMsg91(
-        phone,
-        function () {
-            if (currentUser) {
-                currentUser.phone = '+91' + phone;
-                currentUser.phoneVerified = true;
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            }
-            notify('Phone verified successfully! ✅', 'success');
-            closeModal('phoneVerificationModal');
-
-            loadProfile();
-
-            if (pendingBookingAmount !== null) {
-                openPayment(pendingBookingAmount);
-            }
-        },
-        function (err) {
-            var errMsg = typeof err === 'string' ? err : 'OTP verification failed. Please try again.';
-            notify(errMsg, 'error');
-            if (errorEl) {
-                errorEl.textContent = errMsg;
-                errorEl.style.display = 'block';
-            }
-            if (verifyBtn) {
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = 'Verify via OTP';
-            }
-        }
-    );
-}
-
 function openPayment(amount) {
     if (!requireAuth()) return;
-
-    // Check if phone number is verified
-    if (!currentUser || !currentUser.phoneVerified) {
-        openPhoneVerificationPopup(amount);
-        return;
-    }
 
     // Save phone to currentBooking just in case
     currentBooking.userPhone = currentUser.phone || '';

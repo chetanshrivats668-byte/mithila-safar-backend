@@ -416,6 +416,7 @@
                             <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Mobile Number</div>
                             <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not available</div>
                         </div>
+                        <button id="btnVerifyPhoneProfile" class="btn-primary" style="display:none; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="openPhoneVerificationModal()">Verify</button>
                     </div>
                 </div>
             </div>
@@ -588,6 +589,20 @@
                     href="#" id="resendEmailOtpLink" onclick="resendEmailOTP();return false;" style="color:var(--primary);">Resend Code</a></p>
             <p id="emailOtpError"
                 style="color:var(--danger);text-align:center;font-size:.85rem;margin-top:.5rem;display:none;"></p>
+        </div>
+    </div>
+
+    <!-- ===== PHONE VERIFICATION MODAL ===== -->
+    <div class="modal" id="phoneVerificationModal" onclick="closeOnOverlay(event,'phoneVerificationModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('phoneVerificationModal')">×</button>
+            <h2>📱 Verify Phone Number</h2>
+            <p class="subtitle">Please verify your phone number to continue</p>
+            <form class="modal-form" onsubmit="sendPhoneVerificationOTP(event)">
+                <input type="tel" id="verificationPhoneInput" placeholder="Phone Number (+91)" required>
+                <div id="msg91-widget-container-verify" style="margin-top: 10px;"></div>
+                <button type="submit" class="btn-primary" id="btnSendVerificationOTP" style="display:none;">Send OTP</button>
+            </form>
         </div>
     </div>
 

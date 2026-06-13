@@ -17,5 +17,6 @@ router.post('/refresh', authController.refreshAccessToken);
 // Profile Management Endpoints
 router.get('/me', requireAuth, authController.getCurrentUser);
 router.put('/profile', requireAuth, authController.updateUserProfile);
+router.post('/mark-phone-verified', requireAuth, authController.markPhoneVerified);
 
 export default router;

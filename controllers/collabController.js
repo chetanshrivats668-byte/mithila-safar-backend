@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
-import { verifyMsg91AccessToken } from './auth/authController.js';
+import { verifyMsg91Token } from './auth/authController.js';
 import redisClient from '../utils/redisClient.js';
 
 function isCollaboratorApproved(collab) {
@@ -217,13 +217,30 @@ export async function loginWithPhone(req, res) {
       return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
     }
 
-    // Verify token with MSG91
-    const verification = await verifyMsg91AccessToken(token, phone);
-    if (!verification || !verification.success) {
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const normalizedPhone = `+91${cleanPhone}`;
+
+    const verificationReq = {
+      body: { phone: normalizedPhone, token }
+    };
+
+    let verificationPassed = false;
+    const verificationRes = {
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(payload) {
+        verificationPassed = Boolean(payload?.success);
+        return payload;
+      }
+    };
+
+    await verifyMsg91Token(verificationReq, verificationRes);
+
+    if (!verificationPassed) {
       return res.status(400).json({ success: false, message: 'Phone verification failed' });
     }
-
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, cleanPhone);
     if (!collab) {

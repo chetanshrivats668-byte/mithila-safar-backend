@@ -14,6 +14,9 @@ function normalize(c) {
   if (c.approvedat && !c.approvedAt) c.approvedAt = c.approvedat;
   if (c.approvedby && !c.approvedBy) c.approvedBy = c.approvedby;
   if (c.partnercollabrejectedat && !c.partnerCollabRejectedAt) c.partnerCollabRejectedAt = c.partnercollabrejectedat;
+  if (c.verificationrequestedat && !c.verificationRequestedAt) c.verificationRequestedAt = c.verificationrequestedat;
+  if (c.rejectionreason && !c.rejectionReason) c.rejectionReason = c.rejectionreason;
+
   if (c.partnercollabreapplyafter && !c.partnerCollabReapplyAfter) c.partnerCollabReapplyAfter = c.partnercollabreapplyafter;
   if (c.businessname && !c.businessName) c.businessName = c.businessname;
   if (c.businesstype && !c.businessType) c.businessType = c.businesstype;
@@ -50,6 +53,8 @@ function normalize(c) {
   delete c.totalbookings; delete c.totalearnings;
   delete c.verificationstatus; delete c.googleemail;
   delete c.partnercollabstatus; delete c.submittedfrom; delete c.userid;
+  delete c.verificationrequestedat; delete c.rejectionreason;
+
   delete c.approvedat; delete c.approvedby;
   delete c.partnercollabrejectedat; delete c.partnercollabreapplyafter;
   delete c.routecities; delete c.operatingcity;
@@ -70,11 +75,19 @@ function normalizePhone(phone) {
 }
 
 const VALID_COLLABORATOR_COLUMNS = [
-  'id', 'name', 'email', 'phone', 'phoneVerified', 'password',
+  'id', 'userId', 'name', 'email', 'googleEmail', 'phone', 'phoneVerified', 'password',
   'businessName', 'businessType', 'businessDescription', 'serviceCategories',
-  'address', 'city', 'state', 'aadhaarUrl', 'panUrl', 'bankDetails', 'documents',
-  'verificationStatus', 'verifiedAt', 'verifiedBy', 'status', 'rating',
-  'totalBookings', 'totalEarnings', 'createdAt', 'updatedAt'
+  'address', 'city', 'state', 'routeCities', 'operatingCity', 'landmark', 'pinCode',
+  'aadhaarUrl', 'panUrl', 'aadhaarId', 'yearsOfExperience', 'upiId',
+  'bankDetails', 'documents',
+  'verificationStatus', 'verificationRequestedAt', 'rejectionReason',
+  'partnerCollabStatus', 'submittedFrom', 'approvedAt', 'approvedBy',
+  'partnerCollabRejectedAt', 'partnerCollabReapplyAfter',
+  'verifiedAt', 'verifiedBy',
+  'status', 'rating', 'totalBookings', 'totalEarnings',
+  'suspendedAt', 'suspendedBy', 'unsuspendedAt', 'unsuspendedBy',
+  'totalRooms', 'capacity', 'totalSeats', 'servicePhone', 'driverPhone',
+  'createdAt', 'updatedAt'
 ];
 
 function filterSupabaseColumns(data) {
@@ -161,6 +174,8 @@ export async function createCollaborator(db, data) {
     bankDetails: data.bankDetails || {},
     documents: data.documents || {},
     verification_status: data.verificationStatus || data.verification_status || 'pending',
+    verificationRequestedAt: data.verificationRequestedAt || null,
+    rejectionReason: data.rejectionReason || null,
     partnerCollabStatus: data.partnerCollabStatus || 'pending',
     submittedFrom: data.submittedFrom || data.userId || null,
     approvedAt: data.approvedAt || null,
@@ -180,7 +195,9 @@ export async function createCollaborator(db, data) {
   if (isSupabaseAvailable()) {
     const record = {
       ...collabData,
-      verificationStatus: data.verificationStatus || 'pending',
+      verificationStatus: data.verificationStatus || data.verification_status || 'pending',
+      verificationRequestedAt: data.verificationRequestedAt || null,
+      rejectionReason: data.rejectionReason || null,
       partnerCollabStatus: data.partnerCollabStatus || 'pending',
       submittedFrom: data.submittedFrom || data.userId || null,
       approvedAt: data.approvedAt || null,
@@ -199,6 +216,9 @@ export async function createCollaborator(db, data) {
 
 export async function updateCollaborator(db, collabId, updates) {
   updates.updatedAt = new Date().toISOString();
+  if (updates.email !== undefined) updates.email = normalizeEmail(updates.email);
+  if (updates.googleEmail !== undefined) updates.googleEmail = normalizeEmail(updates.googleEmail || updates.email);
+  if (updates.phone !== undefined) updates.phone = normalizePhone(updates.phone);
   const existing = memoryDb.collabs.get(collabId);
   if (existing) {
     Object.assign(existing, updates);
