@@ -99,8 +99,20 @@ function closeModal(id) {
 }
 
 function closeOnOverlay(e, id) {
-    // Disabled: clicking outside the modal no longer closes it
-    // Users must use the × close button instead
+    if (e.target !== e.currentTarget) return; // Only close if clicking the background itself
+    
+    // Minor modals that are safe to close on outside click
+    const minorModals = [
+        'busDetailsModal',
+        'bookingDetailModal',
+        'loginModal',
+        'signupModal',
+        'ticketModal'
+    ];
+    
+    if (minorModals.includes(id)) {
+        closeModal(id);
+    }
 }
 
 function switchModals(closeId, openId) {
