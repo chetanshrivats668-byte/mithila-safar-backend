@@ -197,6 +197,11 @@ app.use('/api/collaborator/cafe/tables', cafeTableRoutes);
 app.use('/api/collaborator/dashboard', dashboardRoutes);
 app.use('/api/collaborator/verification', verificationRoutes);
 
+// ========== HEALTH CHECK (for keep-awake/pingers) ==========
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // ========== STATIC CONFIG ==========
 app.get('/api/config', (req, res) => {
   res.json({
