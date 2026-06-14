@@ -1,10 +1,14 @@
 import { sanitizeInput } from '../middleware/validator.js';
 import * as appService from '../services/applicationService.js';
 import * as collabService from '../services/collabService.js';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 12);
 }
 
 export async function submitApplication(req, res) {
@@ -36,7 +40,7 @@ export async function submitApplication(req, res) {
       if (existingByGoogleEmail.status === 'approved') return res.status(409).json({ success: false, message: 'Your application was already approved. Please login with your credentials.' });
     }
 
-    const hashedPassword = crypto.createHash('sha256').update(data.password).digest('hex');
+    const hashedPassword = await hashPassword(data.password);
     const application = await appService.createApplication(req.app.locals.db, {
       name: data.name,
       email: normalizedEmail,

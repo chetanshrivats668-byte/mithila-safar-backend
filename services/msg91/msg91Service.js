@@ -1,8 +1,15 @@
-const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY || '504876AD0r3lYK6a292cd5P1';
+const MSG91_AUTH_KEY = process.env.MSG91_AUTH_KEY;
 const MSG91_TEMPLATE_ID = process.env.MSG91_TEMPLATE_ID || '65f5c8f0d6fc050f3c5e3f3b';
 const MSG91_SENDER_ID = process.env.MSG91_SENDER_ID || 'YTRIPT';
 
+function ensureMsg91Configured() {
+  if (!MSG91_AUTH_KEY) {
+    throw new Error('MSG91_AUTH_KEY is required');
+  }
+}
+
 export async function sendOTP(phone, otpCode) {
+  ensureMsg91Configured();
   const url = 'https://control.msg91.com/api/v5/otp/send';
   const payload = {
     template_id: MSG91_TEMPLATE_ID,
@@ -29,6 +36,7 @@ export async function sendOTP(phone, otpCode) {
 }
 
 export async function verifyOTP(phone, otpCode) {
+  ensureMsg91Configured();
   const url = 'https://control.msg91.com/api/v5/otp/verify';
   const payload = {
     authkey: MSG91_AUTH_KEY,

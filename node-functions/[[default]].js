@@ -7,10 +7,15 @@ const app = express();
 app.use(express.json());
 
 // ========== SECURITY CONFIG ==========
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'msadmin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'MithilaSafar@2026';
-const JWT_SECRET = process.env.JWT_SECRET || 'ms-booking-secret-change-this';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const JWT_SECRET = process.env.JWT_SECRET;
 const TOKEN_EXPIRY = '8h';
+
+if (!ADMIN_USERNAME || !ADMIN_PASSWORD || !JWT_SECRET) {
+    throw new Error('Missing required auth environment variables for node-functions default entrypoint');
+}
+
 const ADMIN_PASS_HASH = crypto.createHash('sha256').update(ADMIN_PASSWORD).digest('hex');
 
 // Rate limiting

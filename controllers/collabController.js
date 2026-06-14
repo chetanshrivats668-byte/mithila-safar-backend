@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { generateToken } from '../middleware/auth.js';
 import { sanitizeInput, validateCollaboratorRegistration } from '../middleware/validator.js';
 import * as collabService from '../services/collabService.js';
@@ -78,6 +79,32 @@ function buildCollaboratorSessionResponse(collab, token) {
   };
 }
 
+function isLegacySha256Hash(value) {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 12);
+}
+
+async function verifyPassword(password, storedHash) {
+  if (!storedHash) {
+    return { valid: false, upgradedHash: null };
+  }
+
+  if (storedHash.startsWith('$2')) {
+    const valid = await bcrypt.compare(password, storedHash);
+    return { valid, upgradedHash: null };
+  }
+
+  const legacyHash = crypto.createHash('sha256').update(password).digest('hex');
+  if (isLegacySha256Hash(storedHash) && storedHash === legacyHash) {
+    return { valid: true, upgradedHash: await hashPassword(password) };
+  }
+
+  return { valid: false, upgradedHash: null };
+}
+
 export async function registerCollaborator(req, res) {
   try {
     const data = sanitizeInput(req.body);
@@ -104,7 +131,7 @@ export async function registerCollaborator(req, res) {
       return res.status(409).json({ success: false, message });
     }
 
-    const hashedPassword = crypto.createHash('sha256').update(data.password).digest('hex');
+    const hashedPassword = await hashPassword(data.password);
     const collab = await collabService.createCollaborator(req.app.locals.db, {
       ...data,
       password: hashedPassword
@@ -153,12 +180,23 @@ export async function loginCollaborator(req, res) {
       });
     }
 
-    const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
-    if (collab.password !== hashedPassword) {
+    const passwordCheck = await verifyPassword(password, collab.password);
+    if (!passwordCheck.valid) {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
       });
+    }
+
+    if (passwordCheck.upgradedHash) {
+      try {
+        await collabService.updateCollaborator(req.app.locals.db, collab.id, {
+          password: passwordCheck.upgradedHash
+        });
+        collab.password = passwordCheck.upgradedHash;
+      } catch (upgradeErr) {
+        console.warn('Collaborator password hash upgrade failed:', upgradeErr);
+      }
     }
 
     const token = generateToken(buildCollaboratorSessionPayload(collab));
@@ -191,8 +229,23 @@ export async function loginWithOTP(req, res) {
       return res.status(400).json({ success: false, message: 'OTP expired. Request new OTP.' });
     }
 
+    const attemptCount = Number(stored.attempts || 0);
+    if (attemptCount >= 5) {
+      await redisClient.del(key);
+      return res.status(429).json({ success: false, message: 'Too many OTP attempts. Request a new OTP.' });
+    }
+
     if (stored.otp !== otp) {
-      return res.status(401).json({ success: false, message: 'Invalid OTP' });
+      const nextAttempts = attemptCount + 1;
+      await redisClient.set(key, JSON.stringify({
+        ...stored,
+        attempts: nextAttempts
+      }));
+      if (nextAttempts >= 5) {
+        await redisClient.del(key);
+        return res.status(429).json({ success: false, message: 'Too many OTP attempts. Request a new OTP.' });
+      }
+      return res.status(401).json({ success: false, message: `Invalid OTP. ${5 - nextAttempts} attempt(s) remaining.` });
     }
 
     await redisClient.del(key);
