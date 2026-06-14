@@ -921,9 +921,9 @@ tr:hover td{background:var(--card2)}
         <button class="sb-link" onclick="switchPane('pricing')"><span class="ico">💰</span>Pricing</button>
         <button class="sb-link" onclick="switchPane('schedule')"><span class="ico">📅</span>Schedule</button>
         <button class="sb-link" onclick="switchPane('analytics')"><span class="ico">📈</span>Analytics</button>
-        <button class="sb-link" onclick="switchPane('hotel-rooms')"><span class="ico">🏨</span>Hotel Rooms</button>
-        <button class="sb-link" onclick="switchPane('cafe-tables')"><span class="ico">☕</span>Cafe Tables</button>
-        <button class="sb-link" onclick="switchPane('cab')"><span class="ico">🚗</span>Cab Management</button>
+        <button class="sb-link" id="sbLinkHotelRooms" onclick="switchPane('hotel-rooms')"><span class="ico">🏨</span>Hotel Rooms</button>
+        <button class="sb-link" id="sbLinkCafeTables" onclick="switchPane('cafe-tables')"><span class="ico">☕</span>Cafe Tables</button>
+        <button class="sb-link" id="sbLinkCab" onclick="switchPane('cab')"><span class="ico">🚗</span>Cab Management</button>
         <button class="sb-link" onclick="switchPane('profile')"><span class="ico">👤</span>Profile</button>
     </nav>
     <div class="sb-prof">
@@ -2071,9 +2071,9 @@ function getInventoryConfig() {
   };
   return configs[primary] || configs.bus;
 }
-
 function updateBusinessUI() {
   const cfg = getInventoryConfig();
+  const primary = cfg.primary;
 
   document.getElementById('invLabel').textContent = cfg.label || 'Items';
   document.getElementById('invIcon').textContent = cfg.icon || '📦';
@@ -2084,8 +2084,16 @@ function updateBusinessUI() {
   document.getElementById('ovInvIcon').textContent = cfg.icon || '📦';
   document.getElementById('ovInvLabel').textContent = 'Active ' + (cfg.label || 'Items');
   document.getElementById('sbBizType').textContent = (cfg.label || 'Business') + ' Dashboard';
-}
 
+  // Role-based sidebar items visibility
+  const hotelRoomsLink = document.getElementById('sbLinkHotelRooms');
+  const cafeTablesLink = document.getElementById('sbLinkCafeTables');
+  const cabLink = document.getElementById('sbLinkCab');
+
+  if (hotelRoomsLink) hotelRoomsLink.style.display = primary === 'hotel' ? 'block' : 'none';
+  if (cafeTablesLink) cafeTablesLink.style.display = primary === 'cafe' ? 'block' : 'none';
+  if (cabLink) cabLink.style.display = primary === 'cab' ? 'block' : 'none';
+}
 /* ─── Pane Switching ─── */
 function openAddInventoryFlow() {
   switchPane('inventory');
