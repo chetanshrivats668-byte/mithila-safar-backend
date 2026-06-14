@@ -414,9 +414,30 @@
                         <div style="font-size:1.4rem;">📱</div>
                         <div style="flex:1;">
                             <div style="font-size:.75rem;color:var(--gray);margin-bottom:.15rem;">Mobile Number</div>
-                            <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not available</div>
+                            <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+                                <div id="profilePhoneDisplay" style="font-size:.95rem;font-weight:600;">Not available</div>
+                                <span id="phoneVerifiedBadge"
+                                    style="display:none;background:#d4edda;color:#155724;font-size:.72rem;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;">Verified</span>
+                                <span id="phoneUnverifiedBadge"
+                                    style="display:none;background:#fff3cd;color:#856404;font-size:.72rem;padding:.2rem .55rem;border-radius:99px;font-weight:600;white-space:nowrap;">Unverified</span>
+                            </div>
                         </div>
-                        <button id="btnVerifyPhoneProfile" class="btn-primary" style="display:none; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="openPhoneVerificationModal()">Verify</button>
+                        <div style="display:flex;gap:.4rem;">
+                            <button id="btnVerifyPhoneProfile" class="btn-primary" style="display:none; padding: 0.4rem 0.8rem; font-size: 0.8rem; min-height:unset; height:34px;" onclick="openPhoneVerificationModal()">Verify</button>
+                            <button id="btnEditPhoneProfile" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; background: #252535; border: 1.5px solid var(--border); color: var(--text); border-radius: 8px; font-weight: 600; min-height:unset; height:34px;" onclick="togglePhoneEditForm(true)">Change</button>
+                        </div>
+                    </div>
+                    <!-- Inline Change Form -->
+                    <div id="phoneEditFormContainer" style="display:none; margin-top:.8rem; padding:1rem; background:rgba(255,255,255,0.02); border: 1px dashed var(--border); border-radius:12px;">
+                        <label style="font-size:.75rem; color:var(--gray); font-weight:600; display:block; margin-bottom:.5rem;">NEW INDIAN MOBILE NUMBER</label>
+                        <input id="profilePhoneInput" type="tel" maxlength="10"
+                            style="width:100%; padding:.65rem .8rem; border:1.5px solid var(--border); border-radius:8px; font-size:.95rem; background:var(--bg); color:var(--text); min-height:unset; height:42px; margin-bottom:.6rem;"
+                            placeholder="10-digit number"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                        <div style="display:flex; gap:.5rem; justify-content:flex-end;">
+                            <button class="btn-secondary" style="flex:1; padding:0 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:38px;" onclick="togglePhoneEditForm(false)">Cancel</button>
+                            <button class="btn-primary" style="flex:1; padding:0 1.2rem; min-height:unset; height:38px;" onclick="saveProfilePhone()">Verify & Save</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -613,8 +634,8 @@
             <h2>🙏 Welcome Back</h2>
             <p class="subtitle">Login to Yatri Point</p>
             
-            <div class="login-tabs" style="display:flex;margin-bottom:1rem;border-bottom:2px solid var(--border);">
-                <button type="button" class="login-tab active" data-tab="email" style="flex:1;padding:.7rem;background:none;border:none;color:var(--gold);font-weight:700;border-bottom:2px solid var(--gold);cursor:default;font-family:inherit;font-size:.9rem;text-align:center;">📧 Email/Password</button>
+            <div class="login-tabs" style="display:flex; margin-bottom:1.5rem; background:rgba(255,255,255,0.02); border-radius:12px; padding:6px; border:1px solid var(--border);">
+                <button type="button" class="login-tab active" data-tab="email" style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:var(--primary); color:#ffffff; font-weight:700; cursor:default; font-family:inherit; font-size:.9rem; text-align:center; box-shadow: 0 4px 15px rgba(216, 78, 85, 0.3);">📧 Email/Password</button>
             </div>
 
             <form class="modal-form" id="loginEmailForm" onsubmit="handleLogin(event)" style="display:block">

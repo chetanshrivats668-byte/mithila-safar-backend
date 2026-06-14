@@ -64,8 +64,7 @@ import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/em
 import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
 import {
   sendOTP,
-  verifyOTP as verifyMsg91OTP,
-  verifyMsg91Token as verifyMsg91WidgetToken
+  verifyOTP as verifyMsg91OTP
 } from '../../services/msg91/msg91Service.js';
 import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
 import { memoryDb } from '../../utils/firestoreFallback.js';
@@ -499,15 +498,21 @@ export async function markPhoneVerified(req, res) {
       return res.status(400).json({ success: false, message: 'Phone and token are required' });
     }
 
-    const updates = { phone, phoneVerified: true, phone_verified: true };
+    console.log('[DEBUG markPhoneVerified] req.user:', req.user);
+    const updates = { phone, phoneVerified: true };
     await dbUpdate('users', req.user.userId, updates);
     const userData = await dbGet('users', req.user.userId);
+    
+    if (!userData) {
+      console.warn('[DEBUG markPhoneVerified] User profile not found for id:', req.user.userId);
+      return res.status(404).json({ success: false, message: 'User profile not found.' });
+    }
+    
     const { password: _, ...safeUser } = userData;
-
     return res.json({ success: true, user: safeUser });
   } catch (err) {
-    console.error('[MARK PHONE VERIFIED ERROR]:', err);
-    return res.status(500).json({ success: false, message: 'Failed to verify phone' });
+    console.error('[MARK PHONE VERIFIED ERROR]:', err.stack || err);
+    return res.status(500).json({ success: false, message: 'Failed to verify phone: ' + (err.message || 'unknown error') });
   }
 }
 

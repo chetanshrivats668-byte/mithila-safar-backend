@@ -140,6 +140,20 @@ export async function list(table, opts = {}) {
 }
 
 export async function create(table, id, data) {
+  if (!isSupabaseAvailable()) {
+    const store = getMemoryStore(table);
+    if (store) {
+      const clean = { ...data };
+      if (table === 'users') {
+        delete clean.userId;
+      }
+      const record = { id, ...clean };
+      store.set(id, record);
+      return record;
+    }
+    return null;
+  }
+
   try {
     const clean = { ...data };
     if (table === 'users') {
@@ -159,6 +173,17 @@ export async function create(table, id, data) {
 }
 
 export async function update(table, id, data) {
+  if (!isSupabaseAvailable()) {
+    const store = getMemoryStore(table);
+    if (store) {
+      const existing = store.get(id) || {};
+      const record = { ...existing, ...data };
+      store.set(id, record);
+      return record;
+    }
+    return;
+  }
+
   try {
     const record = { ...data };
     const { error } = await supabase.from(table).update(record).eq('id', id);
@@ -174,6 +199,14 @@ export async function update(table, id, data) {
 }
 
 export async function remove(table, id) {
+  if (!isSupabaseAvailable()) {
+    const store = getMemoryStore(table);
+    if (store) {
+      store.delete(id);
+    }
+    return;
+  }
+
   try {
     const { error } = await supabase.from(table).delete().eq('id', id);
     if (error) {

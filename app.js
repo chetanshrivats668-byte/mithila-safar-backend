@@ -1973,11 +1973,19 @@ async function payViaRazorpay() {
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
     try {
+        // Audit 2026-06-14: lift the partnerId from the selected item onto the
+        // booking root so the server can route partner SMS to the right operator.
+        var partnerId = currentBooking.collaboratorId
+            || (currentBooking.selectedBus && currentBooking.selectedBus.collaboratorId)
+            || (currentBooking.selectedHotel && currentBooking.selectedHotel.collaboratorId)
+            || (currentBooking.selectedCab && currentBooking.selectedCab.collaboratorId)
+            || (currentBooking.selectedCafe && currentBooking.selectedCafe.collaboratorId)
+            || null;
         var payload = {
             amount: amount / 100,
             type: currentBooking.type,
             itemName: currentBooking.type + ' booking',
-            details: currentBooking,
+            details: { ...currentBooking, collaboratorId: partnerId },
             seats: currentBooking.seats,
             roomType: currentBooking.roomType,
             userName: currentUser?.name || '',
@@ -2098,11 +2106,19 @@ async function payViaUpiId() {
 
     try {
         notify('Initiating UPI payment...', 'info');
+        // Audit 2026-06-14: lift the partnerId from the selected item onto the
+        // booking root so the server can route partner SMS to the right operator.
+        var partnerId = currentBooking.collaboratorId
+            || (currentBooking.selectedBus && currentBooking.selectedBus.collaboratorId)
+            || (currentBooking.selectedHotel && currentBooking.selectedHotel.collaboratorId)
+            || (currentBooking.selectedCab && currentBooking.selectedCab.collaboratorId)
+            || (currentBooking.selectedCafe && currentBooking.selectedCafe.collaboratorId)
+            || null;
         var payload = {
             amount: amount / 100,
             type: currentBooking.type,
             itemName: currentBooking.type + ' booking',
-            details: currentBooking,
+            details: { ...currentBooking, collaboratorId: partnerId },
             seats: currentBooking.seats,
             roomType: currentBooking.roomType,
             userName: currentUser?.name || '',
@@ -2298,19 +2314,131 @@ function openProfile() {
 
 function loadProfile() {
     if (!currentUser) return;
-    document.getElementById('profileName').textContent = currentUser.name || 'User';
-    document.getElementById('profileEmail').textContent = currentUser.email || '—';
-    document.getElementById('profileNameInput').value = currentUser.name || '';
-    var initial = (currentUser.name || currentUser.email || 'U')[0].toUpperCase();
-    document.getElementById('profilePhotoInitial').textContent = initial;
-    // Show verified badge for Google users
-    if (currentUser.authProvider === 'google') {
-        document.getElementById('emailVerifiedBadge').style.display = 'inline-block';
+    const nameEl = document.getElementById('profileName');
+    const emailEl = document.getElementById('profileEmail');
+    const nameInputEl = document.getElementById('profileNameInput');
+    const photoInitialEl = document.getElementById('profilePhotoInitial');
+    const emailBadgeEl = document.getElementById('emailVerifiedBadge');
+    
+    if (nameEl) nameEl.textContent = currentUser.name || 'User';
+    if (emailEl) emailEl.textContent = currentUser.email || '—';
+    if (nameInputEl) nameInputEl.value = currentUser.name || '';
+    
+    if (photoInitialEl) {
+        var initial = (currentUser.name || currentUser.email || 'U')[0].toUpperCase();
+        photoInitialEl.textContent = initial;
     }
+    
+    if (emailBadgeEl) {
+        if (currentUser.authProvider === 'google') {
+            emailBadgeEl.style.display = 'inline-block';
+        } else {
+            emailBadgeEl.style.display = 'none';
+        }
+    }
+    
     var phone = currentUser.phone || '';
+    var verified = currentUser.phoneVerified;
+    
+    var displayEl = document.getElementById('profilePhoneDisplay');
+    var verifiedBadge = document.getElementById('phoneVerifiedBadge');
+    var unverifiedBadge = document.getElementById('phoneUnverifiedBadge');
+    var verifyBtn = document.getElementById('btnVerifyPhoneProfile');
+    
     if (phone) {
-        document.getElementById('profilePhoneDisplay').textContent = phone;
-        document.getElementById('phoneVerifiedBadge').style.display = 'inline-block';
+        if (displayEl) displayEl.textContent = phone;
+        if (verified) {
+            if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
+            if (unverifiedBadge) unverifiedBadge.style.display = 'none';
+            if (verifyBtn) verifyBtn.style.display = 'none';
+        } else {
+            if (verifiedBadge) verifiedBadge.style.display = 'none';
+            if (unverifiedBadge) unverifiedBadge.style.display = 'inline-block';
+            if (verifyBtn) verifyBtn.style.display = 'inline-block';
+        }
+    } else {
+        if (displayEl) displayEl.textContent = 'Not available';
+        if (verifiedBadge) verifiedBadge.style.display = 'none';
+        if (unverifiedBadge) unverifiedBadge.style.display = 'none';
+        if (verifyBtn) verifyBtn.style.display = 'none';
+    }
+}
+
+function togglePhoneEditForm(show) {
+    const container = document.getElementById('phoneEditFormContainer');
+    if (!container) return;
+    container.style.display = show ? 'block' : 'none';
+    if (show) {
+        var rawPhone = currentUser?.phone || '';
+        const phoneInput = document.getElementById('profilePhoneInput');
+        if (phoneInput) {
+            phoneInput.value = rawPhone.replace('+91', '').replace(/\D/g, '').slice(-10);
+            phoneInput.focus();
+        }
+    }
+}
+
+async function saveProfilePhone() {
+    var phoneInputEl = document.getElementById('profilePhoneInput');
+    if (!phoneInputEl) return;
+    var phoneInput = phoneInputEl.value.trim();
+    var cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+        return notify('Please enter a valid 10-digit Indian mobile number', 'error');
+    }
+    
+    var formattedPhone = '+91' + cleanPhone;
+    
+    // If user inputs the exact same phone number and it is already verified, do nothing
+    if (formattedPhone === currentUser.phone && currentUser.phoneVerified) {
+        notify('This phone number is already verified.', 'info');
+        togglePhoneEditForm(false);
+        return;
+    }
+
+    notify('Please verify the new phone number via OTP...', 'info');
+
+    try {
+        // Trigger MSG91 OTP verification first
+        const token = await window.msg91OTP.verify(formattedPhone);
+        
+        notify('Saving changes...', 'info');
+        
+        // Once verified by widget, tell backend to update phone & mark verified
+        const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + authToken
+            },
+            body: JSON.stringify({ phone: formattedPhone, token: token })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            notify('Phone number changed and verified successfully!', 'success');
+            currentUser.phone = formattedPhone;
+            currentUser.phoneVerified = true;
+            saveSession(authToken, currentUser, refreshToken);
+            
+            togglePhoneEditForm(false);
+            loadProfile();
+        } else {
+            notify(data.message || 'Verification failed on server', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        if (err === 'mock-otp-token' || (err && err.message === 'mock-otp-token')) {
+            // Support local offline/mock testing if widget resolves mock token
+            currentUser.phone = formattedPhone;
+            currentUser.phoneVerified = true;
+            saveSession(authToken, currentUser, refreshToken);
+            togglePhoneEditForm(false);
+            loadProfile();
+            notify('Phone number changed and verified (mock OTP)', 'success');
+        } else {
+            notify(err.message || err || 'Phone verification failed. Number was not changed.', 'error');
+        }
     }
 }
 

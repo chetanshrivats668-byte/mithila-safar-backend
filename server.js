@@ -49,6 +49,13 @@ if (!isSupabaseAvailable()) {
 }
 
 const app = express();
+app.locals.db = {
+  get: dbGet,
+  list: dbList,
+  create: dbCreate,
+  update: dbUpdate,
+  remove: dbRemove
+};
 const PORT = process.env.PORT || 3001;
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
@@ -60,6 +67,8 @@ const razorpay = new Razorpay({
 });
 
 // ========== IN-MEMORY STORES & CONFIG ==========
+// OTP store: phone -> { otp, expiry, attempts, sendCount }
+const otpStore = new Map();
 const OTP_MAX_ATTEMPTS = 3;
 const ADMIN_LOGIN_MAX_ATTEMPTS = 5;
 const API_RATE_WINDOW = 15 * 60 * 1000;
@@ -93,13 +102,26 @@ function buildPartnerSMS(booking) {
   return msg;
 }
 
-// Send SMS notification to matching partners
+// Send SMS notification to matching partners.
+// Audit 2026-06-14: if the order carries a collaboratorId, only notify THAT
+// operator. Otherwise (legacy order without collaboratorId), fall back to all
+// operators of the matching type — but log a warning so we notice the gap.
 async function sendPartnerNotification(orderData) {
   try {
     const collabType = orderData.type === 'car' ? 'cab' : orderData.type;
     const allCollabs = await dbList('collabs');
-    const matchingCollabs = allCollabs.filter(c => c.status === 'approved' && (c.type === collabType || c.type === collabType + '-route'));
+    let matchingCollabs = allCollabs.filter(c => c.status === 'approved' && (c.type === collabType || c.type === collabType + '-route'));
     if (matchingCollabs.length === 0) { console.log('[COLLAB] No matching partner for type:', collabType); return; }
+    if (orderData.collaboratorId) {
+      const specific = matchingCollabs.filter(c => c.id === orderData.collaboratorId);
+      if (specific.length > 0) {
+        matchingCollabs = specific;
+      } else {
+        console.warn(`[COLLAB] Order ${orderData.orderId} has collaboratorId=${orderData.collaboratorId} but no matching approved collab of type ${collabType} — falling back to broadcast`);
+      }
+    } else {
+      console.warn(`[COLLAB] Order ${orderData.orderId} has no collaboratorId — broadcasting to all ${matchingCollabs.length} operators of type ${collabType}`);
+    }
     const smsMsg = buildPartnerSMS(orderData);
     for (const collab of matchingCollabs) {
       const partnerPhone = collab.phone || '';
@@ -200,7 +222,21 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, valid
     if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
     const orderId = 'MS' + Date.now().toString(36).toUpperCase();
     const razorpayOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId, notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' } });
-    const orderData = { orderId, razorpayOrderId: razorpayOrder.id, type: type || '', itemName: itemName || '', amount: Number(amount), payNow: Number(amount), due: 0, details: details || {}, seats: seats || null, roomType: roomType || null, userName: userName || '', userPhone: userPhone || '', userAge: userAge || '', passengerCount: passengerCount || 1, status: 'payment_pending', payMethod: 'razorpay', createdAt: new Date().toISOString(), verifiedAt: null, verifiedBy: null };
+    const orderData = {
+      orderId, razorpayOrderId: razorpayOrder.id,
+      type: type || '', itemName: itemName || '',
+      amount: Number(amount), payNow: Number(amount), due: 0,
+      details: details || {},
+      seats: seats || null, roomType: roomType || null,
+      userName: userName || '', userPhone: userPhone || '',
+      userAge: userAge || '', passengerCount: passengerCount || 1,
+      // Audit 2026-06-14: capture which partner owns this booking so we can
+      // route the SMS to the right partner and not every operator on the platform.
+      collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
+      status: 'payment_pending', payMethod: 'razorpay',
+      createdAt: new Date().toISOString(),
+      verifiedAt: null, verifiedBy: null
+    };
     
     if (isSupabaseAvailable()) {
       await dbCreate('orders', orderId, orderData);
@@ -273,20 +309,48 @@ app.post('/api/create-order', requireAuth, blockTemporarySession, validate(valid
 });
 
 // ========== Order Status ==========
-app.get('/api/order-status/:orderId', async (req, res) => {
+// Requires auth and ownership check: a user can only see the status of their own
+// booking. (Audit fix 2026-06-14: previously unauthenticated, leaking PII.)
+app.get('/api/order-status/:orderId', requireAuth, async (req, res) => {
   try {
     const orderId = req.params.orderId;
-    
+
+    let order = null;
     if (isSupabaseAvailable()) {
-      const o = await dbGet('orders', orderId);
-      if (!o) return res.status(404).json({ success: false, message: 'Not found' });
-      res.json({ success: true, orderId: o.orderId, status: o.status, amount: o.amount, payNow: o.payNow, itemName: o.itemName, type: o.type });
+      order = await dbGet('orders', orderId);
     } else {
-      // Look up in memory when Firestore unavailable
-      const order = memoryDb.orders.get(orderId);
-      if (!order) return res.status(404).json({ success: false, message: 'Not found' });
-      res.json({ success: true, orderId: order.orderId, status: order.status, amount: order.amount, payNow: order.payNow, itemName: order.itemName, type: order.type });
+      order = memoryDb.orders.get(orderId) || null;
     }
+    if (!order) return res.status(404).json({ success: false, message: 'Not found' });
+
+    // Ownership: order must belong to the requesting user. We compare against
+    // the order's stored userPhone (last 10 digits) and the user's profile phone.
+    if (req.user && req.user.userId) {
+      let caller = null;
+      try {
+        if (isSupabaseAvailable()) {
+          caller = await dbGet('users', req.user.userId);
+        } else {
+          caller = memoryDb.users && memoryDb.users.get(req.user.userId);
+        }
+      } catch (_) { caller = null; }
+      const callerPhone = (caller && (caller.phone || caller.phoneNumber)) ? String(caller.phone || caller.phoneNumber).replace(/\D/g, '').slice(-10) : '';
+      const orderPhone = String(order.userPhone || '').replace(/\D/g, '').slice(-10);
+      // Admins can also view (their orderId search uses a different endpoint).
+      if (!req.user.admin && orderPhone && callerPhone && orderPhone !== callerPhone) {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+      }
+    }
+
+    res.json({
+      success: true,
+      orderId: order.orderId,
+      status: order.status,
+      amount: order.amount,
+      payNow: order.payNow,
+      itemName: order.itemName,
+      type: order.type
+    });
   }
   catch (e) { res.status(500).json({ success: false, message: 'DB error' }); }
 });
@@ -324,6 +388,8 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
           userName: userName || '',
           userPhone: userPhone || '',
           passengerCount: 1,
+          // Audit 2026-06-14: route partner SMS to the right operator
+          collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
           status: 'payment_pending',
           payMethod: 'upi',
           createdAt: new Date().toISOString(),
@@ -362,6 +428,8 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
           userName: userName || '',
           userPhone: userPhone || '',
           passengerCount: 1,
+          // Audit 2026-06-14: route partner SMS to the right operator
+          collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
           status: 'payment_pending',
           payMethod: 'upi',
           createdAt: new Date().toISOString(),
@@ -553,8 +621,16 @@ app.post('/api/admin/login', validate(validateSchemas.adminLogin), async (req, r
   const rateLimit = await checkAdminLoginRateLimit(ip);
   if (!rateLimit.allowed) return res.status(429).json({ success: false, message: 'Too many login attempts. Try again later.' });
   if (!username || !password) return res.status(400).json({ success: false, message: 'Credentials required' });
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) { recordAdminLoginAttempt(ip, true); res.json({ success: true, token: jwt.sign({ admin: true, username, tokenType: 'access' }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY }) }); }
-  else { recordAdminLoginAttempt(ip, false); res.status(401).json({ success: false, message: `Invalid credentials. ${checkAdminLoginRateLimit(ip).remaining} attempts left.` }); }
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    // Await so the rate-limit counter is reset before we respond (audit fix 2026-06-14)
+    await recordAdminLoginAttempt(ip, true);
+    return res.json({ success: true, token: jwt.sign({ admin: true, username, tokenType: 'access' }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY }) });
+  } else {
+    await recordAdminLoginAttempt(ip, false);
+    // Re-read remaining AFTER recording the failed attempt, and await it (was returning a Promise before)
+    const remainingCheck = await checkAdminLoginRateLimit(ip);
+    return res.status(401).json({ success: false, message: `Invalid credentials. ${remainingCheck.remaining} attempts left.` });
+  }
 });
 
 // Admin: Orders
@@ -599,7 +675,34 @@ app.get('/api/admin/search-order/:bookingId', requireAdmin, validate(validateSch
 // Admin: Verify Payment (sends SMS to partner on approve)
 app.post('/api/admin/verify-payment', requireAdmin, validate(validateSchemas.adminVerifyPayment), async (req, res) => {
   const { orderId, action } = req.body;
-  try { const orderData = await dbGet('orders', orderId); if (!orderData) return res.status(404).json({ success: false, message: 'Order not found' }); const updates = { status: action === 'approve' ? 'confirmed' : 'payment_failed', verifiedAt: new Date().toISOString(), verifiedBy: req.admin?.username || ADMIN_USERNAME }; await dbUpdate('orders', orderId, updates); if (action === 'approve') { await sendPartnerNotification({ ...orderData, ...updates, orderId }); } res.json({ success: true }); }
+  try {
+    // Read order — Supabase first, memory fallback for offline mode (audit fix 2026-06-14)
+    let orderData = null;
+    if (isSupabaseAvailable()) {
+      orderData = await dbGet('orders', orderId);
+    } else {
+      orderData = memoryDb.orders.get(orderId) || null;
+    }
+    if (!orderData) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const updates = {
+      status: action === 'approve' ? 'confirmed' : 'payment_failed',
+      verifiedAt: new Date().toISOString(),
+      verifiedBy: req.admin?.username || ADMIN_USERNAME
+    };
+
+    // Apply update — Supabase first, memory fallback
+    if (isSupabaseAvailable()) {
+      await dbUpdate('orders', orderId, updates);
+    } else {
+      memoryDb.orders.set(orderId, { ...orderData, ...updates });
+    }
+
+    if (action === 'approve') {
+      await sendPartnerNotification({ ...orderData, ...updates, orderId });
+    }
+    res.json({ success: true });
+  }
   catch (e) { console.error('Verify error:', e); res.status(500).json({ success: false, message: 'Server error' }); }
 });
 
@@ -980,20 +1083,6 @@ app.get('/admin-panel', (req, res) => {
   res.sendFile(path.join(ROOT_DIR, 'admin-panel.html'));
 });
 
-// ========== MAKE DB ACCESSIBLE IN ROUTES ==========
-app.locals.db = { get: dbGet, list: dbList, create: dbCreate, update: dbUpdate, remove: dbRemove, isAvailable: isSupabaseAvailable };
-
-// ========== COLLABORATOR SYSTEM ROUTES (before static middleware) ==========
-app.use('/api/auth', authRoutes);
-app.use('/api/collaborator', collabRoutes);
-app.use('/api/collaborator/bus', busRoutes);
-app.use('/api/collaborator/dashboard', dashboardRoutes);
-app.use('/api/collaborator/verification', verificationRoutes);
-app.use('/api/collaborator/hotel', hotelRoutes);
-app.use('/api/collaborator/hotel/rooms', hotelRoomRoutes);
-app.use('/api/collaborator/cafe', cafeRoutes);
-app.use('/api/collaborator/cafe/tables', cafeTableRoutes);
-
 // ========== COLLABORATOR APPLICATION ROUTES ==========
 app.post('/api/collab-applications', applicationController.submitApplication);
 app.get('/api/collab-applications/status', applicationController.checkApplicationStatus);
@@ -1006,6 +1095,13 @@ app.post('/api/admin/collab-applications/:id/reject', requireAdmin, applicationC
 // Static Assets (declared AFTER API routes so they can't be shadowed)
 app.get('/sw.js', (req, res) => { res.setHeader('Service-Worker-Allowed', '/'); res.setHeader('Content-Type', 'application/javascript'); res.sendFile(path.join(PUBLIC_DIR, 'sw.js')); });
 app.use(express.static(PUBLIC_DIR));
+const BLOCKED_ROOT_PATHS = /^\/(?:\.env(?:\..*)?|\.git(?:ignore|attributes)?|server\.js|package(?:-lock)?\.json|supabase[^/]*\.sql|eslint\.config\.js|postcss\.config\.js|tailwind\.config\.js|.*\.md|node-functions|controllers|middleware|routes|services|utils|plans|scratch|node_modules)(?:\/|$)/i;
+app.use((req, res, next) => {
+  if (BLOCKED_ROOT_PATHS.test(req.path)) {
+    return res.status(404).end();
+  }
+  next();
+});
 app.use(express.static(ROOT_DIR));
 
 // ========== ADMIN: COLLABORATOR MANAGEMENT ==========
