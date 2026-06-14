@@ -223,4 +223,4 @@ export async function adminRejectApplication(req, res) {
     console.error('Reject application error:', e);
     res.status(500).json({ success: false, message: 'Rejection failed' });
   }
-}
+} 
