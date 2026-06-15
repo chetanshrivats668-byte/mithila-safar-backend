@@ -833,8 +833,9 @@ tr:hover td{background:var(--card2)}
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
             <div class="form-group"><label>Total Seats *</label><input type="number" id="dashboardCabSeats" placeholder="e.g. 4" min="1"></div>
-            <div class="form-group"><label>Car driver Phone Number *</label><input type="tel" id="dashboardCabDriverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
+            <div class="form-group"><label>Driver Name *</label><input type="text" id="dashboardCabDriverName" placeholder="Driver's full name"></div>
           </div>
+          <div class="form-group"><label>Car driver Phone Number *</label><input type="tel" id="dashboardCabDriverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')"></div>
         </div>
 
         <!-- HOTEL SECTION -->
@@ -1679,6 +1680,7 @@ async function handleRegister(e) { e.preventDefault();
   let totalSeats = 0;
   let servicePhone = '';
   let driverPhone = '';
+  let driverName = '';
 
   if (serviceCat === 'bus') {
     const inputs = document.querySelectorAll('.dashboard-route-city-input');
@@ -1703,9 +1705,10 @@ async function handleRegister(e) { e.preventDefault();
   } else if (serviceCat === 'cab') {
     operatingCity = document.getElementById('dashboardCabCity').value.trim();
     const seatsInput = document.getElementById('dashboardCabSeats').value.trim();
+    driverName = document.getElementById('dashboardCabDriverName').value.trim();
     driverPhone = document.getElementById('dashboardCabDriverPhone').value.trim();
-    if (!operatingCity || !seatsInput || !driverPhone) {
-      err.textContent = 'Please fill all cab fields (operating city, total seats, driver phone).';
+    if (!operatingCity || !seatsInput || !driverPhone || !driverName) {
+      err.textContent = 'Please fill all cab fields (operating city, total seats, driver name, driver phone).';
       err.style.display = 'block';
       return;
     }
@@ -1761,7 +1764,7 @@ async function handleRegister(e) { e.preventDefault();
     serviceCategory: serviceCat, documents,
     routeCities, operatingCity,
     serviceAddress, serviceCity, serviceState, serviceLandmark, servicePincode,
-    totalRooms, capacity, totalSeats, servicePhone, driverPhone
+    totalRooms, capacity, totalSeats, servicePhone, driverPhone, driverName
   };
 
   btn.disabled = true; btn.textContent = 'Submitting...';
@@ -2345,11 +2348,12 @@ function showAddItemModal() {
     <div class="form-group"><label>Owner/Manager Mobile Number</label><input type="tel" id="f_phone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
     <div class="form-group"><label>Email ID of Cafe</label><input type="email" id="f_email" placeholder="cafe@example.com" required></div>
   ` : isCab ? `
-    <div class="form-group"><label>Car Model name</label><input type="text" id="f_name" placeholder="e.g. Swift Dzire" required></div>
+    <div class="form-group"><label>Cab / Service Name</label><input type="text" id="f_name" placeholder="e.g. Raju Travels / Swift Dzire" required></div>
     <div class="form-group"><label>Vehicle Type</label><select id="f_type"><option>Sedan</option><option>SUV</option><option>Hatchback</option><option>Premium</option></select></div>
     <div class="form-group"><label>Number plate</label><input type="text" id="f_plate" placeholder="BR-01-AB-1234"></div>
     <div class="form-group"><label>Total Number of seat</label><input type="number" id="f_seats" placeholder="4" required></div>
     <div class="form-group"><label>Car Owner Aadhaar ID</label><input type="text" id="f_ownerAadhaarId" placeholder="12-digit Aadhaar" maxlength="12" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
+    <div class="form-group"><label>Driver Name *</label><input type="text" id="f_driverName" placeholder="e.g. Raju Kumar" required></div>
     <div class="form-group"><label>Car driver Phone Number</label><input type="tel" id="f_driverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
     <div class="form-group"><label>Operating City *</label><input type="text" id="f_cabCity" placeholder="e.g. Patna, Ranchi, Delhi"></div>
     <div class="form-group"><label>Price per Km (₹)</label><input type="number" id="f_price" placeholder="12" required></div>
@@ -2391,6 +2395,7 @@ async function saveItem(e) { e.preventDefault();
   const phone = document.getElementById('f_phone') ? document.getElementById('f_phone').value.trim() : '';
   const email = document.getElementById('f_email') ? document.getElementById('f_email').value.trim() : '';
   const driverPhone = document.getElementById('f_driverPhone') ? document.getElementById('f_driverPhone').value.trim() : '';
+  const driverName = document.getElementById('f_driverName') ? document.getElementById('f_driverName').value.trim() : '';
 
   if (ownerAadhaarId && !/^\d{12}$/.test(ownerAadhaarId)) {
     alert('Valid 12-digit Aadhaar ID is required');
@@ -2406,6 +2411,10 @@ async function saveItem(e) { e.preventDefault();
   }
   if (driverPhone && !/^[6-9]\d{9}$/.test(driverPhone)) {
     alert('Valid 10-digit Indian driver phone number is required');
+    return;
+  }
+  if (primary === 'cab' && !driverName) {
+    alert('Driver name is required');
     return;
   }
 
@@ -2440,6 +2449,7 @@ async function saveItem(e) { e.preventDefault();
     data.numberPlate = document.getElementById('f_plate').value.trim();
     data.totalSeats = parseInt(document.getElementById('f_seats').value) || 4;
     data.ownerAadhaarId = ownerAadhaarId;
+    data.driverName = driverName;
     data.driverPhone = driverPhone;
     data.operatingCity = document.getElementById('f_cabCity').value.trim();
     data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
@@ -3683,24 +3693,26 @@ function showAddCabModal() {
   const modal = document.getElementById('itemModal');
   const body = document.getElementById('modalBody');
   body.innerHTML =
-    '<div class="form-group"><label>Cab Name *</label><input type="text" id="addCabName" placeholder="e.g. Swift Dzire"></div>' +
+    '<div class="form-group"><label>Cab / Service Name *</label><input type="text" id="addCabName" placeholder="e.g. Raju Travels / Swift Dzire"></div>' +
     '<div class="form-group"><label>Vehicle Number *</label><input type="text" id="addCabVehicle" placeholder="e.g. MH-01-AB-1234"></div>' +
     '<div class="form-group"><label>Total Seats *</label><input type="number" id="addCabSeats" placeholder="e.g. 4" min="1" max="8"></div>' +
+    '<div class="form-group"><label>Driver Name *</label><input type="text" id="addCabDriverName" placeholder="e.g. Raju Kumar"></div>' +
     '<div class="form-group"><label>Driver Phone *</label><input type="tel" id="addCabPhone" placeholder="10-digit phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"></div>';
   document.getElementById('modalTitle').textContent = '🚗 Add New Cab';
   document.getElementById('modalSaveBtn').onclick = async () => {
     const name = document.getElementById('addCabName').value.trim();
     const vehicle = document.getElementById('addCabVehicle').value.trim();
     const seats = parseInt(document.getElementById('addCabSeats').value);
+    const driverName = document.getElementById('addCabDriverName').value.trim();
     const phone = document.getElementById('addCabPhone').value.trim();
-    if (!name || !vehicle || !seats || !phone) return alert('Please fill all fields');
+    if (!name || !vehicle || !seats || !phone || !driverName) return alert('Please fill all fields');
     const saveBtn = document.getElementById('modalSaveBtn');
     saveBtn.disabled = true; saveBtn.textContent = 'Saving...';
     try {
       const r = await fetch(API + '/api/collaborator/cab/create-cab', {
         method:'POST',
         headers:{'Content-Type':'application/json','Authorization':'Bearer '+TOKEN},
-        body:JSON.stringify({name,vehicleNumber:vehicle,totalSeats:seats,driverPhone:phone})
+        body:JSON.stringify({name,vehicleNumber:vehicle,totalSeats:seats,driverPhone:phone,driverName})
       });
       const d = await r.json();
       if (d.success) { modal.style.display = 'none'; loadCabs(); }

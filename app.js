@@ -1763,14 +1763,19 @@ function renderCabResults(cabs) {
     header.innerHTML = 'Available Cabs in ' + currentBooking.city;
     var html = '';
     cabs.forEach(function (c) {
-        var name = c.drivername || c.driverName || c.cabname || c.cabName || 'Cab';
-        var model = c.cabtype || c.cabType || c.cabname || c.cabName || 'Standard';
+        var serviceName = c.cabname || c.cabName || c.name || c.busName || 'Cab';
+        var model = c.cabtype || c.cabType || 'Standard';
+        var driver = c.drivername || c.driverName || '';
+        var driverPhone = c.driverphone || c.driverPhone || '';
         var fare = c.fare || c.ratePerKm || 'N/A';
         var rating = c.rating || '-';
         var totalSeats = c.totalSeats || c.totalseats || 4;
         html += '<div class="result-card">';
-        html += '<h3>' + name + '</h3>';
+        html += '<h3>' + serviceName + '</h3>';
         html += '<div class="result-details"><span>Car: ' + model + '</span><span>Rating: ' + rating + '</span></div>';
+        if (driver) {
+            html += '<div class="result-details"><span>👤 Driver: ' + driver + (driverPhone ? ' (' + driverPhone + ')' : '') + '</span></div>';
+        }
         html += '<div class="result-details"><span>Rs ' + fare + '/km</span><span>💺 ' + totalSeats + ' seats (whole cab)</span></div>';
         html += '<button class="btn-primary" onclick="bookCab(\'' + c.id + '\', ' + fare + ')">Book Now</button>';
         html += '</div>';

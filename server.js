@@ -988,8 +988,34 @@ app.post('/api/cabs/search', validate(validateSchemas.cabSearch), cacheResponseB
     const memCabs = Array.from(memoryDb.cabs.values()).filter(c => c.status === 'active');
     const seenIds = new Set(cabs.map(c => c.id));
     for (const mc of memCabs) { if (!seenIds.has(mc.id)) cabs.push(mc); }
-    if (city) cabs = cabs.filter(function(c) { return (c.city || c.route || '').toLowerCase().includes(city.toLowerCase()); });
-    res.json({ success: true, cabs: cabs });
+    
+    // Enrich with collaborator details and filter out unapproved/suspended collaborators
+    const enrichedCabs = [];
+    for (const c of cabs) {
+      const collabId = c.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const cabCity = c.city || c.route || collab.operatingCity || collab.city || '';
+      
+      if (!city || cabCity.toLowerCase().includes(city.toLowerCase())) {
+        enrichedCabs.push({
+          ...c,
+          city: cabCity,
+          operatorName: collab.businessName || collab.name || 'Local Operator',
+          operatorRating: collab.rating || 4.0,
+          operatorPhone: collab.phone || ''
+        });
+      }
+    }
+    
+    res.json({ success: true, cabs: enrichedCabs });
   } catch (e) {
     console.error('Cab search error:', e);
     res.json({ success: true, cabs: [] });
@@ -1008,13 +1034,35 @@ app.post('/api/hotels/search', validate(validateSchemas.hotelSearch), cacheRespo
     const memHotels = Array.from(memoryDb.hotels.values()).filter(h => h.status === 'active');
     const seenIds = new Set(hotels.map(h => h.id));
     for (const mh of memHotels) { if (!seenIds.has(mh.id)) hotels.push(mh); }
-    if (location) hotels = hotels.filter(function(h) { return (h.city || h.location || '').toLowerCase().includes(location.toLowerCase()); });
-    const result = [];
-    for (const hotel of hotels) {
-      const rooms = await dbList('hotel_rooms', { filters: [{ column: 'hotelId', op: 'eq', value: hotel.id }] });
-      result.push({ ...hotel, rooms: rooms });
+    
+    const enrichedHotels = [];
+    for (const h of hotels) {
+      const collabId = h.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const hotelCity = h.city || h.location || collab.city || collab.operatingCity || '';
+      
+      if (!location || hotelCity.toLowerCase().includes(location.toLowerCase())) {
+        const rooms = await dbList('hotel_rooms', { filters: [{ column: 'hotelId', op: 'eq', value: h.id }] });
+        enrichedHotels.push({
+          ...h,
+          city: hotelCity,
+          rooms: rooms,
+          operatorName: collab.businessName || collab.name || 'Local Operator',
+          operatorRating: collab.rating || 4.0,
+          operatorPhone: collab.phone || ''
+        });
+      }
     }
-    res.json({ success: true, hotels: result });
+    
+    res.json({ success: true, hotels: enrichedHotels });
   } catch (e) {
     console.error('Hotel search error:', e);
     res.json({ success: true, hotels: [] });
@@ -1032,13 +1080,37 @@ app.get('/api/cafes', cacheResponse({ ttl: 60_000 }), async (req, res) => {
     const memCafes = Array.from(memoryDb.cafes.values()).filter(c => c.status === 'active');
     const seenIds = new Set(cafes.map(c => c.id));
     for (const mc of memCafes) { if (!seenIds.has(mc.id)) cafes.push(mc); }
-    const result = [];
+    
+    const enrichedCafes = [];
     for (const cafe of cafes) {
+      const collabId = cafe.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const cafeCity = cafe.city || cafe.location || collab.city || collab.operatingCity || '';
+      
       const tables = await dbList('cafe_tables', { filters: [{ column: 'cafeId', op: 'eq', value: cafe.id }] });
       const availableTables = tables.filter(function(t) { return t.status === 'available'; });
-      result.push({ ...cafe, totalTables: tables.length, availableTables: availableTables.length, tables: tables });
+      
+      enrichedCafes.push({
+        ...cafe,
+        city: cafeCity,
+        totalTables: tables.length,
+        availableTables: availableTables.length,
+        tables: tables,
+        operatorName: collab.businessName || collab.name || 'Local Operator',
+        operatorRating: collab.rating || 4.0,
+        operatorPhone: collab.phone || ''
+      });
     }
-    res.json({ success: true, cafes: result });
+    
+    res.json({ success: true, cafes: enrichedCafes });
   } catch (e) {
     console.error('Cafe search error:', e);
     res.json({ success: true, cafes: [] });
@@ -1051,8 +1123,33 @@ app.get('/api/listings/hotel', async (req, res) => {
     const { city } = req.query;
     let hotels = await dbList('collaborator_hotels');
     hotels = hotels.filter(h => h.status === 'active');
-    if (city) hotels = hotels.filter(h => (h.city || h.location || '').toLowerCase() === city.toLowerCase());
-    res.json({ success: true, listings: hotels });
+    
+    const enrichedHotels = [];
+    for (const h of hotels) {
+      const collabId = h.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const hotelCity = h.city || h.location || collab.city || collab.operatingCity || '';
+      
+      if (!city || hotelCity.toLowerCase() === city.toLowerCase()) {
+        enrichedHotels.push({
+          ...h,
+          city: hotelCity,
+          operatorName: collab.businessName || collab.name || 'Local Operator',
+          operatorRating: collab.rating || 4.0,
+          operatorPhone: collab.phone || ''
+        });
+      }
+    }
+    
+    res.json({ success: true, listings: enrichedHotels });
   } catch (e) { res.json({ success: true, listings: [] }); }
 });
 
@@ -1062,8 +1159,33 @@ app.get('/api/listings/cafe', async (req, res) => {
     const { city } = req.query;
     let cafes = await dbList('collaborator_cafes');
     cafes = cafes.filter(c => c.status === 'active');
-    if (city) cafes = cafes.filter(c => (c.city || c.location || '').toLowerCase() === city.toLowerCase());
-    res.json({ success: true, listings: cafes });
+    
+    const enrichedCafes = [];
+    for (const cafe of cafes) {
+      const collabId = cafe.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const cafeCity = cafe.city || cafe.location || collab.city || collab.operatingCity || '';
+      
+      if (!city || cafeCity.toLowerCase() === city.toLowerCase()) {
+        enrichedCafes.push({
+          ...cafe,
+          city: cafeCity,
+          operatorName: collab.businessName || collab.name || 'Local Operator',
+          operatorRating: collab.rating || 4.0,
+          operatorPhone: collab.phone || ''
+        });
+      }
+    }
+    
+    res.json({ success: true, listings: enrichedCafes });
   } catch (e) { res.json({ success: true, listings: [] }); }
 });
 
@@ -1073,8 +1195,33 @@ app.get('/api/listings/cab', async (req, res) => {
     const { city } = req.query;
     let cabs = await dbList('collaborator_cabs');
     cabs = cabs.filter(c => c.status === 'active');
-    if (city) cabs = cabs.filter(c => (c.city || '').toLowerCase() === city.toLowerCase());
-    res.json({ success: true, listings: cabs });
+    
+    const enrichedCabs = [];
+    for (const c of cabs) {
+      const collabId = c.collaboratorId;
+      if (!collabId) continue;
+      const collab = await collabService.getCollaboratorById(req.app.locals.db, collabId);
+      if (!collab) continue;
+      
+      const collabStatus = collab.status || '';
+      const verificationStatus = collab.verification_status || '';
+      const isApproved = collabStatus === 'approved' || collabStatus === 'active' || verificationStatus === 'verified';
+      if (!isApproved) continue;
+      
+      const cabCity = c.city || c.route || collab.operatingCity || collab.city || '';
+      
+      if (!city || cabCity.toLowerCase() === city.toLowerCase()) {
+        enrichedCabs.push({
+          ...c,
+          city: cabCity,
+          operatorName: collab.businessName || collab.name || 'Local Operator',
+          operatorRating: collab.rating || 4.0,
+          operatorPhone: collab.phone || ''
+        });
+      }
+    }
+    
+    res.json({ success: true, listings: enrichedCabs });
   } catch (e) { res.json({ success: true, listings: [] }); }
 });
 
@@ -1150,7 +1297,7 @@ app.get('/api/admin/services', requireAdmin, async (req, res) => {
           const items = await dbList(colName, { orderBy: { column: 'createdAt', ascending: false } });
           items.forEach(item => {
             const data = { id: item.id, type, ...item };
-            data.name = data.name || data.busName || data.vehicleModel || 'Unnamed';
+            data.name = data.name || data.cabName || data.cabname || data.cafeName || data.cafename || data.hotelName || data.hotelname || data.busName || data.vehicleModel || 'Unnamed';
             data.number_plate = data.numberPlate || data.vehicleNumber || data.address || data.city || '';
             allServices.push(data);
           });
@@ -1171,7 +1318,7 @@ app.get('/api/admin/services', requireAdmin, async (req, res) => {
       for (const item of map.values()) {
         if (!seenIds.has(item.id)) {
           const data = { id: item.id, type, ...item };
-          data.name = data.name || data.busName || data.vehicleModel || 'Unnamed';
+          data.name = data.name || data.cabName || data.cabname || data.cafeName || data.cafename || data.hotelName || data.hotelname || data.busName || data.vehicleModel || 'Unnamed';
           data.number_plate = data.numberPlate || data.vehicleNumber || data.address || data.city || '';
           allServices.push(data);
         }
