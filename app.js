@@ -732,11 +732,6 @@ async function handleCredentialResponse(response) {
 
         hideTempSessionBanner();
         notify('Welcome ' + (data.user.name || data.user.email || '') + '!', 'success');
-        if (data.redirectTo === '/collaborator-dashboard') {
-            window.location.href = '/collaborator-dashboard.html';
-            return;
-        }
-        await checkAndRedirectCollaborator();
     } catch (err) {
         if (err.name === 'AbortError' || err.message === 'Failed to fetch' || err.message === 'NetworkError') {
             notify('Network error — please check your connection', 'error');
@@ -793,11 +788,6 @@ async function handleLogin(e) {
         applyCollaboratorLoginContext(data);
         closeModal('loginModal');
         notify('Welcome back ' + (data.user.name || '') + '!', 'success');
-        if (data.redirectTo === '/collaborator-dashboard') {
-            window.location.href = '/collaborator-dashboard.html';
-            return;
-        }
-        await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Login failed: ' + (err.message || 'network error'), 'error');
     } finally {
@@ -920,11 +910,6 @@ async function handlePhoneLogin(e) {
             applyCollaboratorLoginContext(data);
             closeModal('loginModal');
             notify(data.message || 'Welcome!', 'success');
-            if (data.redirectTo === '/collaborator-dashboard') {
-                window.location.href = '/collaborator-dashboard.html';
-                return;
-            }
-            await checkAndRedirectCollaborator();
             resetPhoneLoginForm();
         } catch (err) {
             notify('Verification failed: ' + (err.message || 'network error'), 'error');
@@ -1019,11 +1004,6 @@ async function completePhoneProfile(e) {
         applyCollaboratorLoginContext(data);
         closeModal('completeProfileModal');
         notify(data.message || 'Welcome to Yatri Point!', 'success');
-        if (data.redirectTo === '/collaborator-dashboard') {
-            window.location.href = '/collaborator-dashboard.html';
-            return;
-        }
-        await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Profile completion failed: ' + (err.message || 'network error'), 'error');
     } finally {
@@ -1058,13 +1038,8 @@ async function handleSignup(e) {
         if (data.token && data.user) {
             saveSession(data.token, data.user, data.refreshToken);
             applyCollaboratorLoginContext(data);
-            if (data.redirectTo === '/collaborator-dashboard') {
-                window.location.href = '/collaborator-dashboard.html';
-                return;
-            }
         }
         notify('Account created successfully!', 'success');
-        await checkAndRedirectCollaborator();
     } catch (err) {
         notify('Signup failed: ' + (err.message || 'network error'), 'error');
     } finally {
@@ -1103,11 +1078,6 @@ async function confirmEmailOTP() {
         if (data.token && data.user) {
             saveSession(data.token, data.user, data.refreshToken);
             applyCollaboratorLoginContext(data);
-            if (data.redirectTo === '/collaborator-dashboard') {
-                window.location.href = '/collaborator-dashboard.html';
-                return;
-            }
-            await checkAndRedirectCollaborator();
         }
         notify('Email verified successfully!', 'success');
     } catch (err) {
