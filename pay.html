@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#d84e55">
+  <meta name="description" content="Yatri Point — Secure Payment Gateway. Pay for your bus, hotel, cab or café booking safely via Razorpay.">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Pay Securely | Yatri Point</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Poppins:wght@600;700;800&display=swap">
+
+  <!-- Razorpay Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary:       #d84e55;
+      --primary-dark:  #b03d44;
+      --primary-light: #e8767f;
+      --accent:        #f39c12;
+      --success:       #27ae60;
+      --success-bg:    #0d2e1c;
+      --danger:        #e74c3c;
+      --warning:       #f39c12;
+      --info:          #3498db;
+      --bg:            #0f0f13;
+      --card:          #1a1a24;
+      --card2:         #20202e;
+      --text:          #e8eaf0;
+      --text-muted:    #8892a0;
+      --border:        #2c2c3e;
+      --shadow:        0 2px 8px rgba(0,0,0,.5);
+      --shadow-lg:     0 16px 48px rgba(0,0,0,.7);
+      --radius:        10px;
+      --radius-lg:     16px;
+      --radius-xl:     22px;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+
+    input, select, button, textarea { font-family: inherit; font-size: 16px !important; }
+    button { cursor: pointer; }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; display: block; }
+
+    /* ===================== LAYOUT ===================== */
+    .page-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(216,78,85,.18) 0%, transparent 60%), var(--bg);
+    }
+
+    /* ===================== HEADER ===================== */
+    .pay-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(216,78,85,.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .pay-header .logo-area {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    .pay-header .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    .pay-header .logo-text h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -.3px;
+      line-height: 1.1;
+    }
+
+    .pay-header .logo-text small {
+      font-size: .65rem;
+      color: rgba(255,255,255,.75);
+      display: block;
+    }
+
+    .secure-badge {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      background: rgba(255,255,255,.15);
+      padding: .35rem .8rem;
+      border-radius: 99px;
+      font-size: .72rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .3px;
+    }
+
+    .secure-badge::before { content: '🔒'; font-size: .8rem; }
+
+    /* ===================== BODY AREA ===================== */
+    .pay-body {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .pay-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+
+    /* ===================== AMOUNT CARD ===================== */
+    .amount-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .amount-card-top {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      padding: 1.8rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .amount-card-top::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.06);
+      top: -60px; right: -60px;
+    }
+
+    .amount-card-top::after {
+      content: '';
+      position: absolute;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.06);
+      bottom: -50px; left: -30px;
+    }
+
+    .amount-label {
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,.75);
+      margin-bottom: .5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .amount-value {
+      font-family: 'Poppins', sans-serif;
+      font-size: 3.4rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+      letter-spacing: -1px;
+    }
+
+    .amount-value .currency {
+      font-size: 1.8rem;
+      vertical-align: super;
+      font-weight: 700;
+    }
+
+    .amount-locked {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      background: rgba(255,255,255,.18);
+      padding: .3rem .8rem;
+      border-radius: 99px;
+      font-size: .7rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.9);
+      margin-top: .8rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .amount-card-body {
+      padding: 1.2rem 1.5rem;
+    }
+
+    .booking-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .55rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .88rem;
+    }
+
+    .booking-row:last-child { border-bottom: none; }
+
+    .booking-row .label {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .booking-row .value {
+      font-weight: 700;
+      color: var(--text);
+      text-align: right;
+    }
+
+    .booking-row .value.highlight { color: var(--primary-light); }
+
+    /* ===================== CONTACT CARD ===================== */
+    .card-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.4rem 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .section-title {
+      font-size: .75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      margin-bottom: .9rem;
+    }
+
+    .input-group:last-child { margin-bottom: 0; }
+
+    .input-group label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-muted);
+    }
+
+    .input-group input {
+      background: #252535;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: .75rem 1rem;
+      color: var(--text);
+      font-size: .95rem !important;
+      width: 100%;
+      transition: border-color .2s, box-shadow .2s;
+      min-height: 48px;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(216,78,85,.18);
+    }
+
+    .input-group input:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .input-group input.prefilled {
+      border-color: rgba(39,174,96,.35);
+      background: rgba(39,174,96,.05);
+    }
+
+    /* ===================== PAY METHOD TABS ===================== */
+    .pay-tabs {
+      display: flex;
+      background: #252535;
+      border-radius: var(--radius-lg);
+      padding: 5px;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .pay-tab-btn {
+      flex: 1;
+      padding: .65rem .6rem;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: .82rem;
+      transition: all .25s;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .pay-tab-btn.active {
+      background: var(--card);
+      color: var(--primary-light);
+      box-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+
+    .pay-tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ===================== PAY METHOD PANELS ===================== */
+    .pay-panel { display: none; }
+    .pay-panel.active { display: block; }
+
+    /* Razorpay Panel */
+    .razorpay-panel {
+      text-align: center;
+      padding: 1.6rem 1.2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .panel-icon { font-size: 3rem; margin-bottom: .8rem; }
+
+    .panel-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: .3rem;
+    }
+
+    .panel-subtitle {
+      font-size: .82rem;
+      color: var(--text-muted);
+      margin-bottom: 1.8rem;
+      line-height: 1.5;
+    }
+
+    /* UPI ID Panel */
+    .upi-panel {
+      padding: 1.4rem 1.2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .upi-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      background: #252535;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: .5rem 1rem;
+      margin-bottom: 1.2rem;
+      transition: border-color .2s;
+    }
+
+    .upi-input-wrapper:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(216,78,85,.18);
+    }
+
+    .upi-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+    .upi-input-wrapper input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: .95rem !important;
+      padding: .35rem 0;
+      min-height: unset;
+    }
+
+    .upi-input-wrapper input:focus { outline: none; }
+
+    .upi-examples {
+      font-size: .73rem;
+      color: var(--text-muted);
+      margin-top: -.7rem;
+      margin-bottom: 1.2rem;
+      padding-left: .2rem;
+    }
+
+    /* ===================== PAY BUTTON ===================== */
+    .pay-now-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      border: none;
+      padding: 1.1rem;
+      border-radius: var(--radius-lg);
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: .3px;
+      box-shadow: 0 8px 28px rgba(216,78,85,.4);
+      transition: all .25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pay-now-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.1), transparent);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+
+    .pay-now-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(216,78,85,.5); }
+    .pay-now-btn:hover::before { opacity: 1; }
+    .pay-now-btn:active { transform: translateY(0); }
+    .pay-now-btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+    .pay-now-btn .arrow { font-size: 1.2rem; transition: transform .2s; }
+    .pay-now-btn:hover .arrow { transform: translateX(4px); }
+
+    /* ===================== WAITING STATE ===================== */
+    #waitingState {
+      display: none;
+      text-align: center;
+      padding: 2.5rem 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+    }
+
+    #waitingState.active { display: block; }
+
+    .waiting-spinner {
+      width: 60px; height: 60px;
+      border: 4px solid rgba(216,78,85,.2);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+      margin: 0 auto 1.2rem;
+    }
+
+    .waiting-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: .4rem;
+    }
+
+    .waiting-sub {
+      font-size: .82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .trust-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: .8rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      flex-wrap: wrap;
+    }
+
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .73rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .trust-item .icon { font-size: .9rem; }
+
+    /* ===================== SUCCESS STATE ===================== */
+    #successState {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    #successState.active { display: block; }
+
+    .success-animation {
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--success), #1a9e52);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin: 0 auto 1.5rem;
+      box-shadow: 0 0 0 0 rgba(39,174,96,.5);
+      animation: successPulse 1.5s ease-out;
+    }
+
+    @keyframes successPulse {
+      0% { box-shadow: 0 0 0 0 rgba(39,174,96,.7); transform: scale(.8); }
+      50% { box-shadow: 0 0 0 30px rgba(39,174,96,0); transform: scale(1.1); }
+      100% { box-shadow: 0 0 0 0 rgba(39,174,96,0); transform: scale(1); }
+    }
+
+    .success-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--success);
+      margin-bottom: .5rem;
+    }
+
+    .success-subtitle {
+      font-size: .9rem;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+
+    .success-receipt {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      text-align: left;
+      margin-bottom: 1.5rem;
+    }
+
+    .receipt-row {
+      display: flex;
+      justify-content: space-between;
+      padding: .5rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .88rem;
+    }
+
+    .receipt-row:last-child { border-bottom: none; }
+
+    .receipt-row .rl { color: var(--text-muted); }
+    .receipt-row .rv { font-weight: 700; color: var(--text); }
+    .receipt-row .rv.green { color: var(--success); }
+
+    .success-actions {
+      display: flex;
+      gap: .8rem;
+    }
+
+    .btn-outline {
+      flex: 1;
+      padding: .85rem;
+      border: 2px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: transparent;
+      color: var(--text);
+      font-weight: 700;
+      font-size: .9rem;
+      transition: .2s;
+    }
+
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary-light); }
+
+    .btn-primary {
+      flex: 2;
+      padding: .85rem;
+      border: none;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff;
+      font-weight: 800;
+      font-size: .9rem;
+      box-shadow: 0 4px 16px rgba(216,78,85,.35);
+      transition: .2s;
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(216,78,85,.45); }
+
+    /* ===================== ERROR STATE ===================== */
+    #errorState {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    #errorState.active { display: block; }
+
+    .error-icon {
+      font-size: 3.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .error-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--danger);
+      margin-bottom: .5rem;
+    }
+
+    .error-msg {
+      font-size: .88rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    /* ===================== LOADER OVERLAY ===================== */
+    #loaderOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,15,19,.8);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    #loaderOverlay.active { display: flex; }
+
+    .loader-spinner {
+      width: 52px; height: 52px;
+      border: 4px solid rgba(216,78,85,.2);
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-text {
+      color: var(--text);
+      font-weight: 600;
+      font-size: .95rem;
+    }
+
+    /* ===================== TOAST ===================== */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      width: min(92vw, 400px);
+    }
+
+    .toast {
+      padding: .85rem 1.2rem;
+      border-radius: var(--radius-lg);
+      font-size: .88rem;
+      font-weight: 600;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+      animation: toastIn .3s ease;
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .toast.success { background: #0d2e1c; border: 1px solid rgba(39,174,96,.4); color: #4ecf80; }
+    .toast.error   { background: #2e0d0d; border: 1px solid rgba(231,76,60,.4);  color: #f17f79; }
+    .toast.info    { background: #0d1e2e; border: 1px solid rgba(52,152,219,.4); color: #74b9e6; }
+    .toast.warning { background: #2e200d; border: 1px solid rgba(243,156,18,.4); color: #f5c842; }
+
+    /* ===================== FOOTER ===================== */
+    .pay-footer {
+      text-align: center;
+      padding: .8rem 1rem 2rem;
+      color: var(--text-muted);
+      font-size: .72rem;
+      line-height: 1.8;
+    }
+
+    .pay-footer a { color: var(--primary-light); }
+
+    /* ===================== INVALID PAGE ===================== */
+    #invalidPage {
+      display: none;
+      flex: 1;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    #invalidPage.active { display: flex; }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 520px) {
+      .pay-body { padding: 1.2rem .8rem 3rem; }
+      .amount-value { font-size: 2.8rem; }
+      .amount-card-top { padding: 1.5rem 1.2rem; }
+      .pay-tab-btn { font-size: .72rem; padding: .6rem .2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loader overlay -->
+<div id="loaderOverlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-text" id="loaderText">Processing...</div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="page-wrapper">
+
+  <!-- ====== HEADER ====== -->
+  <header class="pay-header">
+    <div class="logo-area">
+      <div class="logo-icon">🧳</div>
+      <div class="logo-text">
+        <h1>Yatri Point</h1>
+        <small>Mithila Safar</small>
+      </div>
+    </div>
+    <div class="secure-badge">SSL Secured</div>
+  </header>
+
+  <!-- ====== INVALID STATE ====== -->
+  <div id="invalidPage">
+    <div style="font-size:3rem;">⚠️</div>
+    <h2 style="font-size:1.4rem; font-weight:800; color:var(--danger);">Invalid Payment Link</h2>
+    <p style="color:var(--text-muted); max-width:320px; line-height:1.6;" id="invalidMsg">
+      This payment link is missing required information. Please contact support.
+    </p>
+    <a href="/" style="margin-top:.5rem; color:var(--primary-light); font-weight:700;">← Back to Yatri Point</a>
+  </div>
+
+  <!-- ====== SUCCESS STATE ====== -->
+  <div id="successState" class="pay-body">
+    <div class="pay-container">
+      <div class="success-animation">✓</div>
+      <div class="success-title">Payment Successful!</div>
+      <div class="success-subtitle">Your booking is confirmed. You'll receive details on your registered phone number.</div>
+
+      <div class="success-receipt" id="successReceipt">
+        <!-- Filled by JS -->
+      </div>
+
+      <div class="success-actions">
+        <button class="btn-outline" onclick="window.location.href='/'">← Home</button>
+        <button class="btn-primary" onclick="printReceipt()">🧾 Receipt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== ERROR STATE ====== -->
+  <div id="errorState" class="pay-body">
+    <div class="pay-container">
+      <div class="error-icon">❌</div>
+      <div class="error-title">Payment Failed</div>
+      <div class="error-msg" id="errorMsg">Something went wrong. Please try again or contact support.</div>
+      <button class="btn-primary" onclick="resetPage()" style="flex:none; width:100%;">🔁 Try Again</button>
+    </div>
+  </div>
+
+  <!-- ====== MAIN PAYMENT STATE ====== -->
+  <div class="pay-body" id="mainPaySection">
+    <div class="pay-container">
+
+      <!-- AMOUNT CARD -->
+      <div class="amount-card" id="amountCard">
+        <div class="amount-card-top">
+          <div class="amount-label">Total Amount Due</div>
+          <div class="amount-value">
+            <span class="currency">₹</span><span id="displayAmount">0</span>
+          </div>
+          <div class="amount-locked">🔒 Amount is fixed — cannot be changed</div>
+        </div>
+        <div class="amount-card-body" id="bookingDetails">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <!-- CONTACT INFO -->
+      <div class="card-section" id="contactSection">
+        <div class="section-title">👤 Your Details</div>
+        <div class="input-group">
+          <label for="payerName">Full Name</label>
+          <input type="text" id="payerName" placeholder="Enter your full name" maxlength="80" autocomplete="name">
+        </div>
+        <div class="input-group">
+          <label for="payerPhone">Mobile Number</label>
+          <input type="tel" id="payerPhone" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel" inputmode="numeric"
+                 oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+        </div>
+      </div>
+
+      <!-- PAYMENT METHOD TABS (2 options — both auto-verified) -->
+      <div class="card-section" style="padding: 1rem 1rem .8rem;">
+        <div class="section-title">💳 Choose Payment Method</div>
+        <div class="pay-tabs" id="payTabs">
+          <button class="pay-tab-btn active" id="tab-razorpay" onclick="switchTab('razorpay')">💳 Card / UPI / Wallets</button>
+          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">📱 Enter UPI ID</button>
+        </div>
+      </div>
+
+      <!-- PANEL: Razorpay -->
+      <div class="razorpay-panel pay-panel active" id="panel-razorpay">
+        <div class="panel-icon">🔐</div>
+        <div class="panel-title">Secure Checkout</div>
+        <div class="panel-subtitle">Pay via any UPI app, Credit/Debit Card, Netbanking, or Wallet.<br>Scan QR with GPay/PhonePe is also available inside the checkout.</div>
+        <button class="pay-now-btn" id="btnRazorpay" onclick="handleRazorpayPay()">
+          <span>Pay ₹<span id="rzpBtnAmt">0</span></span>
+          <span class="arrow">→</span>
+        </button>
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:1rem;opacity:.5;">
+          <img src="https://admin.razorpay.com/assets/badges/razorpay-badge.svg" alt="Razorpay Secure" style="height:22px;">
+        </div>
+      </div>
+
+      <!-- PANEL: UPI ID -->
+      <div class="upi-panel pay-panel" id="panel-upiid">
+        <div class="section-title" style="margin-bottom:1rem;">📱 Pay via UPI ID</div>
+        <div style="background:rgba(39,174,96,.07);border:1px solid rgba(39,174,96,.2);border-radius:10px;padding:.7rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#4ecf80;line-height:1.6;">
+          ✅ Payment is automatically confirmed by Razorpay — no Transaction ID needed
+        </div>
+        <div class="upi-input-wrapper">
+          <span class="upi-icon">📲</span>
+          <input type="text" id="upiIdInput" placeholder="yourname@upi / 9876543210@ybl" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="upi-examples">e.g. name@okhdfcbank, mobile@paytm, 9876543210@ybl, name@axl</div>
+        <button class="pay-now-btn" id="btnUpiId" onclick="handleUpiIdPay()">
+          <span>Pay ₹<span id="upiIdBtnAmt">0</span> via UPI</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+
+      <!-- WAITING / VERIFYING STATE (shown when Razorpay modal closes) -->
+      <div id="waitingState">
+        <div class="waiting-spinner"></div>
+        <div class="waiting-title">Verifying your payment…</div>
+        <div class="waiting-sub">Please wait. We're confirming with Razorpay.<br>This usually takes a few seconds.<br><br>Do <strong>not</strong> press back or refresh.</div>
+        <div style="margin-top:1.5rem;font-size:.75rem;color:var(--text-muted);">
+          If your payment was deducted, your booking will be confirmed automatically within 2–3 minutes.
+        </div>
+      </div>
+
+      <!-- TRUST STRIP -->
+      <div class="trust-strip">
+        <div class="trust-item"><span class="icon">🔒</span> 256-bit SSL</div>
+        <div class="trust-item"><span class="icon">🏦</span> RBI Compliant</div>
+        <div class="trust-item"><span class="icon">✅</span> Auto-Verified</div>
+        <div class="trust-item"><span class="icon">🛡️</span> Razorpay Secured</div>
+      </div>
+
+    </div><!-- /pay-container -->
+  </div><!-- /pay-body -->
+
+  <!-- FOOTER -->
+  <footer class="pay-footer">
+    Powered by <strong>Yatri Point</strong> · <a href="/terms.html" target="_blank">Terms</a> · <a href="/privacy.html" target="_blank">Privacy</a><br>
+    Questions? Call <a href="tel:+918178030064">+91 81780 30064</a>
+  </footer>
+
+</div><!-- /page-wrapper -->
+
+<script>
+// =============================================
+//  Yatri Point — Standalone Payment Page
+//  pay.html — v1.0
+// =============================================
+
+const API_BASE = '';  // same origin; or set to 'https://yatripoint.onrender.com' for cross-origin
+
+// ---- Parse URL params ----
+const params     = new URLSearchParams(window.location.search);
+const AMOUNT     = parseFloat(params.get('amount') || '0');
+const TYPE       = (params.get('type')    || 'booking').toLowerCase();
+const REF        = params.get('ref')      || '';          // booking / order reference
+const NOTE       = params.get('note')     || '';          // human-readable note
+const PAYER_NAME = params.get('name')     || '';          // pre-filled name
+const PAYER_PH   = params.get('phone')   || '';          // pre-filled phone
+const ITEM_NAME  = params.get('item')     || (TYPE + ' booking');
+
+// Razorpay key will be fetched from config endpoint
+let RAZORPAY_KEY = '';
+
+// ---- Validate ----
+function validateParams() {
+  if (!AMOUNT || AMOUNT < 1 || AMOUNT > 1_000_000) {
+    showInvalid('Invalid or missing payment amount. Please contact the sender of this link.');
+    return false;
+  }
+  return true;
+}
+
+// ---- Type display map ----
+const TYPE_EMOJI = { bus: '🚌', hotel: '🏨', cab: '🚗', car: '🚗', cafe: '☕', booking: '🎫' };
+const TYPE_LABEL = { bus: 'Bus Ticket', hotel: 'Hotel Stay', cab: 'Cab Ride', car: 'Cab Ride', cafe: 'Café Seat', booking: 'Booking' };
+
+// =============================================
+//  INIT
+// =============================================
+async function init() {
+  if (!validateParams()) return;
+
+  // Populate amount displays
+  const fmtAmt = formatRupee(AMOUNT);
+  document.getElementById('displayAmount').textContent = fmtAmt;
+  document.getElementById('rzpBtnAmt').textContent     = fmtAmt;
+  document.getElementById('upiIdBtnAmt').textContent   = fmtAmt;
+  document.getElementById('qrBtnAmt').textContent      = fmtAmt;
+  document.getElementById('qrAmount').textContent      = fmtAmt;
+
+  // Booking details rows
+  const details = [
+    { label: TYPE_EMOJI[TYPE] + ' Type',    value: TYPE_LABEL[TYPE] || TYPE },
+    NOTE   ? { label: '📝 Details', value: NOTE }         : null,
+    REF    ? { label: '🆔 Ref. No.',  value: REF, cls: 'highlight' } : null,
+  ].filter(Boolean);
+
+  document.getElementById('bookingDetails').innerHTML = details.map(d => `
+    <div class="booking-row">
+      <span class="label">${d.label}</span>
+      <span class="value ${d.cls || ''}">${d.value}</span>
+    </div>
+  `).join('');
+
+  // Pre-fill contact if provided in URL
+  if (PAYER_NAME) {
+    const el = document.getElementById('payerName');
+    el.value = PAYER_NAME;
+    el.classList.add('prefilled');
+  }
+  if (PAYER_PH) {
+    const el = document.getElementById('payerPhone');
+    el.value = PAYER_PH.replace(/^(\+91|91)/, '').slice(-10);
+    el.classList.add('prefilled');
+  }
+
+  // Fetch Razorpay key from config
+  try {
+    const res  = await fetch(API_BASE + '/api/config');
+    const data = await res.json();
+    RAZORPAY_KEY = data.razorpayKeyId || '';
+  } catch (e) {
+    console.warn('Could not fetch config, Razorpay card tab may not work.');
+  }
+}
+
+// =============================================
+//  HELPERS
+// =============================================
+function formatRupee(n) {
+  return Number(n).toLocaleString('en-IN');
+}
+
+function showLoader(msg = 'Processing...') {
+  document.getElementById('loaderText').textContent = msg;
+  document.getElementById('loaderOverlay').classList.add('active');
+}
+
+function hideLoader() {
+  document.getElementById('loaderOverlay').classList.remove('active');
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  const container = document.getElementById('toastContainer');
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(() => el.remove(), 400); }, 3500);
+}
+
+function showInvalid(msg) {
+  document.getElementById('invalidMsg').textContent = msg;
+  document.getElementById('invalidPage').classList.add('active');
+  document.getElementById('mainPaySection').style.display = 'none';
+}
+
+function showSuccess(orderId, payId) {
+  document.getElementById('mainPaySection').style.display = 'none';
+  const ss = document.getElementById('successState');
+  ss.classList.add('active');
+
+  const receipt = document.getElementById('successReceipt');
+  const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  receipt.innerHTML = `
+    <div class="receipt-row"><span class="rl">Status</span><span class="rv green">✅ Confirmed</span></div>
+    <div class="receipt-row"><span class="rl">Amount Paid</span><span class="rv">₹${formatRupee(AMOUNT)}</span></div>
+    <div class="receipt-row"><span class="rl">Type</span><span class="rv">${TYPE_LABEL[TYPE] || TYPE}</span></div>
+    ${NOTE ? `<div class="receipt-row"><span class="rl">Details</span><span class="rv">${NOTE}</span></div>` : ''}
+    ${orderId ? `<div class="receipt-row"><span class="rl">Booking ID</span><span class="rv">${orderId}</span></div>` : ''}
+    ${payId   ? `<div class="receipt-row"><span class="rl">Payment ID</span><span class="rv">${payId}</span></div>`  : ''}
+    <div class="receipt-row"><span class="rl">Paid On</span><span class="rv">${now}</span></div>
+  `;
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showError(msg) {
+  document.getElementById('mainPaySection').style.display = 'none';
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('errorState').classList.add('active');
+}
+
+function resetPage() {
+  document.getElementById('errorState').classList.remove('active');
+  document.getElementById('mainPaySection').style.display = '';
+}
+
+function printReceipt() {
+  window.print();
+}
+
+// =============================================
+//  VALIDATION HELPERS
+// =============================================
+function getContactDetails() {
+  const name  = document.getElementById('payerName').value.trim();
+  const phone = document.getElementById('payerPhone').value.replace(/\D/g,'').slice(-10);
+
+  if (!name || name.length < 2) {
+    toast('Please enter your full name', 'warning');
+    document.getElementById('payerName').focus();
+    return null;
+  }
+  if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
+    toast('Please enter a valid 10-digit Indian mobile number', 'warning');
+    document.getElementById('payerPhone').focus();
+    return null;
+  }
+  return { name, phone: '+91' + phone };
+}
+
+// =============================================
+//  TAB SWITCHING (2 tabs only)
+// =============================================
+function switchTab(tabId) {
+  document.querySelectorAll('.pay-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.pay-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+  document.getElementById('panel-' + tabId).classList.add('active');
+}
+
+// Show/hide the waiting state overlay within the payment panels area
+function showWaiting() {
+  document.querySelectorAll('.pay-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('waitingState').classList.add('active');
+}
+
+function hideWaiting() {
+  document.getElementById('waitingState').classList.remove('active');
+  // Restore active panel
+  document.querySelectorAll('.pay-panel').forEach(p => p.style.display = '');
+  const activePanel = document.querySelector('.pay-tab-btn.active');
+  if (activePanel) switchTab(activePanel.id.replace('tab-',''));
+}
+
+// =============================================
+//  CREATE ORDER (payment-link endpoint — no auth required)
+// =============================================
+async function createPaymentLinkOrder(contact) {
+  const res = await fetch(API_BASE + '/api/payment-link/create-order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      amount:    AMOUNT,
+      type:      TYPE,
+      itemName:  ITEM_NAME,
+      note:      NOTE,
+      ref:       REF,
+      userName:  contact.name,
+      userPhone: contact.phone,
+    }),
+  });
+
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Order creation failed');
+  return data;
+}
+
+// =============================================
+//  VERIFY PAYMENT (payment-link endpoint — no auth)
+// =============================================
+async function verifyPaymentLinkOrder(payload) {
+  const res = await fetch(API_BASE + '/api/payment-link/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.message || 'Verification failed');
+  return data;
+}
+
+// =============================================
+//  RAZORPAY HANDLER
+// =============================================
+async function handleRazorpayPay() {
+  if (typeof Razorpay === 'undefined') {
+    toast('Payment gateway is still loading. Please wait a moment.', 'warning');
+    return;
+  }
+
+  const contact = getContactDetails();
+  if (!contact) return;
+
+  showLoader('Creating secure payment order…');
+
+  try {
+    const orderData = await createPaymentLinkOrder(contact);
+    hideLoader();
+
+    const options = {
+      key:         RAZORPAY_KEY || orderData.razorpayKey,
+      amount:      Math.round(AMOUNT * 100),
+      currency:    'INR',
+      name:        'Yatri Point',
+      description: ITEM_NAME,
+      order_id:    orderData.razorpayOrderId,
+      handler: async function (response) {
+        showLoader('Verifying payment…');
+        try {
+          const result = await verifyPaymentLinkOrder({
+            razorpayOrderId:   response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+            orderId:           orderData.orderId,
+          });
+          hideLoader();
+          if (result.success) {
+            showSuccess(orderData.orderId, response.razorpay_payment_id);
+          } else {
+            showError('Payment verification failed. Contact support with Payment ID: ' + response.razorpay_payment_id);
+          }
+        } catch (err) {
+          hideLoader();
+          showError('Verification error: ' + err.message);
+        }
+      },
+      prefill: {
+        name:    contact.name,
+        contact: contact.phone,
+      },
+      theme: { color: '#d84e55' },
+      modal: {
+        ondismiss: function () {
+          // Show waiting state — webhook will confirm asynchronously
+          hideLoader();
+          showWaiting();
+          // Poll for order confirmation for 3 minutes (36 × 5s)
+          let polls = 0;
+          const maxPolls = 36;
+          const poll = setInterval(async () => {
+            polls++;
+            try {
+              const r = await fetch(API_BASE + '/api/payment-link/status/' + orderData.orderId);
+              const d = await r.json();
+              if (d.status === 'confirmed') {
+                clearInterval(poll);
+                hideWaiting();
+                showSuccess(orderData.orderId, d.razorpayPaymentId || '');
+              } else if (polls >= maxPolls) {
+                clearInterval(poll);
+                hideWaiting();
+                toast('Payment verification is taking longer than usual. Check your bookings page or contact support.', 'warning');
+              }
+            } catch (_) {}
+          }, 5000);
+        }
+      }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (response) {
+      toast('Payment failed: ' + response.error.description, 'error');
+    });
+    rzp.open();
+
+  } catch (err) {
+    hideLoader();
+    toast('Error: ' + err.message, 'error');
+  }
+}
+
+// =============================================
+//  UPI ID HANDLER
+// =============================================
+async function handleUpiIdPay() {
+  if (typeof Razorpay === 'undefined') {
+    toast('Payment gateway is still loading. Please wait.', 'warning');
+    return;
+  }
+
+  const upiId = document.getElementById('upiIdInput').value.trim();
+  if (!upiId || !upiId.includes('@') || upiId.split('@')[1].length < 2) {
+    toast('Please enter a valid UPI ID (e.g. name@bank)', 'warning');
+    document.getElementById('upiIdInput').focus();
+    return;
+  }
+
+  const contact = getContactDetails();
+  if (!contact) return;
+
+  showLoader('Creating UPI payment order…');
+
+  try {
+    const orderData = await createPaymentLinkOrder(contact);
+    hideLoader();
+
+    const options = {
+      key:         RAZORPAY_KEY || orderData.razorpayKey,
+      amount:      Math.round(AMOUNT * 100),
+      currency:    'INR',
+      name:        'Yatri Point',
+      description: ITEM_NAME,
+      order_id:    orderData.razorpayOrderId,
+      prefill: {
+        name:    contact.name,
+        contact: contact.phone,
+        method:  'upi',
+        vpa:     upiId,
+      },
+      handler: async function (response) {
+        showLoader('Verifying UPI payment…');
+        try {
+          const result = await verifyPaymentLinkOrder({
+            razorpayOrderId:   response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+            orderId:           orderData.orderId,
+          });
+          hideLoader();
+          if (result.success) {
+            showSuccess(orderData.orderId, response.razorpay_payment_id);
+          } else {
+            showError('Payment verification failed. Contact support with Payment ID: ' + response.razorpay_payment_id);
+          }
+        } catch (err) {
+          hideLoader();
+          showError('Verification error: ' + err.message);
+        }
+      },
+      theme: { color: '#d84e55' },
+      modal: {
+        ondismiss: function () {
+          toast('Payment cancelled.', 'info');
+        }
+      }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function (r) {
+      toast('Payment failed: ' + r.error.description, 'error');
+    });
+    rzp.open();
+
+  } catch (err) {
+    hideLoader();
+    toast('Error: ' + err.message, 'error');
+  }
+}
+
+// =============================================
+//  QR CONFIRM HANDLER
+// =============================================
+async function handleQrConfirm() {
+  const ref = document.getElementById('qrRefInput').value.trim();
+  if (!ref || ref.length < 4) {
+    toast('Please enter your UPI Transaction ID or Reference Number', 'warning');
+    document.getElementById('qrRefInput').focus();
+    return;
+  }
+
+  const contact = getContactDetails();
+  if (!contact) return;
+
+  showLoader('Submitting payment for verification…');
+
+  try {
+    const res = await fetch(API_BASE + '/api/payment-link/qr-confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount:    AMOUNT,
+        type:      TYPE,
+        itemName:  ITEM_NAME,
+        note:      NOTE,
+        ref:       REF,
+        upiRef:    ref,
+        userName:  contact.name,
+        userPhone: contact.phone,
+      }),
+    });
+
+    const data = await res.json();
+    hideLoader();
+
+    if (data.success) {
+      // QR is manual verification — show a "pending" success state
+      document.getElementById('mainPaySection').style.display = 'none';
+      const ss = document.getElementById('successState');
+      ss.classList.add('active');
+
+      const now = new Date().toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      document.getElementById('successReceipt').innerHTML = `
+        <div class="receipt-row"><span class="rl">Status</span><span class="rv" style="color:var(--warning)">⏳ Pending Verification</span></div>
+        <div class="receipt-row"><span class="rl">Amount</span><span class="rv">₹${formatRupee(AMOUNT)}</span></div>
+        <div class="receipt-row"><span class="rl">Type</span><span class="rv">${TYPE_LABEL[TYPE] || TYPE}</span></div>
+        ${NOTE ? `<div class="receipt-row"><span class="rl">Details</span><span class="rv">${NOTE}</span></div>` : ''}
+        <div class="receipt-row"><span class="rl">UPI Ref / TxnID</span><span class="rv">${ref}</span></div>
+        <div class="receipt-row"><span class="rl">Submitted On</span><span class="rv">${now}</span></div>
+      `;
+      // Override title/subtitle for pending state
+      document.querySelector('.success-title').textContent    = 'Payment Submitted!';
+      document.querySelector('.success-subtitle').textContent = 'Our team will verify your payment and confirm your booking within 30 minutes.';
+      document.querySelector('.success-animation').textContent = '⏳';
+      document.querySelector('.success-animation').style.background = 'linear-gradient(135deg,#b8860b,#e6a817)';
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      toast(data.message || 'Submission failed. Please try again.', 'error');
+    }
+  } catch (err) {
+    hideLoader();
+    toast('Network error. Please try again.', 'error');
+  }
+}
+
+// =============================================
+//  BOOT
+// =============================================
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

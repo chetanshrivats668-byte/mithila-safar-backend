@@ -88,11 +88,16 @@
             if (!container) return;
             const host = typeof container === 'string' ? document.querySelector(container) : container;
             if (!host) return;
+            const hasSkeleton = host.querySelector('.yp-skel-card') || host.querySelector('.yp-skel');
             if (host.dataset.ypPrevHtml !== undefined) {
-                host.innerHTML = host.dataset.ypPrevHtml;
+                if (hasSkeleton) {
+                    host.innerHTML = host.dataset.ypPrevHtml;
+                }
                 delete host.dataset.ypPrevHtml;
             } else {
-                host.innerHTML = '';
+                if (hasSkeleton) {
+                    host.innerHTML = '';
+                }
             }
             host.classList.remove('yp-skel-host');
         }

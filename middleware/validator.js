@@ -436,7 +436,7 @@ export const schemas = {
     userPhone: { ...phoneRule, required: false },
     userAge: { type: 'number', required: false, min: 0, max: 120, integer: true, label: 'Age' },
     passengerCount: { type: 'number', required: false, min: 1, max: 20, integer: true, label: 'Passenger count' },
-    seats: { type: 'string[]', required: false, max: 20, maxLength: 8, label: 'Seats' },
+    seats: { type: 'string[]', required: false, max: 20, maxLength: 64, label: 'Seats' },
     roomType: { type: 'string', required: false, maxLength: 60, label: 'Room type' },
   },
   razorpayVerify: {
