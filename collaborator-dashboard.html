@@ -688,6 +688,162 @@ tr:hover td{background:var(--card2)}
     .cab-card-item { flex-wrap: wrap; }
     .cab-card-right { width: 100%; justify-content: flex-end; }
   }
+
+  /* === PREMIUM GLOBAL LOADER OVERLAY === */
+  .global-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    background: rgba(10, 15, 46, 0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .global-loader-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .global-loader-overlay.hidden {
+    display: none !important;
+  }
+
+  .loader-card {
+    background: rgba(13, 21, 64, 0.85);
+    border: 1px solid rgba(245, 197, 24, 0.15);
+    border-radius: 24px;
+    padding: 3rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    transform: scale(0.92);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 320px;
+    width: 90%;
+  }
+
+  .global-loader-overlay.active .loader-card {
+    transform: scale(1);
+  }
+
+  .loader-spinner {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spinner-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid transparent;
+    border-radius: 50%;
+  }
+
+  .spinner-ring:nth-child(1) {
+    border-top-color: var(--gold);
+    animation: spin-clockwise 1.5s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+
+  .spinner-ring:nth-child(2) {
+    inset: 8px;
+    border-bottom-color: var(--blue);
+    animation: spin-counter-clockwise 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+
+  .spinner-ring:nth-child(3) {
+    inset: 16px;
+    border-left-color: var(--green);
+    animation: spin-clockwise 0.9s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+
+  .spinner-logo {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    color: #fff;
+    opacity: 0.95;
+    animation: pulse-glow-gold 2s ease-in-out infinite;
+    user-select: none;
+    z-index: 2;
+  }
+
+  .loader-message {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+    text-align: center;
+    letter-spacing: 0.25px;
+    line-height: 1.4;
+    animation: fade-pulse 2s ease-in-out infinite;
+  }
+
+  /* === INLINE PREMIUM SPINNER === */
+  .premium-spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem 1.5rem;
+    width: 100%;
+  }
+
+  .premium-spinner-inline {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.05);
+    border-top-color: var(--gold);
+    border-right-color: var(--blue);
+    border-radius: 50%;
+    animation: spin-clockwise 0.8s linear infinite;
+  }
+
+  .premium-spinner-text {
+    font-size: 0.85rem;
+    color: var(--text2);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+
+  /* === ANIMATIONS === */
+  @keyframes spin-clockwise {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes spin-counter-clockwise {
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  @keyframes pulse-glow-gold {
+    0%, 100% {
+      transform: scale(1);
+      text-shadow: 0 0 8px rgba(245, 197, 24, 0.3);
+    }
+    50% {
+      transform: scale(1.12);
+      text-shadow: 0 0 16px rgba(245, 197, 24, 0.7), 0 0 24px rgba(59, 130, 246, 0.4);
+    }
+  }
+
+  @keyframes fade-pulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
 </style>
 
 <!-- SVG Gradient for Analytics Chart -->
@@ -1331,6 +1487,7 @@ async function sendLoginPhoneOtp() {
   msg91OTP.verify('+91' + phone)
     .then(async function(verifiedToken) {
       // Widget success — attempt login using the verified token
+      showLoader('Logging you in...');
       try {
         const r = await fetch(API + '/api/collaborator/login-with-phone', {
           method: 'POST',
@@ -1356,6 +1513,8 @@ async function sendLoginPhoneOtp() {
         err.textContent = d.message || 'Login failed'; err.style.display = 'block';
       } catch {
         err.textContent = 'Network error'; err.style.display = 'block';
+      } finally {
+        hideLoader();
       }
       btn.disabled = false;
       btn.textContent = 'Send OTP';
@@ -1377,6 +1536,7 @@ async function handleLogin(e) { e.preventDefault();
     const pass = document.getElementById('loginPassword').value;
     const otp = document.getElementById('loginOtpInput').value.trim();
     
+    showLoader('Logging in...');
     try {
       const payload = { email, password: pass };
       if (otp) payload.otp = otp;
@@ -1413,7 +1573,9 @@ async function handleLogin(e) { e.preventDefault();
         }
       }
       err.textContent = d.message || 'Invalid credentials'; err.style.display = 'block';
-    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
+    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; } finally {
+      hideLoader();
+    }
   } else {
     // Phone OTP Login
     const phone = document.getElementById('loginPhone').value.trim();
@@ -1423,6 +1585,7 @@ async function handleLogin(e) { e.preventDefault();
       err.style.display = 'block';
       return;
     }
+    showLoader('Logging in...');
     try {
       const r = await fetch(API + '/api/collaborator/login-with-phone', {
         method: 'POST',
@@ -1447,7 +1610,9 @@ async function handleLogin(e) { e.preventDefault();
         }
       }
       err.textContent = d.message || 'Invalid verification code'; err.style.display = 'block';
-    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
+    } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; } finally {
+      hideLoader();
+    }
   }
 }
 
@@ -1471,6 +1636,7 @@ async function sendRegisterPhoneOtp() {
   msg91OTP.verify('+91' + phone)
     .then(async function(verifiedToken) {
       // Confirm with backend
+      showLoader('Verifying OTP...');
       try {
         const r = await fetch(API + '/api/collaborator/verify-msg91-token', {
           method: 'POST',
@@ -1481,7 +1647,7 @@ async function sendRegisterPhoneOtp() {
         if (d.success) {
           _registerPhoneVerified = true;
           status.style.color = '#86efac';
-          status.textContent = '\u2705 Phone verified!';
+          status.textContent = '✅ Phone verified!';
           document.getElementById('appPhone').readOnly = true;
           document.getElementById('appOtp').readOnly = true;
           document.getElementById('sendOtpBtn').style.display = 'none';
@@ -1496,9 +1662,11 @@ async function sendRegisterPhoneOtp() {
         // Offline — mark verified locally
         _registerPhoneVerified = true;
         status.style.color = '#86efac';
-        status.textContent = '\u2705 Phone verified!';
+        status.textContent = '✅ Phone verified!';
         document.getElementById('appPhone').readOnly = true;
-        btn.textContent = '\u2705 Verified';
+        btn.textContent = '✅ Verified';
+      } finally {
+        hideLoader();
       }
     })
     .catch(function(widgetErr) {
@@ -1768,6 +1936,7 @@ async function handleRegister(e) { e.preventDefault();
   };
 
   btn.disabled = true; btn.textContent = 'Submitting...';
+  showLoader('Submitting application...');
   try {
     const r = await fetch(API + '/api/collab-applications', { 
       method:'POST', 
@@ -1812,6 +1981,8 @@ async function handleRegister(e) { e.preventDefault();
     err.style.display = 'block'; 
     btn.disabled = false; 
     btn.textContent = 'Submit Application'; 
+  } finally {
+    hideLoader();
   }
 }
 
@@ -3109,15 +3280,25 @@ async function loadSchedule() {
 }
 
 async function collaboratorFetch(path, options = {}, retry = true) {
-  const requestOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
-  let res = await fetch(API + path, requestOptions);
-  if ((res.status === 401 || res.status === 403) && retry) {
-    const restored = await restoreCollaboratorSessionFromMainAuth();
-    if (!restored || !TOKEN) return res;
-    const retryOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
-    res = await fetch(API + path, retryOptions);
+  let msg = 'Loading data...';
+  if (path.includes('/dashboard/overview')) msg = 'Loading overview statistics...';
+  else if (path.includes('/dashboard/bookings')) msg = 'Retrieving bookings list...';
+  else if (path.includes('/profile')) msg = 'Saving profile changes...';
+  else if (path.includes('/seats')) msg = 'Loading seat configurations...';
+  showLoader(msg);
+  try {
+    const requestOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
+    let res = await fetch(API + path, requestOptions);
+    if ((res.status === 401 || res.status === 403) && retry) {
+      const restored = await restoreCollaboratorSessionFromMainAuth();
+      if (!restored || !TOKEN) return res;
+      const retryOptions = { ...options, headers: { ...(options.headers || {}), 'Authorization': 'Bearer ' + TOKEN } };
+      res = await fetch(API + path, retryOptions);
+    }
+    return res;
+  } finally {
+    hideLoader();
   }
-  return res;
 }
 
 /* ─── Init ─── */
@@ -3853,7 +4034,34 @@ function showCollabRoleSwitcher(roles, mainToken) {
     list.appendChild(btn);
   });
 }
+
+// ========== GLOBAL LOADER UTILITIES ==========
+function showLoader(message = 'Processing your request...') {
+  const loader = document.getElementById('globalLoader');
+  const msgEl = document.getElementById('globalLoaderMessage');
+  if (msgEl) msgEl.textContent = message;
+  if (loader) loader.classList.add('active');
+}
+
+function hideLoader() {
+  const loader = document.getElementById('globalLoader');
+  if (loader) loader.classList.remove('active');
+}
 </script>
 <script src="msg91-otp.js"></script>
+
+<!-- GLOBAL LOADING OVERLAY -->
+<div id="globalLoader" class="global-loader-overlay">
+  <div class="loader-card">
+    <div class="loader-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-logo">YP</div>
+    </div>
+    <div class="loader-message" id="globalLoaderMessage">Processing your request...</div>
+  </div>
+</div>
+
 </body>
 </html>

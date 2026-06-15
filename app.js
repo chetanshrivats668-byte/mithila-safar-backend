@@ -50,6 +50,19 @@ function hideSplash() {
     if (splash) splash.style.display = 'none';
 }
 
+// ========== GLOBAL LOADER UTILITIES ==========
+function showLoader(message = 'Processing your request...') {
+    const loader = document.getElementById('globalLoader');
+    const msgEl = document.getElementById('globalLoaderMessage');
+    if (msgEl) msgEl.textContent = message;
+    if (loader) loader.classList.add('active');
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) loader.classList.remove('active');
+}
+
 // ========== NAVIGATION ==========
 function isIndexPage() {
     const p = window.location.pathname;
@@ -754,6 +767,7 @@ async function handleLogin(e) {
     const pass = document.getElementById('loginPassword').value;
     if (!email || !pass) return notify('Please fill all fields', 'error');
 
+    showLoader('Signing you in...');
     setButtonLoading(btn, true, 'Login');
     try {
         const res = await fetch(API_URL + '/api/auth/login', {
@@ -788,6 +802,7 @@ async function handleLogin(e) {
         notify('Login failed: ' + (err.message || 'network error'), 'error');
     } finally {
         setButtonLoading(btn, false, 'Login');
+        hideLoader();
     }
 }
 
@@ -838,6 +853,7 @@ async function handlePhoneLogin(e) {
         }
         
         console.log('[handlePhoneLogin] Sending OTP for phone:', phone);
+        showLoader('Sending OTP to +91 ' + phone + '...');
         setButtonLoading(btn, true, 'Send OTP');
         try {
             const res = await fetch(API_URL + '/api/auth/send-phone-otp', {
@@ -865,6 +881,7 @@ async function handlePhoneLogin(e) {
             notify('Failed to send OTP: ' + (err.message || 'network error'), 'error');
         } finally {
             setButtonLoading(btn, false, 'Send OTP');
+            hideLoader();
         }
     } else {
         // Verify OTP
@@ -874,6 +891,7 @@ async function handlePhoneLogin(e) {
         }
         
         console.log('[handlePhoneLogin] Verifying OTP for phone:', pendingPhoneLogin, 'otp:', otp);
+        showLoader('Verifying OTP...');
         setButtonLoading(btn, true, 'Verify');
         try {
             const res = await fetch(API_URL + '/api/auth/verify-phone-otp', {
@@ -912,6 +930,7 @@ async function handlePhoneLogin(e) {
             notify('Verification failed: ' + (err.message || 'network error'), 'error');
         } finally {
             setButtonLoading(btn, false, 'Verify');
+            hideLoader();
         }
     }
 }
@@ -983,6 +1002,7 @@ async function completePhoneProfile(e) {
     if (!city) return notify('Please enter your city', 'error');
     if (!state) return notify('Please enter your state', 'error');
     
+    showLoader('Setting up your profile...');
     setButtonLoading(btn, true, 'Continue');
     try {
         const res = await fetch(API_URL + '/api/auth/complete-phone-profile', {
@@ -1008,6 +1028,7 @@ async function completePhoneProfile(e) {
         notify('Profile completion failed: ' + (err.message || 'network error'), 'error');
     } finally {
         setButtonLoading(btn, false, 'Continue');
+        hideLoader();
     }
 }
 
@@ -1021,6 +1042,7 @@ async function handleSignup(e) {
     const password = document.getElementById('signupPassword').value;
     if (!name || !email || !phone || !password) return notify('Please fill all fields', 'error');
 
+    showLoader('Creating your account...');
     setButtonLoading(btn, true, 'Create Account');
     try {
         const res = await fetch(API_URL + '/api/auth/signup', {
@@ -1047,6 +1069,7 @@ async function handleSignup(e) {
         notify('Signup failed: ' + (err.message || 'network error'), 'error');
     } finally {
         setButtonLoading(btn, false, 'Create Account');
+        hideLoader();
     }
 }
 
@@ -1063,6 +1086,7 @@ async function confirmEmailOTP() {
     const code = document.getElementById('emailOtpInput').value.trim();
     if (!code || code.length !== 6) return notify('Please enter a valid 6-digit code', 'error');
     const btn = document.getElementById('btnVerifyEmailOtp');
+    showLoader('Verifying verification code...');
     setButtonLoading(btn, true, '✅ Verify & Login');
     try {
         const res = await fetch(API_URL + '/api/auth/verify-email-otp', {
@@ -1090,11 +1114,13 @@ async function confirmEmailOTP() {
         notify('Verification failed: ' + (err.message || 'network error'), 'error');
     } finally {
         setButtonLoading(btn, false, '✅ Verify & Login');
+        hideLoader();
     }
 }
 
 async function resendEmailOTP() {
     if (emailOtpCooldownTime > 0) return;
+    showLoader('Sending verification code...');
     try {
         const res = await fetch(API_URL + '/api/auth/send-email-otp', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1119,6 +1145,8 @@ async function resendEmailOTP() {
         notify('Verification code resent', 'success');
     } catch (err) {
         notify('Failed to resend code', 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -1191,6 +1219,7 @@ async function searchBuses(e) {
     var date = document.getElementById('busDate').value;
     var passengers = parseInt(document.getElementById('busPassengers').value);
     if (from === to) return notify('From and To cannot be same', 'error');
+    showLoader('Searching for buses from ' + from + ' to ' + to + '...');
     try {
         var res = await fetch(API_URL + '/api/buses/search', {
             method: 'POST', headers: authHeaders(),
@@ -1207,6 +1236,8 @@ async function searchBuses(e) {
         renderBusResults(sorted);
     } catch (err) {
         notify('No buses found for this route', 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -1490,9 +1521,11 @@ async function openBusSeats(busId) {
 
     const seatGrid = document.getElementById('seatGrid');
     seatGrid.innerHTML = `
-        <div style="grid-column:1/-1; text-align:center; padding:2rem;">
-            <div class="spinner" style="display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-radius:50%;border-top-color:var(--primary);animation:spin 0.8s linear infinite;"></div>
-            <p style="color:var(--gray); font-size:0.8rem; margin-top:8px;">Loading visual seat map...</p>
+        <div style="grid-column:1/-1;">
+            <div class="premium-spinner-container">
+                <div class="premium-spinner-inline"></div>
+                <div class="premium-spinner-text">Loading visual seat map...</div>
+            </div>
         </div>
     `;
 
@@ -1651,6 +1684,7 @@ async function searchHotels(e) {
     var checkout = document.getElementById('hotelCheckout').value;
     var guests = document.getElementById('hotelGuests').value;
     if (!location) return notify('Please select a location', 'error');
+    showLoader('Finding hotels in ' + location + '...');
     try {
         var res = await fetch(API_URL + '/api/hotels/search', {
             method: 'POST', headers: authHeaders(),
@@ -1663,6 +1697,8 @@ async function searchHotels(e) {
     } catch (err) {
         console.error('Hotel search error:', err);
         notify('No hotels found in ' + location, 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -1741,6 +1777,7 @@ async function searchCars(e) {
     var time = document.getElementById('carTime').value;
     var passengers = document.getElementById('carPassengers').value;
     if (!city) return notify('Please select a city', 'error');
+    showLoader('Locating cabs in ' + city + '...');
     try {
         var res = await fetch(API_URL + '/api/cabs/search', {
             method: 'POST', headers: authHeaders(),
@@ -1753,6 +1790,8 @@ async function searchCars(e) {
     } catch (err) {
         console.error('Cab search error:', err);
         notify('No cabs available in ' + city, 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -1810,6 +1849,7 @@ function showCafes() {
 async function loadCafes() {
     var container = document.getElementById('cafeGrid');
     if (!container) return;
+    showLoader('Loading cafes...');
     try {
         var res = await fetch(API_URL + '/api/cafes', { headers: authHeaders() });
         var data = await res.json();
@@ -1818,7 +1858,9 @@ async function loadCafes() {
             renderCafes(data.cafes || data.data);
             return;
         }
-    } catch (e) { }
+    } catch (e) { } finally {
+        hideLoader();
+    }
     var cafes = [];
     currentBooking.cafes = cafes;
     renderCafes(cafes);
@@ -1989,6 +2031,7 @@ async function payViaRazorpay() {
     }
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
+    showLoader('Initializing Razorpay gateway...');
     try {
         // Audit 2026-06-14: lift the partnerId from the selected item onto the
         // booking root so the server can route partner SMS to the right operator.
@@ -2016,7 +2059,10 @@ async function payViaRazorpay() {
             body: JSON.stringify(payload)
         });
         var data = await res.json();
-        if (!data.success) return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        if (!data.success) {
+            hideLoader();
+            return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        }
         var options = {
             key: RAZORPAY_KEY_ID,
             amount: amount,
@@ -2025,6 +2071,7 @@ async function payViaRazorpay() {
             description: currentBooking.type + ' booking',
             order_id: data.razorpayOrderId || data.orderId,
             handler: async function (response) {
+                showLoader('Verifying payment and generating ticket...');
                 try {
                     notify('Verifying payment...', 'info');
                     var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
@@ -2049,6 +2096,8 @@ async function payViaRazorpay() {
                     }
                 } catch (err) {
                     notify('Payment verification error', 'error');
+                } finally {
+                    hideLoader();
                 }
             },
             prefill: {
@@ -2066,6 +2115,8 @@ async function payViaRazorpay() {
         rzp.open();
     } catch (err) {
         notify('Payment error: ' + err.message, 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -2121,6 +2172,7 @@ async function payViaUpiId() {
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
 
+    showLoader('Initializing UPI payment...');
     try {
         notify('Initiating UPI payment...', 'info');
         // Audit 2026-06-14: lift the partnerId from the selected item onto the
@@ -2149,7 +2201,10 @@ async function payViaUpiId() {
             body: JSON.stringify(payload)
         });
         var data = await res.json();
-        if (!data.success) return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        if (!data.success) {
+            hideLoader();
+            return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        }
 
         var options = {
             key: RAZORPAY_KEY_ID,
@@ -2166,6 +2221,7 @@ async function payViaUpiId() {
                 vpa: upiId
             },
             handler: async function (response) {
+                showLoader('Verifying payment and generating ticket...');
                 try {
                     notify('Verifying payment...', 'info');
                     var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
@@ -2195,6 +2251,8 @@ async function payViaUpiId() {
                     }
                 } catch (err) {
                     notify('Payment verification error', 'error');
+                } finally {
+                    hideLoader();
                 }
             },
             theme: { color: '#d84e55' },
@@ -2211,6 +2269,8 @@ async function payViaUpiId() {
         rzp.open();
     } catch (err) {
         notify('Payment error: ' + err.message, 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -2222,6 +2282,7 @@ async function confirmUpiPayment() {
         notify('Please enter your Sender UPI ID or Transaction Ref No', 'warning');
         return;
     }
+    showLoader('Submitting UPI payment for verification...');
     notify('Submitting UPI payment...', 'info');
     try {
         var res = await fetch(API_URL + '/api/upi/confirm-payment', {
@@ -2258,6 +2319,8 @@ async function confirmUpiPayment() {
     } catch (err) {
         closePaymentPage();
         notify('Could not submit payment confirmation. Ticket not generated.', 'error');
+    } finally {
+        hideLoader();
     }
 }
 
@@ -2275,7 +2338,12 @@ function openBookings() {
 async function loadBookings() {
     var container = document.getElementById('bookingsList');
     if (!container) return;
-    container.innerHTML = '<p style="text-align:center;padding:2rem;color:var(--gray);">Loading your bookings...</p>';
+    container.innerHTML = `
+        <div class="premium-spinner-container">
+            <div class="premium-spinner-inline"></div>
+            <div class="premium-spinner-text">Loading your bookings...</div>
+        </div>
+    `;
     try {
         var res = await fetch(API_URL + '/api/user/bookings', { method: 'POST', headers: authHeaders() });
         var data = await res.json();
@@ -2674,6 +2742,7 @@ async function submitCollab(e) {
         if (!data.hotelName || !data.general || !data.ac || !data.balcony || !data.location) return notify('Fill all hotel details', 'error');
     }
 
+    showLoader('Submitting application...');
     setButtonLoading(btn, true, '🚀 Submit Application');
     try {
         var res = await fetch(API_URL + '/api/submit-collab', {
@@ -2694,6 +2763,7 @@ async function submitCollab(e) {
         showCollabForm();
     } finally {
         setButtonLoading(btn, false, '🚀 Submit Application');
+        hideLoader();
     }
 }
 
