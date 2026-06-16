@@ -1774,6 +1774,12 @@ async function searchCars(e) {
     }
 }
 
+function getCabBookingId(cab) {
+    if (!cab) return '';
+    return String(cab.id || cab.cabId || cab._id || cab.serviceId || '');
+}
+
+
 function renderCabResults(cabs) {
     var container = document.getElementById('resultsContainer');
     var header = document.getElementById('resultsHeader');
@@ -1781,6 +1787,8 @@ function renderCabResults(cabs) {
     header.innerHTML = 'Available Cabs in ' + currentBooking.city;
     var html = '';
     cabs.forEach(function (c) {
+        var cabBookingId = getCabBookingId(c);
+        var safeCabBookingId = encodeURIComponent(cabBookingId);
         var serviceName = c.cabname || c.cabName || c.name || c.busName || 'Cab';
         var model = c.cabtype || c.cabType || 'Standard';
         var driver = c.drivername || c.driverName || '';
@@ -1804,7 +1812,7 @@ function renderCabResults(cabs) {
                     </div>
                     <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
                         <span class="price" style="margin-right:auto;"><small>Fare</small><br>₹${fare}</span>
-                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="bookCab('${c.id}', '${fare}')">Book Now</button>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="bookCab('${safeCabBookingId}', '${fare}')">Book Now</button>
                     </div>
                 </div>
             </div>
@@ -1815,9 +1823,12 @@ function renderCabResults(cabs) {
 }
 
 function bookCab(cabId, fare) {
+    var normalizedCabId = decodeURIComponent(String(cabId || ''));
     var cab = null;
     if (currentBooking.cabs) {
-        currentBooking.cabs.forEach(function (c) { if (c.id === cabId) cab = c; });
+        currentBooking.cabs.forEach(function (c) {
+            if (getCabBookingId(c) === normalizedCabId) cab = c;
+        });
     }
     if (!cab) return notify('Cab not found', 'error');
     currentBooking.selectedCab = cab;
@@ -1828,6 +1839,7 @@ function bookCab(cabId, fare) {
     currentBooking.amount = amount;
     openPayment(currentBooking.amount);
 }
+
 
 // ========== CAFES ==========
 function showCafes() {
@@ -2000,10 +2012,17 @@ function updatePaymentTotals() {
     var discountedTotal = getDiscountedTotal();
     var finalAmount = discountedTotal;
 
-    document.getElementById('payDiscount').textContent = appliedCouponDiscount;
-    document.getElementById('payFinal').textContent = finalAmount;
-    document.getElementById('upiAppBtnAmount').textContent = finalAmount;
-    document.getElementById('upiIdBtnAmount').textContent = finalAmount;
+    var d = document.getElementById('payDiscount');
+    var f = document.getElementById('payFinal');
+    var u = document.getElementById('upiAppBtnAmount');
+    var r = document.getElementById('razorpayBtnAmount');
+    var i = document.getElementById('upiIdBtnAmount');
+
+    if (d) d.textContent = appliedCouponDiscount;
+    if (f) f.textContent = finalAmount;
+    if (u) u.textContent = finalAmount;
+    if (r) r.textContent = finalAmount;
+    if (i) i.textContent = finalAmount;
 }
 
 function resetPaymentState() {
@@ -2267,9 +2286,16 @@ async function verifyRazorpayPayment(response, data, paymentMethodLabel, amountI
 
 
 function switchPayTab(tabId) {
-    // Hide all sections
-    document.getElementById('upiAppSection').style.display = 'none';
-    document.getElementById('upiIdSection').style.display = 'none';
+    // Hide all sections safely
+    var upiApp = document.getElementById('upiAppSection');
+    var upiId = document.getElementById('upiIdSection');
+    var razorpay = document.getElementById('razorpaySection');
+    var upiQr = document.getElementById('upiSection');
+
+    if (upiApp) upiApp.style.display = 'none';
+    if (upiId) upiId.style.display = 'none';
+    if (razorpay) razorpay.style.display = 'none';
+    if (upiQr) upiQr.style.display = 'none';
 
     // Deactivate all tab buttons
     document.querySelectorAll('.pay-tab-btn').forEach(btn => {
@@ -2278,14 +2304,22 @@ function switchPayTab(tabId) {
         btn.style.color = 'var(--gray)';
     });
 
-    // Get target button and section
-    let activeBtn;
+    // Get target button and section (allow fallback to card/razorpay if upi-app is missing)
+    let activeBtn = document.querySelector('[onclick="switchPayTab(\'' + tabId + '\')"]');
+    
     if (tabId === 'upi-app') {
-        document.getElementById('upiAppSection').style.display = 'block';
-        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-app\')"]');
+        if (upiApp) {
+            upiApp.style.display = 'block';
+        } else if (razorpay) {
+            razorpay.style.display = 'block';
+            activeBtn = document.querySelector('[onclick="switchPayTab(\'card\')"]');
+        }
+    } else if (tabId === 'card') {
+        if (razorpay) razorpay.style.display = 'block';
     } else if (tabId === 'upi-id') {
-        document.getElementById('upiIdSection').style.display = 'block';
-        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-id\')"]');
+        if (upiId) upiId.style.display = 'block';
+    } else if (tabId === 'upi-qr') {
+        if (upiQr) upiQr.style.display = 'block';
     }
 
     if (activeBtn) {

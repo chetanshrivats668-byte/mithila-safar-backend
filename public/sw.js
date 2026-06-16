@@ -1,7 +1,7 @@
 // ============================================================
 // Yatri Point — Service Worker (PWA Offline Support)
 // ============================================================
-const CACHE_NAME = 'ms-booking-v4';
+const CACHE_NAME = 'ms-booking-v5';
 
 // Files to cache for offline use
 const OFFLINE_ASSETS = [
