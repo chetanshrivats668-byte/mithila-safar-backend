@@ -2154,12 +2154,6 @@ async function payViaUpiApp() {
         }
 
         var options = buildRazorpayBaseOptions(amount, data);
-        options.config = {
-            ...options.config,
-            upi: {
-                flow: 'intent'
-            }
-        };
         options.handler = async function (response) {
             await verifyRazorpayPayment(response, data, 'UPI App', amount / 100);
         };
@@ -2206,14 +2200,6 @@ async function payViaRazorpay() {
         }
 
         var options = buildRazorpayBaseOptions(amount, data);
-        if (isMobileDevice()) {
-            options.config = {
-                ...options.config,
-                upi: {
-                    flow: 'intent'
-                }
-            };
-        }
         options.handler = async function (response) {
             await verifyRazorpayPayment(response, data, 'Razorpay', amount / 100);
         };

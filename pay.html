@@ -1268,47 +1268,7 @@ async function handleRazorpayPay() {
 //  UPI APP HANDLER (direct deeplink)
 // =============================================
 async function handleUpiAppPay() {
-  const contact = getContactDetails();
-  if (!contact) return;
-
-  // Merchant UPI details
-  const payeeVPA = '8178030064@ptyes';
-  const payeeName = 'SUDHAKAR KUMAR MISHRA';
-  const transactionNote = TYPE_LABEL[TYPE] || TYPE + ' booking - ' + (NOTE || '');
-
-  // Build UPI deeplink
-  const upiLink = 'upi://pay?pa=' + encodeURIComponent(payeeVPA)
-    + '&pn=' + encodeURIComponent(payeeName)
-    + '&am=' + AMOUNT
-    + '&cu=INR'
-    + '&tn=' + encodeURIComponent(transactionNote);
-
-  // Show confirmation to user
-  const confirmMsg = 'This will open your installed UPI app to pay ₹' + formatRupee(AMOUNT) + '.\n\n' +
-    '⚠️ IMPORTANT: If you cancel or exit the UPI app before completing payment, NO TICKET will be generated.\n\n' +
-    'Proceed to open UPI app?';
-
-  if (!confirm(confirmMsg)) {
-    return;
-  }
-
-  showLoader('Opening UPI app…');
-
-  try {
-    // Open UPI app via deeplink
-    window.location.href = upiLink;
-
-    // Since we can't detect if payment completed or cancelled via deeplink,
-    // show message and let user verify manually if needed
-    setTimeout(() => {
-      hideLoader();
-      toast('UPI app opened. Complete payment there. If cancelled, no ticket is generated.', 'info');
-    }, 1500);
-
-  } catch (err) {
-    hideLoader();
-    toast('Could not open UPI app. Make sure you have a UPI app installed.', 'error');
-  }
+  await handleRazorpayPay();
 }
 
 // =============================================
