@@ -2527,7 +2527,11 @@ function showAddItemModal() {
     <div class="form-group"><label>Driver Name *</label><input type="text" id="f_driverName" placeholder="e.g. Raju Kumar" required></div>
     <div class="form-group"><label>Car driver Phone Number</label><input type="tel" id="f_driverPhone" placeholder="10-digit Phone" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required></div>
     <div class="form-group"><label>Operating City *</label><input type="text" id="f_cabCity" placeholder="e.g. Patna, Ranchi, Delhi"></div>
-    <div class="form-group"><label>Price per Km (₹)</label><input type="number" id="f_price" placeholder="12" required></div>
+    <div class="form-group">
+      <label>Fixed Price (₹)</label>
+      <input type="number" id="f_price" placeholder="500" min="1" required>
+      <small style="color:var(--text2);font-size:.72rem;display:block;margin-top:4px;">Fixed charge for travel within the selected city. Example: ₹500 for all trips within Patna city.</small>
+    </div>
   ` : `
     <div class="form-group"><label>Bus Name</label><input type="text" id="f_name" placeholder="e.g. Volvo AC Sleeper" required></div>
     <div class="form-group"><label>Bus Type</label><select id="f_type"><option>AC Sleeper</option><option>Semi Sleeper</option><option>Seater</option><option>Non-AC</option></select></div>
@@ -2623,7 +2627,7 @@ async function saveItem(e) { e.preventDefault();
     data.driverName = driverName;
     data.driverPhone = driverPhone;
     data.operatingCity = document.getElementById('f_cabCity').value.trim();
-    data.pricePerKm = parseFloat(document.getElementById('f_price').value) || 0;
+    data.price = parseFloat(document.getElementById('f_price').value) || 0;
     data.name = data.busName;
     requestPath = '/api/collaborator/cab/';
   } else {
@@ -3151,10 +3155,13 @@ async function loadPricing() {
   let unit = '';
   let label = 'Price';
   let paddingRight = '2rem';
-  if (primary === 'bus' || primary === 'cab') {
+  if (primary === 'bus') {
     unit = ' / km';
     label = 'Price per Km';
     paddingRight = '2.8rem';
+  } else if (primary === 'cab') {
+    label = 'Fixed Price';
+    paddingRight = '2rem';
   } else if (primary === 'hotel') {
     unit = ' / night';
     label = 'Price per Night';
@@ -3829,7 +3836,7 @@ async function loadCabSeatLayout() {
     const driverName = cab.driverName || '';
     const driverPhone = cab.driverPhone || '';
     const route = cab.route || cab.city || '';
-    const fare = cab.fare || cab.pricePerKm || '';
+    const fare = cab.fare || cab.price || cab.pricePerKm || '';
     const status = cab.status || 'unknown';
 
     // KPI bar — just show total seats since cab is booked as a whole unit
@@ -3858,7 +3865,7 @@ async function loadCabSeatLayout() {
           '</div>' +
           '<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:.8rem">' +
             (route ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">📍 Route:</span> <span style="color:#fff;font-weight:600">' + route + '</span></div>' : '') +
-            (fare ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">💰 Fare:</span> <span style="color:#fff;font-weight:600">₹' + fare + '/km</span></div>' : '') +
+            (fare ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">💰 Fixed Price:</span> <span style="color:#fff;font-weight:600">₹' + fare + '</span></div>' : '') +
             (driverName ? '<div style="margin-bottom:.4rem"><span style="color:var(--text2)">👤 Driver:</span> <span style="color:#fff;font-weight:600">' + driverName + '</span></div>' : '') +
             (driverPhone ? '<div><span style="color:var(--text2)">📞 Phone:</span> <span style="color:#fff;font-weight:600">' + driverPhone + '</span></div>' : '') +
           '</div>' +

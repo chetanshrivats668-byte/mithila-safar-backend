@@ -82,45 +82,125 @@ const TOKEN_EXPIRY = '8h';
 
 // ========== SMS HELPER (MSG91) — see services/smsService.js ==========
 
+function normalizeText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getBookingDetailsObject(booking) {
+  if (!booking?.details) return {};
+  if (typeof booking.details === 'string') {
+    try { return JSON.parse(booking.details); } catch (_) { return {}; }
+  }
+  return booking.details;
+}
+
+function getBookingFieldValue() {
+  for (const value of arguments) {
+    if (value === 0) return '0';
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return String(value).trim();
+    }
+  }
+  return 'N/A';
+}
+
+function normalizePaymentStatus(status) {
+  const normalized = String(status || 'pending').trim().toLowerCase();
+  if (normalized === 'confirmed') return 'Paid';
+  return normalized
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/w/g, ch => ch.toUpperCase());
+}
+
+function buildCollaboratorSpecificDetails(booking) {
+  const details = getBookingDetailsObject(booking);
+  const selectedCab = details.selectedCab || booking?.selectedCab || {};
+  const selectedBus = details.selectedBus || booking?.selectedBus || {};
+  const selectedHotel = details.selectedHotel || booking?.selectedHotel || {};
+  const selectedCafe = details.selectedCafe || booking?.selectedCafe || {};
+  const type = String(booking?.type || details?.type || '').toLowerCase();
+
+  if (type === 'cab' || type === 'car') {
+    return [
+      'Boarding Point: ' + getBookingFieldValue(details.boarding, details.boardingPoint, details.from, details.pickup, details.pickupPoint, selectedCab.boarding, selectedCab.boardingPoint, booking?.boarding, booking?.from),
+      'Dropping Point: ' + getBookingFieldValue(details.dropping, details.droppingPoint, details.to, details.dropoff, selectedCab.dropping, selectedCab.droppingPoint, selectedCab.to, booking?.dropping, booking?.to)
+    ];
+  }
+
+  if (type === 'bus') {
+    return [
+      'Dropping City: ' + getBookingFieldValue(details.to, details.droppingCity, details.dropping, selectedBus.to, selectedBus.droppingCity, booking?.to, booking?.dropping)
+    ];
+  }
+
+  if (type === 'hotel') {
+    return [
+      'Room Type: ' + getBookingFieldValue(booking?.roomType, details.roomType, selectedHotel.roomType)
+    ];
+  }
+
+  if (type === 'cafe') {
+    const bookingTableNumber = Array.isArray(booking?.seats) ? booking.seats.map(seat => Number(seat) + 1).join(', ') : booking?.seats;
+    const detailsTableNumber = Array.isArray(details?.seats) ? details.seats.map(seat => Number(seat) + 1).join(', ') : (details?.tableNumber || details?.seats);
+    return [
+      'Table number: ' + getBookingFieldValue(detailsTableNumber, selectedCafe.tableNumber, bookingTableNumber)
+    ];
+  }
+
+  return [];
+}
+
+function getPartnerTargetType(type) {
+  const normalized = String(type || '').toLowerCase();
+  return normalized === 'car' ? 'cab' : normalized;
+}
+
+function getBookingCollaboratorId(orderData) {
+  return orderData?.collaboratorId
+    || orderData?.details?.collaboratorId
+    || orderData?.details?.collabId
+    || null;
+}
+
 // Build SMS message for partner notification
 function buildPartnerSMS(booking) {
-  const type = (booking.type || '').toUpperCase();
-  const userName = booking.userName || 'N/A';
-  const userPhone = booking.userPhone || 'N/A';
-  const userAge = booking.userAge || 'N/A';
-  const passengers = booking.passengerCount || 1;
-  const paymentStatus = booking.status || 'pending';
-  const seats = booking.seats || [];
-  const itemName = booking.itemName || 'Booking';
-  const amount = booking.amount || 0;
-  const orderId = booking.orderId || 'N/A';
-  let msg = `YATRI POINT New ${type} Booking!\nID: ${orderId}\nName: ${userName}\nMobile: ${userPhone}\nAge: ${userAge}\nPassengers: ${passengers}\n`;
-  if (type === 'BUS' && seats.length > 0) { msg += `Seats: ${seats.join(', ')}\n`; }
-  msg += `Rs.${amount} | ${paymentStatus}\n${itemName}\n`;
-  if (booking.type === 'car' && booking.liveLocationUrl) { msg += `Live Location: ${booking.liveLocationUrl}\n`; }
-  msg += `— Yatri Point`;
-  return msg;
+  const details = getBookingDetailsObject(booking);
+  const type = String(booking?.type || details?.type || '').toUpperCase();
+  const lines = [
+    'YATRI POINT New ' + (type || 'BOOKING') + ' Booking!',
+    'ID: ' + getBookingFieldValue(booking?.orderId),
+    'Name: ' + getBookingFieldValue(booking?.userName, details.userName, details.name),
+    'Mobile number: ' + getBookingFieldValue(booking?.userPhone, details.userPhone, details.mobileNumber, details.phone),
+    'Age: ' + getBookingFieldValue(booking?.userAge, details.userAge, details.age, booking?.passengerDetails?.[0]?.age),
+    'Payment Status: ' + normalizePaymentStatus(booking?.status),
+    ...buildCollaboratorSpecificDetails(booking)
+  ];
+
+  if ((booking?.type === 'car' || String(booking?.type || '').toLowerCase() === 'car') && booking?.liveLocationUrl) {
+    lines.push('Live Location: ' + booking.liveLocationUrl);
+  }
+
+  lines.push('- Yatri Point');
+  return lines.join('\n');
 }
 
 // Send SMS notification to matching partners.
-// Audit 2026-06-14: if the order carries a collaboratorId, only notify THAT
-// operator. Otherwise (legacy order without collaboratorId), fall back to all
-// operators of the matching type — but log a warning so we notice the gap.
+// If the order carries a collaboratorId, notify ONLY that collaborator.
 async function sendPartnerNotification(orderData) {
   try {
-    const collabType = orderData.type === 'car' ? 'cab' : orderData.type;
+    const collabType = getPartnerTargetType(orderData.type);
     const allCollabs = await dbList('collabs');
     let matchingCollabs = allCollabs.filter(c => c.status === 'approved' && (c.type === collabType || c.type === collabType + '-route'));
     if (matchingCollabs.length === 0) { console.log('[COLLAB] No matching partner for type:', collabType); return; }
-    if (orderData.collaboratorId) {
-      const specific = matchingCollabs.filter(c => c.id === orderData.collaboratorId);
-      if (specific.length > 0) {
-        matchingCollabs = specific;
-      } else {
-        console.warn(`[COLLAB] Order ${orderData.orderId} has collaboratorId=${orderData.collaboratorId} but no matching approved collab of type ${collabType} — falling back to broadcast`);
+    const collaboratorId = getBookingCollaboratorId(orderData);
+    if (collaboratorId) {
+      matchingCollabs = matchingCollabs.filter(c => c.id === collaboratorId);
+      if (matchingCollabs.length === 0) {
+        console.warn(`[COLLAB] Order ${orderData.orderId} has collaboratorId=${collaboratorId} but no approved matching collaborator was found. Notification skipped.`);
+        return;
       }
-    } else {
-      console.warn(`[COLLAB] Order ${orderData.orderId} has no collaboratorId — broadcasting to all ${matchingCollabs.length} operators of type ${collabType}`);
     }
     const smsMsg = buildPartnerSMS(orderData);
     for (const collab of matchingCollabs) {
@@ -129,6 +209,11 @@ async function sendPartnerNotification(orderData) {
     }
   } catch (err) { console.error('Partner notification error:', err); }
 }
+
+
+
+// ========== RATE LIMITER ==========
+
 
 // ========== RATE LIMITER ==========
 async function checkAdminLoginRateLimit(ip) {
@@ -338,11 +423,36 @@ app.post('/api/payment-link/create-order', async (req, res) => {
       currency:       'INR',
     });
   } catch (err) {
-    console.error('[PayLink] Create order error:', err);
-    if (err && err.statusCode === 401) {
-      return res.status(500).json({ success: false, message: 'Payment gateway configuration error' });
+    const statusCode = Number(err?.statusCode || err?.status || 0);
+    const errorDescription = err?.error?.description || err?.description || err?.message || 'Unknown payment gateway error';
+    const isGatewayAuthError = statusCode === 401;
+    const isGatewayConfigError =
+      isGatewayAuthError ||
+      /authentication|authorize|authorise|api key|key_id|key secret|merchant/i.test(String(errorDescription));
+
+    console.error('[PayLink] Create order error:', {
+      statusCode,
+      code: err?.error?.code || err?.code || null,
+      description: errorDescription,
+      field: err?.error?.field || null,
+      source: err?.error?.source || null,
+      step: 'razorpay.orders.create',
+      keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8),
+    });
+
+    if (isGatewayConfigError) {
+      return res.status(500).json({
+        success: false,
+        code: 'PAYMENT_GATEWAY_CONFIG_ERROR',
+        message: 'Payment gateway is temporarily unavailable. Please try again in a few minutes or contact support.',
+      });
     }
-    res.status(500).json({ success: false, message: 'Failed to create payment order. Please try again.' });
+
+    res.status(500).json({
+      success: false,
+      code: 'PAYMENT_ORDER_CREATE_FAILED',
+      message: 'Failed to create payment order. Please try again.',
+    });
   }
 });
 
@@ -503,66 +613,110 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, valid
   try {
     const { amount, type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
     if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
+
     const orderId = 'MS' + Date.now().toString(36).toUpperCase();
     console.log(`[Razorpay] Creating order ${orderId} | amount=${amount} | type=${type || ''} | key=${String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)}...`);
-    const razorpayOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId, notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' } });
+
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: 'INR',
+      receipt: orderId,
+      notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' }
+    });
+
     const orderData = {
-      orderId, razorpayOrderId: razorpayOrder.id,
-      type: type || '', itemName: itemName || '',
-      amount: Number(amount), payNow: Number(amount), due: 0,
+      orderId,
+      razorpayOrderId: razorpayOrder.id,
+      type: type || '',
+      itemName: itemName || '',
+      amount: Number(amount),
+      payNow: Number(amount),
+      due: 0,
       details: details || {},
-      seats: seats || null, roomType: roomType || null,
-      userName: userName || '', userPhone: userPhone || '',
-      userAge: userAge || '', passengerCount: passengerCount || 1,
+      seats: seats || null,
+      roomType: roomType || null,
+      userName: userName || '',
+      userPhone: userPhone || '',
+      userAge: userAge || '',
+      passengerCount: passengerCount || 1,
       collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
-      status: 'payment_pending', payMethod: 'razorpay',
+      status: 'payment_pending',
+      payMethod: 'razorpay',
       createdAt: new Date().toISOString(),
-      verifiedAt: null, verifiedBy: null
+      verifiedAt: null,
+      verifiedBy: null
     };
+
     if (isSupabaseAvailable()) {
       await dbCreate('orders', orderId, orderData);
     } else {
       memoryDb.orders.set(orderId, orderData);
       console.log('[FALLBACK]: Order stored in memory:', orderId);
     }
-    res.json({ success: true, orderId, razorpayOrderId: razorpayOrder.id, razorpayKey: process.env.RAZORPAY_KEY_ID, amount: Math.round(amount * 100), currency: 'INR' });
+
+    res.json({
+      success: true,
+      orderId,
+      razorpayOrderId: razorpayOrder.id,
+      razorpayKey: process.env.RAZORPAY_KEY_ID,
+      amount: Math.round(amount * 100),
+      currency: 'INR'
+    });
   } catch (err) {
+    const statusCode = Number(err?.statusCode || err?.status || 0);
+    const errorDescription = err?.error?.description || err?.description || err?.message || 'Unknown payment gateway error';
+    const isGatewayAuthError = statusCode === 401;
+    const isGatewayConfigError =
+      isGatewayAuthError ||
+      /authentication|authorize|authorise|api key|key_id|key secret|merchant/i.test(String(errorDescription));
+
     console.error('Razorpay order creation error:', {
       message: err?.message,
-      statusCode: err?.statusCode,
-      error: err?.error,
-      description: err?.error?.description,
-      field: err?.error?.field,
-      source: err?.error?.source,
-      step: 'create-order'
+      statusCode,
+      error: err?.error || null,
+      description: errorDescription,
+      field: err?.error?.field || null,
+      source: err?.error?.source || null,
+      step: 'create-order',
+      keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
     });
-    if (err && err.statusCode === 401) {
-      return res.status(401).json({ success: false, message: 'Razorpay authentication failed' });
+
+    if (isGatewayConfigError) {
+      return res.status(500).json({
+        success: false,
+        code: 'PAYMENT_GATEWAY_CONFIG_ERROR',
+        message: 'Payment gateway is temporarily unavailable. Please try again in a few minutes or contact support.'
+      });
     }
-    res.status(500).json({ success: false, message: 'Failed to create payment order' });
+
+    res.status(500).json({
+      success: false,
+      code: 'PAYMENT_ORDER_CREATE_FAILED',
+      message: 'Failed to create payment order. Please try again.'
+    });
   }
 });
 
-// ========== RAZORPAY: Verify Payment ==========
-app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
-  try {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId, liveLocationUrl } = req.body;
-    console.log(`[Razorpay] Verifying payment | orderId=${orderId} | razorpayOrderId=${razorpayOrderId} | paymentId=${razorpayPaymentId}`);
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
-      return res.status(400).json({ success: false, message: 'Missing payment fields' });
-    }
-    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '').update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
-    if (expectedSignature !== razorpaySignature) {
-      console.warn('[Razorpay] Signature mismatch during verify-payment', {
-        orderId,
-        razorpayOrderId,
-        razorpayPaymentId,
-        expectedSignaturePrefix: String(expectedSignature).slice(0, 10),
-        receivedSignaturePrefix: String(razorpaySignature).slice(0, 10),
-        keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
-      });
-      return res.status(400).json({ success: false, message: 'Payment verification failed' });
-    }
+ // ========== RAZORPAY: Verify Payment ==========
+ app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
+   try {
+     const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId, liveLocationUrl } = req.body;
+     console.log(`[Razorpay] Verifying payment | orderId=${orderId} | razorpayOrderId=${razorpayOrderId} | paymentId=${razorpayPaymentId}`);
+     if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
+       return res.status(400).json({ success: false, message: 'Missing payment fields' });
+     }
+     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '').update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
+     if (expectedSignature !== razorpaySignature) {
+       console.warn('[Razorpay] Signature mismatch during verify-payment', {
+         orderId,
+         razorpayOrderId,
+         razorpayPaymentId,
+         expectedSignaturePrefix: String(expectedSignature).slice(0, 10),
+         receivedSignaturePrefix: String(razorpaySignature).slice(0, 10),
+         keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
+       });
+       return res.status(400).json({ success: false, message: 'Payment verification failed' });
+     }
     const updates = { status: 'confirmed', razorpayPaymentId, razorpaySignature, verifiedAt: new Date().toISOString(), verifiedBy: 'razorpay_auto', liveLocationUrl: liveLocationUrl || null };
     if (isSupabaseAvailable()) {
       const orderData = await dbGet('orders', orderId);
@@ -591,105 +745,6 @@ app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, val
   }
 });
 
-
-app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayCreateOrder), async (req, res) => {
-  try {
-    const { amount, type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
-    if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
-    console.log(`[Razorpay] Creating order ${orderId} | amount=${amount} | type=${type || ''} | key=${String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)}...`);
-
-    const orderId = 'MS' + Date.now().toString(36).toUpperCase();
-    const razorpayOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId, notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' } });
-    const orderData = {
-      orderId, razorpayOrderId: razorpayOrder.id,
-      type: type || '', itemName: itemName || '',
-      amount: Number(amount), payNow: Number(amount), due: 0,
-      details: details || {},
-      seats: seats || null, roomType: roomType || null,
-      userName: userName || '', userPhone: userPhone || '',
-      userAge: userAge || '', passengerCount: passengerCount || 1,
-      // Audit 2026-06-14: capture which partner owns this booking so we can
-      // route the SMS to the right partner and not every operator on the platform.
-      collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
-      status: 'payment_pending', payMethod: 'razorpay',
-      createdAt: new Date().toISOString(),
-      verifiedAt: null, verifiedBy: null
-    };
-    
-    if (isSupabaseAvailable()) {
-      await dbCreate('orders', orderId, orderData);
-    } else {
-      memoryDb.orders.set(orderId, orderData);
-      console.log('[FALLBACK]: Order stored in memory:', orderId);
-    }
-    
-    console.error('Razorpay order creation error:', {
-      message: err?.message,
-      statusCode: err?.statusCode,
-      error: err?.error,
-      description: err?.error?.description,
-      field: err?.error?.field,
-      source: err?.error?.source,
-      step: 'create-order'
-    }); 
-    console.log(`[Razorpay] Verifying payment | orderId=${orderId} | razorpayOrderId=${razorpayOrderId} | paymentId=${razorpayPaymentId}`);
-
-
-    res.json({ success: true, orderId, razorpayOrderId: razorpayOrder.id, razorpayKey: process.env.RAZORPAY_KEY_ID, amount: Math.round(amount * 100), currency: 'INR' });
-  } catch (err) { 
-    console.error('Razorpay order creation error:', err); 
-    if (err && err.statusCode === 401) {
-      return res.status(401).json({ success: false, message: 'Razorpay authentication failed' });
-    }
-    if (expectedSignature !== razorpaySignature) {
-      console.warn('[Razorpay] Signature mismatch during verify-payment', {
-        orderId,
-        razorpayOrderId,
-        razorpayPaymentId,
-        expectedSignaturePrefix: String(expectedSignature).slice(0, 10),
-        receivedSignaturePrefix: String(razorpaySignature).slice(0, 10),
-        keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
-      });
-      return res.status(400).json({ success: false, message: 'Payment verification failed' });
-    }
-
-    res.status(500).json({ success: false, message: 'Failed to create payment order' }); 
-  }
-});
-
-// ========== RAZORPAY: Verify Payment ==========
-app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
-  try {
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId, liveLocationUrl } = req.body;
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
-      return res.status(400).json({ success: false, message: 'Missing payment fields' });
-    }
-    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '').update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
-    if (expectedSignature !== razorpaySignature) { return res.status(400).json({ success: false, message: 'Payment verification failed' }); }
-    
-    const updates = { status: 'confirmed', razorpayPaymentId, razorpaySignature, verifiedAt: new Date().toISOString(), verifiedBy: 'razorpay_auto', liveLocationUrl: liveLocationUrl || null };
-    
-    if (isSupabaseAvailable()) {
-      const orderData = await dbGet('orders', orderId);
-      if (!orderData) { return res.status(404).json({ success: false, message: 'Order not found' }); }
-      await dbUpdate('orders', orderId, updates);
-      const updatedData = { ...orderData, ...updates, orderId };
-      await sendPartnerNotification(updatedData);
-    } else {
-      // Update in memory when Firestore unavailable
-      const existingOrder = memoryDb.orders.get(orderId);
-      if (!existingOrder) {
-        return res.status(404).json({ success: false, message: 'Order not found' });
-      }
-      const updatedOrder = { ...existingOrder, ...updates };
-      memoryDb.orders.set(orderId, updatedOrder);
-      console.log('[FALLBACK]: Order verified in memory:', orderId);
-      await sendPartnerNotification(updatedOrder);
-    }
-    
-    res.json({ success: true, orderId, status: 'confirmed' });
-  } catch (err) { console.error('Razorpay verify error:', err); res.status(500).json({ success: false, message: 'Payment verification error' }); }
-});
 
 // ========== RAZORPAY: Webhook (auto payment confirmation) ==========
 // Razorpay calls this URL the instant money lands in your account.
@@ -823,7 +878,7 @@ app.post('/api/create-order', requireAuth, blockTemporarySession, validate(valid
     const { type, itemName, amount, payNow, due, details, seats, roomType, userEmail, userPhone, userName, userAge, passengerCount } = req.body;
     if (!type || !itemName || !amount || !payNow) return res.status(400).json({ success: false, message: 'Missing fields' });
     const orderId = 'MS' + Date.now().toString(36).toUpperCase();
-    const order = { orderId, transactionId: crypto.randomBytes(4).toString('hex').toUpperCase(), type, itemName, amount: Number(amount), payNow: Number(payNow), due: Number(due) || 0, details: details || {}, seats: seats || null, roomType: roomType || null, userEmail: userEmail || null, userPhone: userPhone || null, userName: userName || '', userAge: userAge || '', passengerCount: passengerCount || 1, status: 'payment_pending', payMethod: 'upi', createdAt: new Date().toISOString(), verifiedAt: null, verifiedBy: null };
+    const order = { orderId, transactionId: crypto.randomBytes(4).toString('hex').toUpperCase(), type, itemName, amount: Number(amount), payNow: Number(payNow), due: Number(due) || 0, details: details || {}, seats: seats || null, roomType: roomType || null, userEmail: userEmail || null, userPhone: userPhone || null, userName: userName || '', userAge: userAge || '', passengerCount: passengerCount || 1, collaboratorId: (details && (details.collaboratorId || details.collabId)) || null, status: 'payment_pending', payMethod: 'upi', createdAt: new Date().toISOString(), verifiedAt: null, verifiedBy: null };
     
     if (isSupabaseAvailable()) {
       await dbCreate('orders', orderId, order);
@@ -1858,6 +1913,25 @@ app.get('/api/admin/services', requireAdmin, async (req, res) => {
     }
     
     allServices.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+
+    // Enrich each service with collaborator name, phone, email, businessName
+    const collabCache = {};
+    for (const svc of allServices) {
+      const cId = svc.collaboratorId;
+      if (!cId) continue;
+      if (!collabCache[cId]) {
+        try { collabCache[cId] = await collabService.getCollaboratorById(req.app.locals.db, cId); }
+        catch (_) { collabCache[cId] = null; }
+      }
+      const collab = collabCache[cId];
+      if (collab) {
+        svc.ownerName = collab.name || '';
+        svc.ownerPhone = collab.phone || '';
+        svc.ownerEmail = collab.email || '';
+        svc.ownerBusiness = collab.businessName || '';
+      }
+    }
+
     res.json({ success: true, services: allServices });
   } catch (e) {
     console.error('Get services error:', e);
@@ -1886,7 +1960,7 @@ app.get('/api/admin/search-collaborator/:name', requireAdmin, validate(validateS
 });
 
 // Admin: Approve / Reject any service (bus, hotel, cafe, cab)
-app.post('/api/admin/service/:type/approve', requireAdmin, validate(validateSchemas.adminServiceAction), async (req, res) => {
+app.post('/api/admin/service/:type/approve', requireAdmin, async (req, res) => {
   try {
     const { type } = req.params;
     const { serviceId, action } = req.body;

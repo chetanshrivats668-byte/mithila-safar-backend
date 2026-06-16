@@ -489,10 +489,10 @@ export const schemas = {
   },
   adminVerifyPayment: {
     orderId: { type: 'string', required: true, minLength: 2, maxLength: 64, label: 'Order id' },
-    status: { type: 'enum', values: ['paid', 'rejected'], required: true, label: 'Status' },
+    action: { type: 'enum', values: ['approve', 'reject'], required: true, label: 'Action' },
   },
   adminServiceAction: {
-    type: { type: 'enum', values: ['bus', 'hotel', 'cab', 'cafe'], required: true, label: 'Service type' },
+    serviceId: { type: 'string', required: true, minLength: 1, maxLength: 64, label: 'Service ID' },
     action: { type: 'enum', values: ['approve', 'reject'], required: true, label: 'Action' },
   },
 
@@ -521,6 +521,19 @@ export const schemas = {
     email: ownerEmailRule,
     schedule: { type: 'object', required: false, fields: {} },
     price: { type: 'number', required: false, min: 0, label: 'Price per table' },
+  },
+
+  // ---- Cabs ----
+  cabCreate: {
+    busName: { type: 'string', required: true, minLength: 2, maxLength: 120, label: 'Cab / service name' },
+    busType: { type: 'string', required: true, minLength: 2, maxLength: 50, label: 'Vehicle type' },
+    totalSeats: { type: 'number', required: true, min: 1, max: 12, integer: true, label: 'Total seats' },
+    ownerAadhaarId: aadhaarRule,
+    driverName: { type: 'string', required: true, minLength: 2, maxLength: 80, label: 'Driver name' },
+    driverPhone: { ...phoneRule, required: true, label: 'Driver phone' },
+    operatingCity: { ...cityRule, label: 'Operating city' },
+    price: { type: 'number', required: true, min: 1, max: 100000, label: 'Fixed price' },
+    fare: { type: 'number', required: false, min: 1, max: 100000, label: 'Fixed price' },
   },
 
   // ---- Buses ----

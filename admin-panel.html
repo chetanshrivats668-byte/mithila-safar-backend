@@ -715,32 +715,113 @@ async function loadServices() {
 }
 
 function renderServiceCard(b) {
-  const typeLabel = (b.type || 'bus').toUpperCase();
-  const icon = typeLabel === 'BUS' ? '🚌' : typeLabel === 'HOTEL' ? '🏨' : typeLabel === 'CAFE' ? '☕' : '🚗';
+  const type = (b.type || 'bus').toLowerCase();
+  const typeLabel = type.toUpperCase();
+  const icon = type === 'bus' ? '🚌' : type === 'hotel' ? '🏨' : type === 'cafe' ? '☕' : '🚗';
   const statusKey = b.status || 'pending';
+
+  // Build type-specific detail rows
+  let detailRows = '';
+  if (type === 'bus') {
+    const route = (b.routeCities && b.routeCities.length) ? b.routeCities.join(' → ') : (b.source && b.destination ? `${b.source} → ${b.destination}` : b.route || 'N/A');
+    const busType = b.busType || b.schedule?.busType || 'N/A';
+    const plate = b.numberPlate || b.busNumber || b.number_plate || 'N/A';
+    const seats = b.totalSeats || 'N/A';
+    const fare = b.fare || b.pricePerKm ? `₹${b.fare || b.pricePerKm}/km` : 'N/A';
+    const driver = b.driverName || b.schedule?.driverName || 'N/A';
+    const dep = b.departureTime || 'N/A';
+    const arr = b.arrivalTime || 'N/A';
+    detailRows = `
+      <div class="info" style="grid-column:1/-1"><div class="lbl">Route</div><div class="val">${route}</div></div>
+      <div class="info"><div class="lbl">Bus Type</div><div class="val">${busType}</div></div>
+      <div class="info"><div class="lbl">Number Plate</div><div class="val">${plate}</div></div>
+      <div class="info"><div class="lbl">Total Seats</div><div class="val">${seats}</div></div>
+      <div class="info"><div class="lbl">Fare</div><div class="val">${fare}</div></div>
+      <div class="info"><div class="lbl">Driver</div><div class="val">${driver}</div></div>
+      <div class="info"><div class="lbl">Departure</div><div class="val">${dep}</div></div>
+      <div class="info"><div class="lbl">Arrival</div><div class="val">${arr}</div></div>`;
+  } else if (type === 'hotel') {
+    const addr = b.address || 'N/A';
+    const city = b.city || 'N/A';
+    const state = b.state || 'N/A';
+    const rooms = b.totalRooms || 'N/A';
+    const phone = b.phone || b.ownerPhone || 'N/A';
+    const amenities = Array.isArray(b.amenities) && b.amenities.length ? b.amenities.slice(0,4).join(', ') : 'N/A';
+    detailRows = `
+      <div class="info" style="grid-column:1/-1"><div class="lbl">Address</div><div class="val">${addr}</div></div>
+      <div class="info"><div class="lbl">City</div><div class="val">${city}</div></div>
+      <div class="info"><div class="lbl">State</div><div class="val">${state}</div></div>
+      <div class="info"><div class="lbl">Total Rooms</div><div class="val">${rooms}</div></div>
+      <div class="info"><div class="lbl">Phone</div><div class="val">${phone}</div></div>
+      <div class="info" style="grid-column:1/-1"><div class="lbl">Amenities</div><div class="val">${amenities}</div></div>`;
+  } else if (type === 'cafe') {
+    const addr = b.address || 'N/A';
+    const city = b.city || 'N/A';
+    const state = b.state || 'N/A';
+    const capacity = b.capacity || 'N/A';
+    const price = b.price ? `₹${b.price}/seat` : 'N/A';
+    const phone = b.phone || b.ownerPhone || 'N/A';
+    detailRows = `
+      <div class="info" style="grid-column:1/-1"><div class="lbl">Address</div><div class="val">${addr}</div></div>
+      <div class="info"><div class="lbl">City</div><div class="val">${city}</div></div>
+      <div class="info"><div class="lbl">State</div><div class="val">${state}</div></div>
+      <div class="info"><div class="lbl">Capacity (Tables)</div><div class="val">${capacity}</div></div>
+      <div class="info"><div class="lbl">Price/Seat</div><div class="val">${price}</div></div>
+      <div class="info"><div class="lbl">Phone</div><div class="val">${phone}</div></div>`;
+  } else {
+    // cab
+    const cabName = b.cabName || b.name || 'N/A';
+    const cabNum = b.cabNumber || b.number_plate || 'N/A';
+    const cabType = b.cabType || 'N/A';
+    const fare = b.fare ? `₹${b.fare}` : 'N/A';
+    const route = b.route || b.city || 'N/A';
+    const seats = b.totalSeats || 'N/A';
+    const driver = b.driverName || 'N/A';
+    const driverPhone = b.driverPhone || 'N/A';
+    detailRows = `
+      <div class="info"><div class="lbl">Cab Name</div><div class="val">${cabName}</div></div>
+      <div class="info"><div class="lbl">Cab Number</div><div class="val">${cabNum}</div></div>
+      <div class="info"><div class="lbl">Cab Type</div><div class="val">${cabType}</div></div>
+      <div class="info"><div class="lbl">Fare</div><div class="val">${fare}</div></div>
+      <div class="info"><div class="lbl">Route / City</div><div class="val">${route}</div></div>
+      <div class="info"><div class="lbl">Seats</div><div class="val">${seats}</div></div>
+      <div class="info"><div class="lbl">Driver</div><div class="val">${driver}</div></div>
+      <div class="info"><div class="lbl">Driver Phone</div><div class="val">${driverPhone}</div></div>`;
+  }
+
+  // Owner info (enriched from backend)
+  const ownerName = b.ownerName || b.ownerBusiness || b.collaboratorId || 'N/A';
+  const ownerPhone = b.ownerPhone || 'N/A';
+  const ownerEmail = b.ownerEmail || 'N/A';
+  const ownerBusiness = b.ownerBusiness || 'N/A';
+  const serviceName = b.name || b.hotelName || b.cafeName || b.cabName || b.busName || 'Unnamed';
+
   return `
     <div class="card">
       <div class="card-head">
         <div>
-          <div class="card-id">${icon} ${b.name || b.businessName || 'Unnamed'}</div>
-          <div class="card-name">${b.number_plate || b.address || b.city || ''} · ${b.type || 'N/A'}</div>
+          <div class="card-id">${icon} ${serviceName}</div>
+          <div class="card-name">${ownerBusiness !== 'N/A' ? ownerBusiness + ' · ' : ''}${typeLabel}</div>
         </div>
         ${badge(statusKey)}
       </div>
+      <div style="background:rgba(245,197,24,.06);border:1px solid rgba(245,197,24,.15);border-radius:10px;padding:.6rem .9rem;margin-bottom:.85rem;display:grid;grid-template-columns:1fr 1fr;gap:.3rem .8rem;">
+        <div class="info"><div class="lbl">Owner</div><div class="val">${ownerName}</div></div>
+        <div class="info"><div class="lbl">Phone</div><div class="val">${ownerPhone}</div></div>
+        <div class="info" style="grid-column:1/-1"><div class="lbl">Email</div><div class="val">${ownerEmail}</div></div>
+      </div>
       <div class="card-grid">
-        <div class="info"><div class="lbl">Type</div><div class="val">${typeLabel}</div></div>
-        <div class="info"><div class="lbl">Owner</div><div class="val">${b.collaboratorId || b.ownerName || 'N/A'}</div></div>
-        <div class="info"><div class="lbl">City</div><div class="val">${b.city || b.source || 'N/A'}</div></div>
-        <div class="info"><div class="lbl">Created</div><div class="val">${fmt(b.createdAt)}</div></div>
+        ${detailRows}
+        <div class="info"><div class="lbl">Registered</div><div class="val">${fmt(b.createdAt)}</div></div>
       </div>
       ${['pending_approval','pending','rejected'].includes(statusKey) ? `<div class="card-actions">
-        <button class="act approve" onclick="approveService('${b.id}','${b.type || 'bus'}','approve')">✅ Approve</button>
-        <button class="act reject" onclick="approveService('${b.id}','${b.type || 'bus'}','reject')">❌ Reject</button>
+        <button class="act approve" onclick="approveService('${b.id}','${type}','approve')">✅ Approve</button>
+        <button class="act reject" onclick="approveService('${b.id}','${type}','reject')">❌ Reject</button>
       </div>` : ''}
-      ${statusKey === 'active' && b.type === 'hotel' ? `<div class="card-actions">
+      ${statusKey === 'active' && type === 'hotel' ? `<div class="card-actions">
         <button class="act secondary" onclick="manageHotelRooms('${b.id}')">🛏️ Manage Rooms</button>
       </div>` : ''}
-      ${statusKey === 'active' && b.type === 'cafe' ? `<div class="card-actions">
+      ${statusKey === 'active' && type === 'cafe' ? `<div class="card-actions">
         <button class="act secondary" onclick="manageCafeTables('${b.id}')">🪑 Manage Tables</button>
       </div>` : ''}
     </div>`;
@@ -948,9 +1029,15 @@ function showCollabDetail(id) {
     { label: 'Service Categories', val: (c.serviceCategories || []).join(', ') || 'N/A' },
     { label: 'City', val: c.city || 'N/A' },
     { label: 'State', val: c.state || 'N/A' },
+    { label: 'Operating City', val: c.operatingCity || 'N/A' },
+    { label: 'Route Cities', val: (c.routeCities && c.routeCities.length) ? c.routeCities.join(' → ') : 'N/A' },
     { label: 'Address', val: c.address || 'N/A', full: true },
     { label: 'UPI ID', val: c.upiId || 'N/A' },
+    { label: 'Registration Status', val: c.status || 'N/A' },
     { label: 'Verification Status', val: c.verification_status || 'N/A' },
+    { label: 'Partner Collab Status', val: c.partnerCollabStatus || 'N/A' },
+    { label: 'Aadhaar ID', val: c.aadhaarId || 'N/A' },
+    { label: 'Years of Experience', val: c.yearsOfExperience || 'N/A' },
     { label: 'Rating', val: c.rating !== undefined ? c.rating : 'N/A' },
     { label: 'Total Bookings', val: c.totalBookings !== undefined ? c.totalBookings : 'N/A' },
     { label: 'Total Earnings', val: c.totalEarnings !== undefined ? '₹' + Number(c.totalEarnings).toLocaleString('en-IN') : 'N/A' },
@@ -959,7 +1046,11 @@ function showCollabDetail(id) {
     { label: 'PAN URL', val: c.panUrl ? `<a href="${c.panUrl}" target="_blank" style="color:#f5c518">View</a>` : 'N/A', full: true },
     { label: 'Joined', val: fmtDateTime(c.createdAt) },
     { label: 'Verified At', val: fmtDateTime(c.verifiedAt) },
-    { label: 'Verified By', val: c.verifiedBy || 'N/A' }
+    { label: 'Verified By', val: c.verifiedBy || 'N/A' },
+    { label: 'Partner Approved At', val: c.approvedAt ? fmtDateTime(c.approvedAt) : 'N/A' },
+    { label: 'Partner Approved By', val: c.approvedBy || 'N/A' },
+    { label: 'Suspended At', val: c.suspendedAt ? fmtDateTime(c.suspendedAt) : 'N/A' },
+    { label: 'Suspended By', val: c.suspendedBy || 'N/A' }
   ];
   document.getElementById('modalBody').innerHTML = fields.map(f =>
     `<div class="modal-field${f.full ? ' full' : ''}">

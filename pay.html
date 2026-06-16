@@ -851,17 +851,30 @@
         </div>
       </div>
 
-      <!-- PAYMENT METHOD TABS (2 options — both auto-verified) -->
+      <!-- PAYMENT METHOD TABS (3 options) -->
       <div class="card-section" style="padding: 1rem 1rem .8rem;">
         <div class="section-title">💳 Choose Payment Method</div>
         <div class="pay-tabs" id="payTabs">
-          <button class="pay-tab-btn active" id="tab-razorpay" onclick="switchTab('razorpay')">💳 Card / UPI / Wallets</button>
-          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">📱 Enter UPI ID</button>
+          <button class="pay-tab-btn active" id="tab-upiapp" onclick="switchTab('upiapp')">📱 Pay via UPI App</button>
+          <button class="pay-tab-btn" id="tab-razorpay" onclick="switchTab('razorpay')">💳 Card / UPI / Wallets</button>
+          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">🔢 Enter UPI ID</button>
         </div>
       </div>
 
+      <!-- PANEL: UPI App -->
+      <div class="razorpay-panel pay-panel active" id="panel-upiapp">
+        <div class="panel-icon">📱</div>
+        <div class="panel-title">Pay via UPI App</div>
+        <div class="panel-subtitle">Opens your installed UPI app (GPay, PhonePe, Paytm, etc.) directly.<br><strong>If you cancel before completing payment, no ticket will be generated.</strong></div>
+        <button class="pay-now-btn" id="btnUpiApp" onclick="handleUpiAppPay()">
+          <span>Pay ₹<span id="upiAppBtnAmt">0</span> via UPI App</span>
+          <span class="arrow">→</span>
+        </button>
+        <div style="margin-top:1rem;font-size:.8rem;color:var(--text-muted);">Works on mobile devices with UPI apps installed</div>
+      </div>
+
       <!-- PANEL: Razorpay -->
-      <div class="razorpay-panel pay-panel active" id="panel-razorpay">
+      <div class="razorpay-panel pay-panel" id="panel-razorpay">
         <div class="panel-icon">🔐</div>
         <div class="panel-title">Secure Checkout</div>
         <div class="panel-subtitle">Pay via any UPI app, Credit/Debit Card, Netbanking, or Wallet.<br>Scan QR with GPay/PhonePe is also available inside the checkout.</div>
@@ -965,6 +978,7 @@ async function init() {
   document.getElementById('displayAmount').textContent = fmtAmt;
   document.getElementById('rzpBtnAmt').textContent     = fmtAmt;
   document.getElementById('upiIdBtnAmt').textContent   = fmtAmt;
+  document.getElementById('upiAppBtnAmt').textContent  = fmtAmt;
   document.getElementById('qrBtnAmt').textContent      = fmtAmt;
   document.getElementById('qrAmount').textContent      = fmtAmt;
 
@@ -1134,7 +1148,11 @@ async function createPaymentLinkOrder(contact) {
   });
 
   const data = await res.json();
-  if (!data.success) throw new Error(data.message || 'Order creation failed');
+  if (!data.success) {
+    const err = new Error(data.message || 'Order creation failed');
+    err.code = data.code || '';
+    throw err;
+  }
   return data;
 }
 
@@ -1238,7 +1256,58 @@ async function handleRazorpayPay() {
 
   } catch (err) {
     hideLoader();
+    if (err && err.code === 'PAYMENT_GATEWAY_CONFIG_ERROR') {
+      toast('Payment gateway is temporarily unavailable. Please try again shortly or contact support at +91 81780 30064.', 'error');
+      return;
+    }
     toast('Error: ' + err.message, 'error');
+  }
+}
+
+// =============================================
+//  UPI APP HANDLER (direct deeplink)
+// =============================================
+async function handleUpiAppPay() {
+  const contact = getContactDetails();
+  if (!contact) return;
+
+  // Merchant UPI details
+  const payeeVPA = '8178030064@ptyes';
+  const payeeName = 'SUDHAKAR KUMAR MISHRA';
+  const transactionNote = TYPE_LABEL[TYPE] || TYPE + ' booking - ' + (NOTE || '');
+
+  // Build UPI deeplink
+  const upiLink = 'upi://pay?pa=' + encodeURIComponent(payeeVPA)
+    + '&pn=' + encodeURIComponent(payeeName)
+    + '&am=' + AMOUNT
+    + '&cu=INR'
+    + '&tn=' + encodeURIComponent(transactionNote);
+
+  // Show confirmation to user
+  const confirmMsg = 'This will open your UPI app (GPay, PhonePe, Paytm, etc.) to pay ₹' + formatRupee(AMOUNT) + '.\n\n' +
+    '⚠️ IMPORTANT: If you cancel or exit the UPI app before completing payment, NO TICKET will be generated.\n\n' +
+    'Proceed to open UPI app?';
+
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+
+  showLoader('Opening UPI app…');
+
+  try {
+    // Open UPI app via deeplink
+    window.location.href = upiLink;
+
+    // Since we can't detect if payment completed or cancelled via deeplink,
+    // show message and let user verify manually if needed
+    setTimeout(() => {
+      hideLoader();
+      toast('UPI app opened. Complete payment there. If cancelled, no ticket is generated.', 'info');
+    }, 1500);
+
+  } catch (err) {
+    hideLoader();
+    toast('Could not open UPI app. Make sure you have a UPI app installed.', 'error');
   }
 }
 
