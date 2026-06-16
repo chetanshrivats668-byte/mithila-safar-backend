@@ -855,8 +855,9 @@
       <div class="card-section" style="padding: 1rem 1rem .8rem;">
         <div class="section-title">💳 Choose Payment Method</div>
         <div class="pay-tabs" id="payTabs">
-          <button class="pay-tab-btn active" id="tab-upiapp" onclick="switchTab('upiapp')">📱 Pay via UPI App</button>
-          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">📧 Enter UPI ID</button>
+          <button class="pay-tab-btn active" id="tab-upiapp" onclick="switchTab('upiapp')">📱 UPI App</button>
+          <button class="pay-tab-btn" id="tab-razorpay"  onclick="switchTab('razorpay')">💳 Cards/Netbanking</button>
+          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">📧 UPI ID</button>
         </div>
       </div>
 
@@ -873,6 +874,17 @@
       </div>
 
 
+
+      <!-- PANEL: Razorpay Standard -->
+      <div class="razorpay-panel pay-panel" id="panel-razorpay">
+        <div class="panel-icon">💳</div>
+        <div class="panel-title">Cards, Netbanking & Wallets</div>
+        <div class="panel-subtitle">Pay securely using standard checkout.</div>
+        <button class="pay-now-btn" id="btnRazorpay" onclick="handleRazorpayPay()" style="background:var(--dark);">
+          <span>Pay ₹<span id="rzpBtnAmt2">0</span> via Razorpay</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
 
       <!-- PANEL: UPI ID -->
       <div class="upi-panel pay-panel" id="panel-upiid">
@@ -966,6 +978,7 @@ async function init() {
   document.getElementById('rzpBtnAmt').textContent     = fmtAmt;
   document.getElementById('upiIdBtnAmt').textContent   = fmtAmt;
   document.getElementById('upiAppBtnAmt').textContent  = fmtAmt;
+  if(document.getElementById('rzpBtnAmt2')) document.getElementById('rzpBtnAmt2').textContent = fmtAmt;
   document.getElementById('qrBtnAmt').textContent      = fmtAmt;
   document.getElementById('qrAmount').textContent      = fmtAmt;
 

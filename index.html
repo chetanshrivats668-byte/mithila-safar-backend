@@ -862,10 +862,13 @@
                 style="display:flex; margin-bottom:1.5rem; background:rgba(0,0,0,0.03); border-radius:12px; padding:6px; border:1px solid var(--border);">
                 <button type="button" class="pay-tab-btn active" onclick="switchPayTab('upi-app')"
                     style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:var(--card); color:var(--primary); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s; box-shadow:var(--shadow-sm);">📱
-                    Pay via UPI App</button>
+                    UPI App</button>
+                <button type="button" class="pay-tab-btn" onclick="switchPayTab('razorpay')"
+                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">💳
+                    Cards/Netbanking</button>
                 <button type="button" class="pay-tab-btn" onclick="switchPayTab('upi-id')"
                     style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📧
-                    Pay via UPI ID</button>
+                    UPI ID</button>
             </div>
 
             <!-- UPI App Section -->
@@ -878,6 +881,20 @@
                 <button class="pay-now-btn" id="upiAppBtn" onclick="payViaUpiApp()"
                     style="background:var(--primary); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(216,78,85,0.35); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px;">
                     <span>Pay ₹<span id="upiAppBtnAmount">0</span></span>
+                    <span style="font-size:1.4rem;">→</span>
+                </button>
+            </div>
+
+            <!-- Razorpay Section -->
+            <div id="razorpaySection"
+                style="display:none; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
+                <div style="font-size:3.5rem; margin-bottom:1rem;">💳</div>
+                <h3 style="margin-bottom:0.5rem; color:var(--primary);">Card/Netbanking/Wallets</h3>
+                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:1.5rem;">Pay securely using Credit/Debit
+                    cards, Netbanking, or Wallets.</p>
+                <button class="pay-now-btn" id="razorpayBtn" onclick="payViaRazorpay()"
+                    style="background:var(--dark); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(0,0,0,0.2); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <span>Pay ₹<span id="razorpayBtnAmount">0</span> via Razorpay</span>
                     <span style="font-size:1.4rem;">→</span>
                 </button>
             </div>

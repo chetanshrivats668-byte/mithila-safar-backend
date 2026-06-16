@@ -2358,7 +2358,7 @@ function switchPayTab(tabId) {
             razorpay.style.display = 'block';
             activeBtn = document.querySelector('[onclick="switchPayTab(\'card\')"]');
         }
-    } else if (tabId === 'card') {
+    } else if (tabId === 'card' || tabId === 'razorpay') {
         if (razorpay) razorpay.style.display = 'block';
     } else if (tabId === 'upi-id') {
         if (upiId) upiId.style.display = 'block';
