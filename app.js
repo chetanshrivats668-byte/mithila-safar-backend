@@ -1422,9 +1422,9 @@ function renderBusResults(buses) {
                     </div>
                     
                     <div class="price-booking-cell">
-                        <span class="price"><small>Starts from</small><br>₹${bus.startingPrice}</span>
+                        <span class="price"><small>Starts from</small><br>${bus.startingPrice === 0 ? 'Free' : '₹' + bus.startingPrice}</span>
                         <div style="display:flex; gap:6px;">
-                            <button class="book-btn" style="background:var(--primary);" onclick="event.stopPropagation(); openBusSeats('${bus.id}')">Select Seats</button>
+                            <button class="book-btn" style="background:var(--primary);" onclick="event.stopPropagation(); openBusSeats('${bus.id}')">${bus.startingPrice === 0 ? 'Free - Select Seats' : 'Select Seats'}</button>
                         </div>
                     </div>
                 </div>
@@ -1693,8 +1693,8 @@ function renderHotelResults(hotels) {
                         <span class="seats-pill">🏨 ${rooms.length} Room Types</span>
                     </div>
                     <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
-                        <span class="price" style="margin-right:auto;"><small>From</small><br>₹${lowestPrice}<small>/night</small></span>
-                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openHotelRoom('${h.id}')">View Rooms</button>
+                        <span class="price" style="margin-right:auto;"><small>From</small><br>${lowestPrice === 0 ? 'Free' : ('₹' + lowestPrice + '<small>/night</small>')}</span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openHotelRoom('${h.id}')">${lowestPrice === 0 ? 'Free - View Rooms' : 'View Rooms'}</button>
                     </div>
                 </div>
             </div>
@@ -1793,7 +1793,10 @@ function renderCabResults(cabs) {
         var model = c.cabtype || c.cabType || 'Standard';
         var driver = c.drivername || c.driverName || '';
         var driverPhone = c.driverphone || c.driverPhone || '';
-        var fare = c.fare || c.rate || c.ratePerKm || 'N/A';
+        var fareVal = c.fare !== undefined ? c.fare : (c.rate !== undefined ? c.rate : (c.ratePerKm !== undefined ? c.ratePerKm : 'N/A'));
+        var fare = fareVal;
+        var fareDisplay = fareVal === 0 ? 'Free' : ('₹' + fareVal);
+        var btnText = fareVal === 0 ? 'Free - Book Now' : 'Book Now';
         var rating = c.rating || '-';
         var totalSeats = c.totalSeats || c.totalseats || 4;
         html += `
@@ -1811,8 +1814,8 @@ function renderCabResults(cabs) {
                         ${driver ? `<span class="schedule-badge" style="margin:0;">👤 ${driver} ${driverPhone ? `(${driverPhone})` : ''}</span>` : ''}
                     </div>
                     <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
-                        <span class="price" style="margin-right:auto;"><small>Fare</small><br>₹${fare}</span>
-                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="bookCab('${safeCabBookingId}', '${fare}')">Book Now</button>
+                        <span class="price" style="margin-right:auto;"><small>Fare</small><br>${fareDisplay}</span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="bookCab('${safeCabBookingId}', '${fare}')">${btnText}</button>
                     </div>
                 </div>
             </div>
@@ -1879,8 +1882,10 @@ function renderCafes(cafes) {
         var name = c.cafename || c.cafeName || c.name || 'Cafe';
         var city = c.city || c.location || '';
         var rating = c.rating || '-';
-        var cost = c.costPerSeat || 'N/A';
+        var costVal = c.costPerSeat !== undefined ? c.costPerSeat : 'N/A';
         var available = c.availableTables || c.availableseats || c.availableSeats || 'N/A';
+        var costDisplay = costVal === 0 ? 'Free' : ('₹' + costVal + '<small>/seat</small>');
+        var btnText = costVal === 0 ? 'Free - Book Seat' : 'Book Seat';
         html += `
             <div class="enriched-bus-card cafe-card" data-location="${city}" onclick="openCafeSeats('${c.id}')">
                 <div class="bus-card-header">
@@ -1895,8 +1900,8 @@ function renderCafes(cafes) {
                         <span class="seats-pill ${available < 5 ? 'critical' : ''}">🍽️ ${available} Tables Available</span>
                     </div>
                     <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
-                        <span class="price" style="margin-right:auto;"><small>Cost</small><br>₹${cost}<small>/seat</small></span>
-                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openCafeSeats('${c.id}')">Book Seat</button>
+                        <span class="price" style="margin-right:auto;"><small>Cost</small><br>${costDisplay}</span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openCafeSeats('${c.id}')">${btnText}</button>
                     </div>
                 </div>
             </div>
@@ -1984,6 +1989,10 @@ function confirmCafeSeats() {
 // ========== PAYMENT ==========
 function openPayment(amount) {
     if (!requireAuth()) return;
+    if (amount === 0) {
+        return bookFree();
+    }
+    document.getElementById('paymentPage').classList.add('active');
 
     // Save phone to currentBooking just in case
     currentBooking.userPhone = currentUser.phone || '';
@@ -2085,6 +2094,41 @@ function isMobileDevice() {
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
 }
 
+async function bookFree() {
+    if (!currentBooking || !currentBooking.itemName) {
+        return notify('Booking details not found.', 'error');
+    }
+
+    showLoader('Processing free booking...');
+    try {
+        var res = await fetch(API_URL + '/api/booking/create-free', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(buildPaymentPayload(0))
+        });
+        
+        var data = await res.json();
+        if (!data.success) {
+            hideLoader();
+            return notify('Failed to process free booking: ' + (data.message || 'Error'), 'error');
+        }
+
+        notify('Booking confirmed! ID: ' + data.orderId, 'success');
+        var ticketData = {
+            ...currentBooking,
+            orderId: data.orderId,
+            amount: 0,
+            paymentMethod: 'Free',
+            paymentStatus: 'confirmed'
+        };
+        saveAndRedirectTicket(ticketData);
+    } catch (err) {
+        notify('Booking error: ' + err.message, 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
 async function payViaUpiApp() {
     if (!RAZORPAY_KEY_ID) {
         notify('Payment is not configured right now. Please refresh and try again.', 'error');
@@ -2117,7 +2161,7 @@ async function payViaUpiApp() {
             }
         };
         options.handler = async function (response) {
-            await verifyRazorpayPayment(response, data, 'UPI App (GPay/PhonePe/Paytm)', amount / 100);
+            await verifyRazorpayPayment(response, data, 'UPI App', amount / 100);
         };
         options.modal = {
             ondismiss: function () {

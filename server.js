@@ -697,6 +697,56 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, valid
   }
 });
 
+// ========== FREE BOOKINGS: Create & Verify ==========
+app.post('/api/booking/create-free', requireAuth, blockTemporarySession, async (req, res) => {
+  try {
+    const { type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
+    const orderId = 'FREE_' + Date.now().toString(36).toUpperCase();
+    console.log(`[FreeBooking] Creating order ${orderId} | type=${type || ''}`);
+
+    const orderData = {
+      orderId,
+      razorpayOrderId: null,
+      type: type || '',
+      itemName: itemName || '',
+      amount: 0,
+      payNow: 0,
+      due: 0,
+      details: details || {},
+      seats: seats || null,
+      roomType: roomType || null,
+      userName: userName || '',
+      userPhone: userPhone || '',
+      userAge: userAge || '',
+      passengerCount: passengerCount || 1,
+      collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
+      status: 'confirmed',
+      payMethod: 'free',
+      createdAt: new Date().toISOString(),
+      verifiedAt: new Date().toISOString(),
+      verifiedBy: 'system_free'
+    };
+
+    if (isSupabaseAvailable()) {
+      await dbCreate('orders', orderId, orderData);
+      await sendPartnerNotification(orderData);
+    } else {
+      memoryDb.orders.set(orderId, orderData);
+      console.log('[FALLBACK]: Free Order stored in memory:', orderId);
+      await sendPartnerNotification(orderData);
+    }
+
+    res.json({
+      success: true,
+      orderId,
+      status: 'confirmed'
+    });
+  } catch (err) {
+    console.error('Free booking creation error:', err);
+    res.status(500).json({ success: false, message: 'Failed to create free booking' });
+  }
+});
+
  // ========== RAZORPAY: Verify Payment ==========
  app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
    try {
