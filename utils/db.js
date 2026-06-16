@@ -8,10 +8,31 @@ function isTableError(err) {
   return err && TABLE_NOT_FOUND_CODES.includes(err.code);
 }
 
-function mapRow(row) {
+function mapRow(row, table = '') {
   if (!row) return null;
   const data = { ...row };
   delete data.id;
+
+  // Handle virtual collaboratorId field for orders table
+  if (table === 'orders' || data.details) {
+    if (data.details && !data.collaboratorId) {
+      let detailsObj = data.details;
+      if (typeof detailsObj === 'string') {
+        try {
+          detailsObj = JSON.parse(detailsObj);
+        } catch (e) {}
+      }
+      if (detailsObj) {
+        data.collaboratorId = detailsObj.collaboratorId || detailsObj.collabId || null;
+      }
+    }
+  }
+
+  // Handle virtual orderId field for orders table (since primary key in DB is "id")
+  if (table === 'orders') {
+    data.orderId = row.id;
+  }
+
   return { id: row.id, ...data };
 }
 
@@ -93,7 +114,7 @@ export async function get(table, id) {
       if (isTableError(error)) return null;
       throw error;
     }
-    return data ? mapRow(data) : null;
+    return data ? mapRow(data, table) : null;
   } catch (err) {
     if (isTableError(err)) return null;
     throw err;
@@ -132,7 +153,7 @@ export async function list(table, opts = {}) {
       if (isTableError(error)) return [];
       throw error;
     }
-    return (data || []).map(r => mapRow(r));
+    return (data || []).map(r => mapRow(r, table));
   } catch (err) {
     if (isTableError(err)) return [];
     throw err;
@@ -158,6 +179,10 @@ export async function create(table, id, data) {
     const clean = { ...data };
     if (table === 'users') {
       delete clean.userId;
+    }
+    if (table === 'orders') {
+      delete clean.collaboratorId;
+      delete clean.orderId;
     }
     const record = { id, ...clean };
     const { error } = await supabase.from(table).insert(record);
@@ -186,6 +211,10 @@ export async function update(table, id, data) {
 
   try {
     const record = { ...data };
+    if (table === 'orders') {
+      delete record.collaboratorId;
+      delete record.orderId;
+    }
     const { error } = await supabase.from(table).update(record).eq('id', id);
     if (error) {
       if (isTableError(error)) return;
