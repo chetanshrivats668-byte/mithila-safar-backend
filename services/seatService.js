@@ -31,22 +31,11 @@ export async function generateSeatMap(busId, collaboratorId, totalSeats, seatLay
     }
     const rand = Math.abs(hash) % 100;
 
-    // ~35% seats are booked, 5% blocked, 5% reserved (women)
-    if (rand < 15) {
+    // ~30% seats are booked, 5% blocked
+    if (rand < 30) {
       status = 'booked';
-    } else if (rand >= 15 && rand < 25) {
-      status = 'booked_male';
-    } else if (rand >= 25 && rand < 35) {
-      status = 'booked_female';
-    } else if (rand >= 35 && rand < 40) {
+    } else if (rand >= 30 && rand < 35) {
       status = 'blocked';
-    } else if (rand >= 40 && rand < 45) {
-      status = 'reserved'; // reserved for ladies/seniors
-    }
-
-    // Force first few rows to often be ladies reserved for more realism
-    if (i <= 4 && status === 'available') {
-      status = rand % 2 === 0 ? 'reserved' : status;
     }
 
     const seatId = 'SEAT_' + busId + '_' + String(i).padStart(2, '0');

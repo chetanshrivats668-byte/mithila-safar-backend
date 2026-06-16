@@ -20,7 +20,10 @@ let selectedCafeSeats = [];
 let pendingVerificationEmail = '';
 let emailOtpCooldownTime = 0;
 let emailOtpTimerInterval = null;
-let advancePaymentActive = false;
+
+let appliedCouponCode = '';
+let appliedCouponDiscount = 0;
+
 
 function getTicketPageByType(type) {
     var t = (type || '').toLowerCase();
@@ -327,9 +330,10 @@ let pendingBookingAction = null;
 function verifyPhoneForBooking(callback) {
     if (!requireAuth()) return false;
     if (currentUser.phoneVerified) {
-        if (callback) callback();
+        // Phone already verified — just return true so caller proceeds
         return true;
     }
+    // Phone not verified — store the callback to resume after OTP
     pendingBookingAction = callback;
     openPhoneVerificationModal();
     return false;
@@ -1530,18 +1534,11 @@ function renderCabinSeats(seats, bus) {
         const label = seat.seatLabel || `S${seatNum}`;
         const price = seat.price || bus.startingPrice;
         const status = seat.status || 'available';
-        const isVip = seat.seatType === 'VIP';
-        const isLadies = seat.ladiesOnly === true;
-
         let cellClass = 'seat-cell';
         if (status === 'available') {
             cellClass += ' available';
-            if (isVip) cellClass += ' vip';
-            if (isLadies) cellClass += ' ladies';
-        } else if (status === 'booked' || status === 'booked_male' || status === 'booked_female') {
+        } else if (status === 'booked') {
             cellClass += ' booked';
-            if (status === 'booked_female') cellClass += ' booked_female';
-            if (status === 'booked_male') cellClass += ' booked_male';
         } else {
             cellClass += ' blocked';
         }
@@ -1577,12 +1574,6 @@ function toggleCabinSeat(el) {
         if (selectedSeats.length >= maxPass) return notify(`Max ${maxPass} seat(s) allowed for this booking`, 'error');
         el.classList.add('selected');
         selectedSeats.push(seatId);
-
-        if (el.classList.contains('vip')) {
-            notify(`You selected a VIP Seat (${label})! Special priority boarding applies.`, 'info');
-        } else if (el.classList.contains('ladies')) {
-            notify(`Ladies Preferred Seat (${label}) selected.`, 'info');
-        }
     }
 
     document.getElementById('seatCount').textContent = `${selectedSeats.length}/${maxPass}`;
@@ -1590,7 +1581,10 @@ function toggleCabinSeat(el) {
 }
 
 function confirmSeatSelection() {
-    if (!verifyPhoneForBooking(() => confirmSeatSelection())) return;
+    // Gate: if phone not verified, verifyPhoneForBooking will open the OTP modal
+    // and store this function as pendingBookingAction to be called after verification.
+    if (!verifyPhoneForBooking(confirmSeatSelection)) return;
+
     if (selectedSeats.length === 0) return notify('Please select at least one seat', 'error');
     if (selectedSeats.length > (currentBooking.passengers || 1)) return notify('Too many seats selected', 'error');
 
@@ -1602,7 +1596,7 @@ function confirmSeatSelection() {
         }
     });
 
-    currentBooking.seats = selectedSeats;
+    currentBooking.seats = [...selectedSeats];
     currentBooking.amount = total;
     closeModal('seatModal');
     openPassengerForm();
@@ -1627,8 +1621,9 @@ function openPassengerForm() {
 }
 
 function confirmPassengers(e) {
-    e.preventDefault();
-    if (!verifyPhoneForBooking(() => confirmPassengers(e))) return;
+    // e may be a real submit event or undefined if called from pendingBookingAction
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
+    if (!verifyPhoneForBooking(confirmPassengers)) return;
     var names = document.querySelectorAll('.pName');
     var ages = document.querySelectorAll('.pAge');
     var passengers = [];
@@ -1684,12 +1679,26 @@ function renderHotelResults(hotels) {
         var rating = h.rating || '4.0';
         var rooms = h.rooms || [];
         var lowestPrice = rooms.length > 0 ? Math.min.apply(null, rooms.map(function (r) { return parseFloat(r.price) || 999; })) : 999;
-        html += '<div class="result-card">';
-        html += '<h3>' + name + '</h3>';
-        html += '<div class="result-details"><span>Rating: ' + rating + '</span><span>Location: ' + city + '</span></div>';
-        html += '<div class="result-details">Rooms from Rs' + lowestPrice + '/night</div>';
-        html += '<button class="btn-primary" onclick="openHotelRoom(\'' + h.id + '\')">View Rooms</button>';
-        html += '</div>';
+        html += `
+            <div class="enriched-bus-card" onclick="openHotelRoom('${h.id}')">
+                <div class="bus-card-header">
+                    <div class="operator-info-block">
+                        <span class="operator-name">${name}</span>
+                        <small style="color:var(--gray); font-weight:600;">📍 ${city}</small>
+                    </div>
+                    <span class="bus-meta-badge">⭐ ${rating}</span>
+                </div>
+                <div class="bus-card-body" style="gap:1rem;">
+                    <div class="seats-occupancy-status" style="border:none; padding:0;">
+                        <span class="seats-pill">🏨 ${rooms.length} Room Types</span>
+                    </div>
+                    <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
+                        <span class="price" style="margin-right:auto;"><small>From</small><br>₹${lowestPrice}<small>/night</small></span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openHotelRoom('${h.id}')">View Rooms</button>
+                    </div>
+                </div>
+            </div>
+        `;
     });
     container.innerHTML = html;
     navigateTo('results');
@@ -1728,7 +1737,7 @@ function openHotelRoom(hotelId) {
 }
 
 function confirmRoom(type, price) {
-    if (!verifyPhoneForBooking(() => confirmRoom(type, price))) return;
+    if (!verifyPhoneForBooking(() => confirmRoom(type, price))) return; // arrow wrapper needed to pass args
     if (!price) return notify('Invalid room type', 'error');
     closeModal('roomModal');
     currentBooking.roomType = type;
@@ -1779,15 +1788,27 @@ function renderCabResults(cabs) {
         var fare = c.fare || c.ratePerKm || 'N/A';
         var rating = c.rating || '-';
         var totalSeats = c.totalSeats || c.totalseats || 4;
-        html += '<div class="result-card">';
-        html += '<h3>' + serviceName + '</h3>';
-        html += '<div class="result-details"><span>Car: ' + model + '</span><span>Rating: ' + rating + '</span></div>';
-        if (driver) {
-            html += '<div class="result-details"><span>👤 Driver: ' + driver + (driverPhone ? ' (' + driverPhone + ')' : '') + '</span></div>';
-        }
-        html += '<div class="result-details"><span>Rs ' + fare + '/km</span><span>💺 ' + totalSeats + ' seats (whole cab)</span></div>';
-        html += '<button class="btn-primary" onclick="bookCab(\'' + c.id + '\', ' + fare + ')">Book Now</button>';
-        html += '</div>';
+        html += `
+            <div class="enriched-bus-card">
+                <div class="bus-card-header">
+                    <div class="operator-info-block">
+                        <span class="operator-name">${serviceName}</span>
+                        <small style="color:var(--gray); font-weight:600;">🚗 ${model}</small>
+                    </div>
+                    <span class="bus-meta-badge">⭐ ${rating}</span>
+                </div>
+                <div class="bus-card-body" style="gap:1rem;">
+                    <div class="seats-occupancy-status" style="border:none; padding:0; flex-wrap:wrap; gap:0.5rem;">
+                        <span class="seats-pill">💺 ${totalSeats} Seats</span>
+                        ${driver ? `<span class="schedule-badge" style="margin:0;">👤 ${driver} ${driverPhone ? `(${driverPhone})` : ''}</span>` : ''}
+                    </div>
+                    <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
+                        <span class="price" style="margin-right:auto;"><small>Fare</small><br>₹${fare}</span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="bookCab('${c.id}', '${fare}')">Book Now</button>
+                    </div>
+                </div>
+            </div>
+        `;
     });
     container.innerHTML = html;
     navigateTo('results');
@@ -1800,8 +1821,8 @@ function bookCab(cabId, fare) {
     }
     if (!cab) return notify('Cab not found', 'error');
     currentBooking.selectedCab = cab;
-    var dist = parseInt(document.getElementById('carDropping').value.length) * 5 || 10;
-    var amount = (parseFloat(fare || cab.fare || 10) * dist);
+    var amount = parseFloat(fare || cab.fare || cab.ratePerKm || 0);
+    if (!amount || amount <= 0) return notify('Invalid cab fare', 'error');
     currentBooking.amount = amount;
     openPayment(currentBooking.amount);
 }
@@ -1846,12 +1867,26 @@ function renderCafes(cafes) {
         var rating = c.rating || '-';
         var cost = c.costPerSeat || 'N/A';
         var available = c.availableTables || c.availableseats || c.availableSeats || 'N/A';
-        html += '<div class="result-card cafe-card" data-location="' + city + '">';
-        html += '<h3>' + name + '</h3>';
-        html += '<div class="result-details"><span>Location: ' + city + '</span><span>Rating: ' + rating + '</span></div>';
-        html += '<div class="result-details"><span>Rs ' + cost + '/seat</span><span>Available: ' + available + ' tables</span></div>';
-        html += '<button class="btn-primary" onclick="openCafeSeats(\'' + c.id + '\')">Book Seat</button>';
-        html += '</div>';
+        html += `
+            <div class="enriched-bus-card cafe-card" data-location="${city}" onclick="openCafeSeats('${c.id}')">
+                <div class="bus-card-header">
+                    <div class="operator-info-block">
+                        <span class="operator-name">${name}</span>
+                        <small style="color:var(--gray); font-weight:600;">☕ ${city}</small>
+                    </div>
+                    <span class="bus-meta-badge">⭐ ${rating}</span>
+                </div>
+                <div class="bus-card-body" style="gap:1rem;">
+                    <div class="seats-occupancy-status" style="border:none; padding:0;">
+                        <span class="seats-pill ${available < 5 ? 'critical' : ''}">🍽️ ${available} Tables Available</span>
+                    </div>
+                    <div class="price-booking-cell" style="border:none; padding:0; justify-content:space-between; align-items:center; gap: 1rem;">
+                        <span class="price" style="margin-right:auto;"><small>Cost</small><br>₹${cost}<small>/seat</small></span>
+                        <button class="book-btn" style="background:var(--primary); padding:0.6rem 1.2rem; min-width:120px;" onclick="event.stopPropagation(); openCafeSeats('${c.id}')">Book Seat</button>
+                    </div>
+                </div>
+            </div>
+        `;
     });
     container.innerHTML = html;
 }
@@ -1923,7 +1958,7 @@ function toggleCafeSeat(el) {
 }
 
 function confirmCafeSeats() {
-    if (!verifyPhoneForBooking(() => confirmCafeSeats())) return;
+    if (!verifyPhoneForBooking(confirmCafeSeats)) return;
     if (selectedCafeSeats.length === 0) return notify('Please select at least one seat', 'error');
     var amount = selectedCafeSeats.length * (currentBooking.selectedCafe?.costPerSeat || 0);
     currentBooking.seats = selectedCafeSeats;
@@ -1940,15 +1975,10 @@ function openPayment(amount) {
     currentBooking.userPhone = currentUser.phone || '';
 
     document.getElementById('paySubtotal').textContent = amount;
-    document.getElementById('payDiscount').textContent = '0';
-    document.getElementById('payFinal').textContent = amount;
-    document.getElementById('razorpayBtnAmount').textContent = amount;
-    document.getElementById('upiIdBtnAmount').textContent = amount;
-    document.getElementById('upiAmount').textContent = '₹' + amount;
-    advancePaymentActive = false;
+    resetPaymentState();
+    updatePaymentTotals();
     document.getElementById('upiIdInput').value = '';
-    document.getElementById('qrUpiIdInput').value = '';
-    switchPayTab('card');
+    switchPayTab('upi-app');
     document.getElementById('paymentPage').classList.add('active');
 }
 
@@ -1956,145 +1986,288 @@ function closePaymentPage() {
     document.getElementById('paymentPage').classList.remove('active');
 }
 
-function toggleAdvance(cb) {
-    advancePaymentActive = cb.checked;
-    var total = parseInt(document.getElementById('paySubtotal').textContent) || 0;
-    var info = document.getElementById('advanceInfo');
-    if (cb.checked) {
-        var advance = Math.round(total * 0.3);
-        var due = total - advance;
-        document.getElementById('advanceAmt').textContent = advance;
-        document.getElementById('dueAmt').textContent = due;
-        document.getElementById('payFinal').textContent = advance;
-        document.getElementById('razorpayBtnAmount').textContent = advance;
-        document.getElementById('upiIdBtnAmount').textContent = advance;
-        info.style.display = 'block';
-    } else {
-        document.getElementById('payFinal').textContent = total;
-        document.getElementById('razorpayBtnAmount').textContent = total;
-        document.getElementById('upiIdBtnAmount').textContent = total;
-        info.style.display = 'none';
-    }
+function getPaySubtotal() {
+    return parseInt(document.getElementById('paySubtotal').textContent) || 0;
 }
+
+function getDiscountedTotal() {
+    return Math.max(0, getPaySubtotal() - appliedCouponDiscount);
+}
+
+function updatePaymentTotals() {
+    var discountedTotal = getDiscountedTotal();
+    var finalAmount = discountedTotal;
+
+    document.getElementById('payDiscount').textContent = appliedCouponDiscount;
+    document.getElementById('payFinal').textContent = finalAmount;
+    document.getElementById('upiAppBtnAmount').textContent = finalAmount;
+    document.getElementById('upiIdBtnAmount').textContent = finalAmount;
+}
+
+function resetPaymentState() {
+    appliedCouponCode = '';
+    appliedCouponDiscount = 0;
+    document.getElementById('payDiscount').textContent = '0';
+    document.getElementById('couponInput').value = '';
+}
+
+function getCouponDetails(code, subtotal) {
+    var coupons = {
+        YP120: { discount: 120, minAmountExclusive: 500 },
+        YP100: { discount: 100, minAmountExclusive: 400 },
+        YP50: { discount: 50, minAmountExclusive: 350 },
+        YP0: { discount: subtotal, minAmountExclusive: -1, hidden: true }
+    };
+
+    var coupon = coupons[code];
+    if (!coupon) return null;
+    if (subtotal <= coupon.minAmountExclusive) {
+        return { invalid: true, minAmountExclusive: coupon.minAmountExclusive };
+    }
+
+    return {
+        code: code,
+        discount: Math.min(subtotal, coupon.discount),
+        hidden: !!coupon.hidden
+    };
+}
+
+
 
 function applyCoupon() {
     var code = document.getElementById('couponInput').value.trim().toUpperCase();
-    var validCoupons = { 'WELCOME50': 50, 'YATRI20': 20, 'FIRST10': 10 };
-    if (validCoupons[code]) {
-        var total = parseInt(document.getElementById('paySubtotal').textContent) || 0;
-        var discount = Math.round(total * validCoupons[code] / 100);
-        var final = total - discount;
-        document.getElementById('payDiscount').textContent = discount;
-        document.getElementById('payFinal').textContent = advancePaymentActive ? Math.round(final * 0.3) : final;
-        document.getElementById('razorpayBtnAmount').textContent = document.getElementById('payFinal').textContent;
-        document.getElementById('upiIdBtnAmount').textContent = document.getElementById('payFinal').textContent;
-        notify('Coupon applied! ' + validCoupons[code] + '% off', 'success');
-    } else {
-        notify('Invalid coupon code', 'error');
+    var subtotal = getPaySubtotal();
+
+    if (!code) {
+        appliedCouponCode = '';
+        appliedCouponDiscount = 0;
+        updatePaymentTotals();
+        return notify('Please enter a coupon code', 'error');
     }
+
+    var coupon = getCouponDetails(code, subtotal);
+    if (!coupon) {
+        return notify('Invalid coupon code', 'error');
+    }
+
+    if (coupon.invalid) {
+        return notify('This coupon works only when the amount is greater than ₹' + coupon.minAmountExclusive, 'error');
+    }
+
+    appliedCouponCode = coupon.code;
+    appliedCouponDiscount = coupon.discount;
+    updatePaymentTotals();
+    notify('Coupon applied! ₹' + coupon.discount + ' off', 'success');
 }
 
-async function payViaRazorpay() {
+function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+}
+
+async function payViaUpiApp() {
+    if (!RAZORPAY_KEY_ID) {
+        notify('Payment is not configured right now. Please refresh and try again.', 'error');
+        return;
+    }
     if (typeof Razorpay === 'undefined') {
         notify('Payment gateway loading...', 'info');
         return;
     }
     var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
     if (!amount || amount <= 0) return notify('Invalid amount', 'error');
-    showLoader('Initializing Razorpay gateway...');
+
+    showLoader('Initializing UPI payment...');
     try {
-        // Audit 2026-06-14: lift the partnerId from the selected item onto the
-        // booking root so the server can route partner SMS to the right operator.
-        var partnerId = currentBooking.collaboratorId
-            || (currentBooking.selectedBus && currentBooking.selectedBus.collaboratorId)
-            || (currentBooking.selectedHotel && currentBooking.selectedHotel.collaboratorId)
-            || (currentBooking.selectedCab && currentBooking.selectedCab.collaboratorId)
-            || (currentBooking.selectedCafe && currentBooking.selectedCafe.collaboratorId)
-            || null;
-        var payload = {
-            amount: amount / 100,
-            type: currentBooking.type,
-            itemName: currentBooking.type + ' booking',
-            details: { ...currentBooking, collaboratorId: partnerId },
-            seats: currentBooking.seats,
-            roomType: currentBooking.roomType,
-            userName: currentUser?.name || '',
-            userPhone: currentUser?.phone || '',
-            userAge: '',
-            passengerCount: currentBooking.passengers || 1
-        };
-        // Create order on backend
         var res = await fetch(API_URL + '/api/razorpay/create-order', {
             method: 'POST', headers: authHeaders(),
-            body: JSON.stringify(payload)
+            body: JSON.stringify(buildPaymentPayload(amount))
         });
         var data = await res.json();
         if (!data.success) {
             hideLoader();
             return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
         }
-        var options = {
-            key: RAZORPAY_KEY_ID,
-            amount: amount,
-            currency: 'INR',
-            name: 'Yatri Point',
-            description: currentBooking.type + ' booking',
-            order_id: data.razorpayOrderId || data.orderId,
-            handler: async function (response) {
-                showLoader('Verifying payment and generating ticket...');
-                try {
-                    notify('Verifying payment...', 'info');
-                    var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
-                        method: 'POST', headers: authHeaders(),
-                        body: JSON.stringify({
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                            orderId: data.orderId
-                        })
-                    });
-                    var verifyData = await verifyRes.json();
-                    if (verifyData.success) {
-                        closePaymentPage();
-                        notify('Booking confirmed! ID: ' + data.orderId, 'success');
 
-                        // Generate ticket immediately
-                        var ticketData = { ...currentBooking, orderId: data.orderId, paymentMethod: 'Razorpay' };
-                        saveAndRedirectTicket(ticketData);
-                    } else {
-                        notify('Payment verification failed: ' + verifyData.message, 'error');
-                    }
-                } catch (err) {
-                    notify('Payment verification error', 'error');
-                } finally {
-                    hideLoader();
-                }
-            },
-            prefill: {
-                name: currentUser?.name || '',
-                email: currentUser?.email || '',
-                contact: currentUser?.phone || ''
-            },
-            theme: { color: '#d84e55' },
-            modal: { ondismiss: function () { notify('Payment cancelled', 'info'); } }
+        var options = buildRazorpayBaseOptions(amount, data);
+        options.config = {
+            ...options.config,
+            upi: {
+                flow: 'intent'
+            }
         };
+        options.handler = async function (response) {
+            await verifyRazorpayPayment(response, data, 'UPI App (GPay/PhonePe/Paytm)', amount / 100);
+        };
+        options.modal = {
+            ondismiss: function () {
+                notify('Payment cancelled. Ticket not generated.', 'info');
+            }
+        };
+
         var rzp = new Razorpay(options);
         rzp.on('payment.failed', function (response) {
-            notify('Payment failed: ' + response.error.description, 'error');
+            notify('Payment failed: ' + (response?.error?.description || 'Transaction failed') + '. Ticket not generated.', 'error');
         });
         rzp.open();
     } catch (err) {
-        notify('Payment error: ' + err.message, 'error');
+        notify('Payment error: ' + err.message + '. Ticket not generated.', 'error');
     } finally {
         hideLoader();
     }
 }
 
+async function payViaRazorpay() {
+    if (!RAZORPAY_KEY_ID) {
+        notify('Payment is not configured right now. Please refresh and try again.', 'error');
+        return;
+    }
+    if (typeof Razorpay === 'undefined') {
+        notify('Payment gateway loading...', 'info');
+        return;
+    }
+    var amount = parseInt(document.getElementById('payFinal').textContent) * 100;
+    if (!amount || amount <= 0) return notify('Invalid amount', 'error');
+
+    showLoader('Initializing Razorpay gateway...');
+    try {
+        var res = await fetch(API_URL + '/api/razorpay/create-order', {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify(buildPaymentPayload(amount))
+        });
+        var data = await res.json();
+        if (!data.success) {
+            hideLoader();
+            return notify('Payment failed: ' + (data.message || 'order creation failed'), 'error');
+        }
+
+        var options = buildRazorpayBaseOptions(amount, data);
+        if (isMobileDevice()) {
+            options.config = {
+                ...options.config,
+                upi: {
+                    flow: 'intent'
+                }
+            };
+        }
+        options.handler = async function (response) {
+            await verifyRazorpayPayment(response, data, 'Razorpay', amount / 100);
+        };
+        options.modal = {
+            ondismiss: function () {
+                notify('Payment cancelled. Ticket not generated.', 'info');
+            }
+        };
+
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (response) {
+            notify('Payment failed: ' + (response?.error?.description || 'Transaction failed') + '. Ticket not generated.', 'error');
+        });
+        rzp.open();
+    } catch (err) {
+        notify('Payment error: ' + err.message + '. Ticket not generated.', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+
+
+function getBookingPartnerId() {
+    return currentBooking.collaboratorId
+        || (currentBooking.selectedBus && currentBooking.selectedBus.collaboratorId)
+        || (currentBooking.selectedHotel && currentBooking.selectedHotel.collaboratorId)
+        || (currentBooking.selectedCab && currentBooking.selectedCab.collaboratorId)
+        || (currentBooking.selectedCafe && currentBooking.selectedCafe.collaboratorId)
+        || null;
+}
+
+
+function buildPaymentPayload(amount) {
+    return {
+        amount: amount / 100,
+        type: currentBooking.type,
+        itemName: currentBooking.type + ' booking',
+        details: {
+            ...currentBooking,
+            collaboratorId: getBookingPartnerId(),
+            couponCode: appliedCouponCode || null,
+            couponDiscount: appliedCouponDiscount || 0,
+            originalAmount: getPaySubtotal(),
+            discountedAmount: getDiscountedTotal()
+        },
+        seats: currentBooking.seats,
+        roomType: currentBooking.roomType,
+        userName: currentUser?.name || '',
+        userPhone: currentUser?.phone || '',
+        userAge: '',
+        passengerCount: currentBooking.passengers || 1
+    };
+}
+
+
+function buildRazorpayBaseOptions(amount, data) {
+    return {
+        key: RAZORPAY_KEY_ID,
+        amount: amount,
+        currency: 'INR',
+        name: 'Yatri Point',
+        description: currentBooking.type + ' booking',
+        order_id: data.razorpayOrderId || data.orderId,
+        prefill: {
+            name: currentUser?.name || '',
+            email: currentUser?.email || '',
+            contact: currentUser?.phone || ''
+        },
+        config: {
+            display: {
+                language: 'en'
+            }
+        },
+        theme: { color: '#d84e55' }
+    };
+}
+
+async function verifyRazorpayPayment(response, data, paymentMethodLabel, amountInRupees) {
+    showLoader('Verifying payment and generating ticket...');
+    try {
+        notify('Verifying payment...', 'info');
+        var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                orderId: data.orderId
+            })
+        });
+        var verifyData = await verifyRes.json();
+        if (!verifyData.success) {
+            notify('Payment verification failed: ' + verifyData.message, 'error');
+            return;
+        }
+
+        closePaymentPage();
+        notify('Booking confirmed! ID: ' + data.orderId, 'success');
+        var ticketData = {
+            ...currentBooking,
+            orderId: data.orderId,
+            amount: amountInRupees,
+            paymentMethod: paymentMethodLabel,
+            paymentStatus: 'confirmed'
+        };
+        saveAndRedirectTicket(ticketData);
+    } catch (err) {
+        notify('Payment verification error. Ticket not generated.', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+
 function switchPayTab(tabId) {
     // Hide all sections
-    document.getElementById('razorpaySection').style.display = 'none';
+    document.getElementById('upiAppSection').style.display = 'none';
     document.getElementById('upiIdSection').style.display = 'none';
-    document.getElementById('upiSection').style.display = 'none';
 
     // Deactivate all tab buttons
     document.querySelectorAll('.pay-tab-btn').forEach(btn => {
@@ -2105,15 +2278,12 @@ function switchPayTab(tabId) {
 
     // Get target button and section
     let activeBtn;
-    if (tabId === 'card') {
-        document.getElementById('razorpaySection').style.display = 'block';
-        activeBtn = document.querySelector('[onclick="switchPayTab(\'card\')"]');
+    if (tabId === 'upi-app') {
+        document.getElementById('upiAppSection').style.display = 'block';
+        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-app\')"]');
     } else if (tabId === 'upi-id') {
         document.getElementById('upiIdSection').style.display = 'block';
         activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-id\')"]');
-    } else if (tabId === 'upi-qr') {
-        document.getElementById('upiSection').style.display = 'block';
-        activeBtn = document.querySelector('[onclick="switchPayTab(\'upi-qr\')"]');
     }
 
     if (activeBtn) {
@@ -2125,6 +2295,10 @@ function switchPayTab(tabId) {
 }
 
 async function payViaUpiId() {
+    if (!RAZORPAY_KEY_ID) {
+        notify('Payment is not configured right now. Please refresh and try again.', 'error');
+        return;
+    }
     var upiId = document.getElementById('upiIdInput').value.trim();
     if (!upiId) {
         notify('Please enter a valid UPI ID', 'warning');
@@ -2190,6 +2364,11 @@ async function payViaUpiId() {
                 method: 'upi',
                 vpa: upiId
             },
+            config: isMobileDevice() ? {
+                upi: {
+                    flow: 'intent'
+                }
+            } : {},
             handler: async function (response) {
                 showLoader('Verifying payment and generating ticket...');
                 try {
@@ -2244,55 +2423,7 @@ async function payViaUpiId() {
     }
 }
 
-async function confirmUpiPayment() {
-    if (!requireAuth()) return;
-    var amount = parseInt(document.getElementById('payFinal').textContent);
-    var qrUpiId = document.getElementById('qrUpiIdInput').value.trim();
-    if (!qrUpiId) {
-        notify('Please enter your Sender UPI ID or Transaction Ref No', 'warning');
-        return;
-    }
-    showLoader('Submitting UPI payment for verification...');
-    notify('Submitting UPI payment...', 'info');
-    try {
-        var res = await fetch(API_URL + '/api/upi/confirm-payment', {
-            method: 'POST', headers: authHeaders(),
-            body: JSON.stringify({
-                orderId: 'UPI_' + Date.now().toString(36).toUpperCase(),
-                amount: amount,
-                type: currentBooking.type,
-                itemName: currentBooking.type + ' booking',
-                userName: currentUser?.name || '',
-                userPhone: currentUser?.phone || '',
-                seats: currentBooking.seats,
-                details: { ...currentBooking, upiRef: qrUpiId }
-            })
-        });
-        var data = await res.json();
-        if (data.success) {
-            closePaymentPage();
-            notify(data.message || 'Payment submitted for verification. Ticket will be generated after payment confirmation.', 'success');
 
-            var pendingTicketData = {
-                ...currentBooking,
-                orderId: data.orderId || ('UPI_' + Date.now().toString(36).toUpperCase()),
-                amount: amount,
-                paymentMethod: 'UPI (QR - ' + qrUpiId + ')',
-                paymentStatus: 'pending',
-                paymentReference: qrUpiId
-            };
-            localStorage.setItem('latestTicket', JSON.stringify(pendingTicketData));
-            navigateTo('bookings');
-        } else {
-            notify('UPI confirmation failed: ' + data.message, 'error');
-        }
-    } catch (err) {
-        closePaymentPage();
-        notify('Could not submit payment confirmation. Ticket not generated.', 'error');
-    } finally {
-        hideLoader();
-    }
-}
 
 // ========== BOOKINGS ==========
 function openBookings() {
@@ -2780,10 +2911,13 @@ document.addEventListener('DOMContentLoaded', function () {
             // Initialize Google Sign-In once config is ready
             initGoogleSignIn();
         })
-        .catch(function () {
-            // Fallback: use hardcoded client ID
+        .catch(function (err) {
+            console.error('Failed to load /api/config:', err);
+            notify('Unable to initialize payment. Please refresh and try again.', 'error');
+            // Fallback only for Google sign-in. Do NOT fallback Razorpay to a hardcoded key,
+            // otherwise frontend can drift from backend env and payments will fail.
             GOOGLE_CLIENT_ID = '494833578713-r3tbr8e1bquphe3r84pbdeba5no7tqmj.apps.googleusercontent.com';
-            RAZORPAY_KEY_ID = 'rzp_test_SrBhiCCTjRroIi';
+            RAZORPAY_KEY_ID = '';
             initGoogleSignIn();
         });
 

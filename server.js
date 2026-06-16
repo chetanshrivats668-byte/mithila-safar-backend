@@ -504,6 +504,101 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, valid
     const { amount, type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
     if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
     const orderId = 'MS' + Date.now().toString(36).toUpperCase();
+    console.log(`[Razorpay] Creating order ${orderId} | amount=${amount} | type=${type || ''} | key=${String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)}...`);
+    const razorpayOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId, notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' } });
+    const orderData = {
+      orderId, razorpayOrderId: razorpayOrder.id,
+      type: type || '', itemName: itemName || '',
+      amount: Number(amount), payNow: Number(amount), due: 0,
+      details: details || {},
+      seats: seats || null, roomType: roomType || null,
+      userName: userName || '', userPhone: userPhone || '',
+      userAge: userAge || '', passengerCount: passengerCount || 1,
+      collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
+      status: 'payment_pending', payMethod: 'razorpay',
+      createdAt: new Date().toISOString(),
+      verifiedAt: null, verifiedBy: null
+    };
+    if (isSupabaseAvailable()) {
+      await dbCreate('orders', orderId, orderData);
+    } else {
+      memoryDb.orders.set(orderId, orderData);
+      console.log('[FALLBACK]: Order stored in memory:', orderId);
+    }
+    res.json({ success: true, orderId, razorpayOrderId: razorpayOrder.id, razorpayKey: process.env.RAZORPAY_KEY_ID, amount: Math.round(amount * 100), currency: 'INR' });
+  } catch (err) {
+    console.error('Razorpay order creation error:', {
+      message: err?.message,
+      statusCode: err?.statusCode,
+      error: err?.error,
+      description: err?.error?.description,
+      field: err?.error?.field,
+      source: err?.error?.source,
+      step: 'create-order'
+    });
+    if (err && err.statusCode === 401) {
+      return res.status(401).json({ success: false, message: 'Razorpay authentication failed' });
+    }
+    res.status(500).json({ success: false, message: 'Failed to create payment order' });
+  }
+});
+
+// ========== RAZORPAY: Verify Payment ==========
+app.post('/api/razorpay/verify-payment', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayVerify), async (req, res) => {
+  try {
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId, liveLocationUrl } = req.body;
+    console.log(`[Razorpay] Verifying payment | orderId=${orderId} | razorpayOrderId=${razorpayOrderId} | paymentId=${razorpayPaymentId}`);
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
+      return res.status(400).json({ success: false, message: 'Missing payment fields' });
+    }
+    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '').update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
+    if (expectedSignature !== razorpaySignature) {
+      console.warn('[Razorpay] Signature mismatch during verify-payment', {
+        orderId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        expectedSignaturePrefix: String(expectedSignature).slice(0, 10),
+        receivedSignaturePrefix: String(razorpaySignature).slice(0, 10),
+        keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
+      });
+      return res.status(400).json({ success: false, message: 'Payment verification failed' });
+    }
+    const updates = { status: 'confirmed', razorpayPaymentId, razorpaySignature, verifiedAt: new Date().toISOString(), verifiedBy: 'razorpay_auto', liveLocationUrl: liveLocationUrl || null };
+    if (isSupabaseAvailable()) {
+      const orderData = await dbGet('orders', orderId);
+      if (!orderData) { return res.status(404).json({ success: false, message: 'Order not found' }); }
+      await dbUpdate('orders', orderId, updates);
+      const updatedData = { ...orderData, ...updates, orderId };
+      await sendPartnerNotification(updatedData);
+    } else {
+      const existingOrder = memoryDb.orders.get(orderId);
+      if (!existingOrder) {
+        return res.status(404).json({ success: false, message: 'Order not found' });
+      }
+      const updatedOrder = { ...existingOrder, ...updates };
+      memoryDb.orders.set(orderId, updatedOrder);
+      console.log('[FALLBACK]: Order verified in memory:', orderId);
+      await sendPartnerNotification(updatedOrder);
+    }
+    res.json({ success: true, orderId, status: 'confirmed' });
+  } catch (err) {
+    console.error('Razorpay verify error:', {
+      message: err?.message,
+      statusCode: err?.statusCode,
+      step: 'verify-payment'
+    });
+    res.status(500).json({ success: false, message: 'Payment verification error' });
+  }
+});
+
+
+app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, validate(validateSchemas.razorpayCreateOrder), async (req, res) => {
+  try {
+    const { amount, type, itemName, details, seats, roomType, userName, userPhone, userAge, passengerCount } = req.body;
+    if (!amount || amount < 1) return res.status(400).json({ success: false, message: 'Invalid amount' });
+    console.log(`[Razorpay] Creating order ${orderId} | amount=${amount} | type=${type || ''} | key=${String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)}...`);
+
+    const orderId = 'MS' + Date.now().toString(36).toUpperCase();
     const razorpayOrder = await razorpay.orders.create({ amount: Math.round(amount * 100), currency: 'INR', receipt: orderId, notes: { type: type || '', itemName: itemName || '', userName: userName || '', userPhone: userPhone || '' } });
     const orderData = {
       orderId, razorpayOrderId: razorpayOrder.id,
@@ -528,12 +623,36 @@ app.post('/api/razorpay/create-order', requireAuth, blockTemporarySession, valid
       console.log('[FALLBACK]: Order stored in memory:', orderId);
     }
     
+    console.error('Razorpay order creation error:', {
+      message: err?.message,
+      statusCode: err?.statusCode,
+      error: err?.error,
+      description: err?.error?.description,
+      field: err?.error?.field,
+      source: err?.error?.source,
+      step: 'create-order'
+    }); 
+    console.log(`[Razorpay] Verifying payment | orderId=${orderId} | razorpayOrderId=${razorpayOrderId} | paymentId=${razorpayPaymentId}`);
+
+
     res.json({ success: true, orderId, razorpayOrderId: razorpayOrder.id, razorpayKey: process.env.RAZORPAY_KEY_ID, amount: Math.round(amount * 100), currency: 'INR' });
   } catch (err) { 
     console.error('Razorpay order creation error:', err); 
     if (err && err.statusCode === 401) {
       return res.status(401).json({ success: false, message: 'Razorpay authentication failed' });
     }
+    if (expectedSignature !== razorpaySignature) {
+      console.warn('[Razorpay] Signature mismatch during verify-payment', {
+        orderId,
+        razorpayOrderId,
+        razorpayPaymentId,
+        expectedSignaturePrefix: String(expectedSignature).slice(0, 10),
+        receivedSignaturePrefix: String(razorpaySignature).slice(0, 10),
+        keyIdPrefix: String(process.env.RAZORPAY_KEY_ID || '').slice(0, 8)
+      });
+      return res.status(400).json({ success: false, message: 'Payment verification failed' });
+    }
+
     res.status(500).json({ success: false, message: 'Failed to create payment order' }); 
   }
 });
