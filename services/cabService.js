@@ -27,7 +27,7 @@ export async function createCab(db, data) {
     driverName: data.driverName || '',
     driverPhone: data.driverPhone || '',
     cabType: data.cabType || data.type || data.busType || '',
-    fare: Number(data.fare ?? data.pricePerKm ?? data.price ?? 0),
+    fare: Number(data.fare ?? data.rate ?? data.price ?? data.pricePerKm ?? 0),
     route: data.route || data.city || data.operatingCity || '',
     totalSeats: Number(data.totalSeats || data.seats || 4),
     ownerAadhaarId: data.ownerAadhaarId || '',
@@ -70,6 +70,9 @@ export async function getCabsByCollaborator(db, collaboratorId) {
 }
 
 export async function updateCab(db, cabId, updates) {
+  if (updates.fare === undefined && updates.price !== undefined) {
+    updates.fare = Number(updates.price) || 0;
+  }
   updates.updatedAt = new Date().toISOString();
   
   if (!isSupabaseAvailable()) {

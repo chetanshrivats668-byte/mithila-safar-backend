@@ -1785,7 +1785,7 @@ function renderCabResults(cabs) {
         var model = c.cabtype || c.cabType || 'Standard';
         var driver = c.drivername || c.driverName || '';
         var driverPhone = c.driverphone || c.driverPhone || '';
-        var fare = c.fare || c.ratePerKm || 'N/A';
+        var fare = c.fare || c.rate || c.ratePerKm || 'N/A';
         var rating = c.rating || '-';
         var totalSeats = c.totalSeats || c.totalseats || 4;
         html += `
@@ -1821,7 +1821,7 @@ function bookCab(cabId, fare) {
     }
     if (!cab) return notify('Cab not found', 'error');
     currentBooking.selectedCab = cab;
-    var amount = parseFloat(fare || cab.fare || cab.ratePerKm || 0);
+    var amount = parseFloat(fare || cab.fare || cab.rate || cab.ratePerKm || 0);
     if (!amount || amount <= 0) return notify('Invalid cab fare', 'error');
     currentBooking.amount = amount;
     openPayment(currentBooking.amount);
