@@ -361,7 +361,8 @@
             e.preventDefault();
 
             const phoneInput = document.getElementById('collabPhoneInput');
-            if (!phoneInput || !phoneInput.value) {
+            const verifyBtn = document.getElementById('collabSendOtpBtn');
+            if (!phoneInput || !phoneInput.value || (verifyBtn && verifyBtn.textContent !== 'Verified')) {
                 alert('Please verify your phone number with OTP first');
                 return;
             }

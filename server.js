@@ -34,6 +34,7 @@ if (!process.env.FIREBASE_API_KEY) missing.push('FIREBASE_API_KEY');
 if (!process.env.FIREBASE_PROJECT_ID) missing.push('FIREBASE_PROJECT_ID');
 if (!process.env.RAZORPAY_KEY_ID) missing.push('RAZORPAY_KEY_ID');
 if (!process.env.RAZORPAY_KEY_SECRET) missing.push('RAZORPAY_KEY_SECRET');
+if (!process.env.RAZORPAY_WEBHOOK_SECRET) missing.push('RAZORPAY_WEBHOOK_SECRET');
 if (!process.env.JWT_SECRET) missing.push('JWT_SECRET');
 if (!process.env.ADMIN_USERNAME) missing.push('ADMIN_USERNAME');
 if (!process.env.ADMIN_PASSWORD) missing.push('ADMIN_PASSWORD');
@@ -45,7 +46,7 @@ if (missing.length > 0) {
 
 // ========== SUPABASE ==========
 if (!isSupabaseAvailable()) {
-  console.warn('[SUPABASE] Missing SUPABASE_URL or SUPABASE_ANON_KEY — running in offline memory mode.');
+  console.warn('[SUPABASE] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — running in offline memory mode.');
 }
 
 const app = express();
@@ -245,7 +246,7 @@ function requireAdmin(req, res, next) {
 
 // ========== MIDDLEWARE ==========
 const allowedOrigins = ['http://localhost:3001','http://127.0.0.1:3001','http://localhost:5500','http://127.0.0.1:5500','https://yatripoint.com','https://www.yatripoint.com','https://yatripoint.in','https://www.yatripoint.in','https://yatri-point.onrender.com','https://yatripoint.onrender.com'];
-app.use(cors({ origin: (origin, cb) => { if (!origin || origin === 'null' || allowedOrigins.includes(origin) || origin.startsWith('http://192.168.')) return cb(null, true); cb(new Error('CORS: origin not allowed')); }, methods: ['GET','POST','PUT','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
+app.use(cors({ origin: (origin, cb) => { if (!origin || origin === 'null' || allowedOrigins.includes(origin)) return cb(null, true); cb(new Error('CORS: origin not allowed')); }, methods: ['GET','POST','PUT','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
 // Capture raw body for Razorpay webhook HMAC verification.
 // All other routes continue to get the parsed JSON body as usual.
 app.use(express.json({
@@ -324,9 +325,7 @@ app.get('/api/config', (req, res) => {
     razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     msg91WidgetId: process.env.MSG91_WIDGET_ID || '366668686d37313131303336',
-    // MSG91_WIDGET_TOKEN_AUTH is the client-facing widget token from MSG91 dashboard.
-    // It is DIFFERENT from MSG91_AUTH_KEY (the secret server-side key). Leave empty if not set.
-    msg91TokenAuth: process.env.MSG91_WIDGET_TOKEN_AUTH || ''
+    msg91TokenAuth: process.env.MSG91_WIDGET_TOKEN_AUTH
   });
 });
 
@@ -471,7 +470,7 @@ app.post('/api/payment-link/verify', async (req, res) => {
 
     // HMAC verification — prevents forged success callbacks
     const expectedSig = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(razorpayOrderId + '|' + razorpayPaymentId)
       .digest('hex');
 
@@ -755,7 +754,7 @@ app.post('/api/booking/create-free', requireAuth, blockTemporarySession, async (
      if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature || !orderId) {
        return res.status(400).json({ success: false, message: 'Missing payment fields' });
      }
-     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '').update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
+     const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(razorpayOrderId + '|' + razorpayPaymentId).digest('hex');
      if (expectedSignature !== razorpaySignature) {
        console.warn('[Razorpay] Signature mismatch during verify-payment', {
          orderId,
@@ -1212,7 +1211,8 @@ app.post('/api/verify-otp', validate(validateSchemas.verifyOtp), (req, res) => {
 
     // Test bypass
     if (cleanPhone === '9876543210' && otp.toString().trim() === '123456') {
-      return res.json({ success: true, phone: '+91' + cleanPhone, message: 'Phone verified successfully' });
+      const verificationToken = jwt.sign({ phone: '+91' + cleanPhone, verified: true }, JWT_SECRET, { expiresIn: '15m' });
+      return res.json({ success: true, phone: '+91' + cleanPhone, verificationToken, message: 'Phone verified successfully' });
     }
 
     const stored = otpStore.get(cleanPhone);
@@ -1237,7 +1237,8 @@ app.post('/api/verify-otp', validate(validateSchemas.verifyOtp), (req, res) => {
       return res.status(400).json({ success: false, message: `Incorrect OTP. ${left} attempt(s) remaining.` });
     }
     otpStore.delete(cleanPhone);
-    return res.json({ success: true, phone: '+91' + cleanPhone, message: 'Phone verified successfully' });
+    const verificationToken = jwt.sign({ phone: '+91' + cleanPhone, verified: true }, JWT_SECRET, { expiresIn: '15m' });
+    return res.json({ success: true, phone: '+91' + cleanPhone, verificationToken, message: 'Phone verified successfully' });
   } catch (err) {
     console.error('Verify OTP error:', err);
     res.status(500).json({ success: false, message: 'Verification error. Please try again.' });
@@ -1593,16 +1594,21 @@ app.get('/api/buses/:busId/seats', async (req, res) => {
       const seatNum = parseInt(s.seatNumber || s.id.split('_').pop(), 10);
       let type = s.seatType || 'standard';
       if (seatNum <= 4) type = 'VIP';
-      
+
       let ladiesOnly = false;
       if ([5, 6, 11, 12, 17, 18].includes(seatNum)) {
         ladiesOnly = true;
       }
 
       return {
-        ...s,
+        id: s.id,
+        seatNumber: s.seatNumber || String(seatNum),
+        status: s.status || 'available',
+        price: Number(s.price || 0),
         seatType: type,
-        ladiesOnly
+        ladiesOnly,
+        travelDate,
+        busId
       };
     });
 
@@ -1874,7 +1880,6 @@ app.get('/admin-panel', (req, res) => {
 
 // ========== COLLABORATOR APPLICATION ROUTES ==========
 app.post('/api/collab-applications', applicationController.submitApplication);
-app.get('/api/collab-applications/status', applicationController.checkApplicationStatus);
 
 // ========== ADMIN: APPLICATION MANAGEMENT ==========
 app.get('/api/admin/collab-applications', requireAdmin, applicationController.adminListApplications);
@@ -2162,75 +2167,6 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch' });
   }
 });
-
-// ========== DEMO SEED DATA ==========
-// A prototype bus for the Madhubani → Benipatti route for testing purposes.
-(function seedDemoData() {
-  const DEMO_COLLAB_ID = 'DEMO_MITHILA_TRAVELS';
-  const DEMO_BUS_ID    = 'DEMO_BUS_MDB_BNP';
-
-  // Only seed if not already present
-  if (!memoryDb.collabs.has(DEMO_COLLAB_ID)) {
-    memoryDb.collabs.set(DEMO_COLLAB_ID, {
-      id: DEMO_COLLAB_ID,
-      name: 'Rohan Kumar',
-      email: 'demo@mithilatravels.in',
-      phone: '9876543210',
-      businessName: 'Mithila Travels (Demo)',
-      businessType: 'bus',
-      serviceCategories: ['bus'],
-      status: 'approved',
-      verificationStatus: 'verified',
-      verification_status: 'verified',
-      rating: 4.8,
-      totalBookings: 142,
-      totalEarnings: 85000,
-      upiId: 'mithilatravels@ybl',
-      routeCities: ['Madhubani', 'Benipatti'],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    console.log('[DEMO]: Seeded demo collaborator — Mithila Travels');
-  }
-
-  if (!memoryDb.buses.has(DEMO_BUS_ID)) {
-    memoryDb.buses.set(DEMO_BUS_ID, {
-      id: DEMO_BUS_ID,
-      collaboratorId: DEMO_COLLAB_ID,
-      collaboratorid: DEMO_COLLAB_ID,
-      busName: 'Mithila Express',
-      busname: 'Mithila Express',
-      busType: 'AC Seater',
-      bustype: 'AC Seater',
-      busNumber: 'BR-05-7892',
-      busnumber: 'BR-05-7892',
-      numberPlate: 'BR-05-7892',
-      source: 'Madhubani',
-      destination: 'Benipatti',
-      routeCities: ['Madhubani', 'Benipatti'],
-      routecities: ['Madhubani', 'Benipatti'],
-      departureTime: '07:00 AM',
-      departuretime: '07:00 AM',
-      arrivalTime: '09:00 AM',
-      arrivaltime: '09:00 AM',
-      fare: 80,
-      price: 80,
-      totalSeats: 40,
-      totalseats: 40,
-      seatLayout: '2x2',
-      seatlayout: '2x2',
-      status: 'active',
-      amenities: ['AC', 'Charging Point', 'Water Bottle'],
-      schedules: [{
-        departureTime: '07:00 AM',
-        arrivalTime: '09:00 AM',
-        runningDays: [true, true, true, true, true, true, true]  // all days
-      }],
-      createdAt: new Date().toISOString()
-    });
-    console.log('[DEMO]: Seeded demo bus — Mithila Express (Madhubani → Benipatti)');
-  }
-})();
 
 app.listen(PORT, () => {
   console.log('Yatri Point backend running on port ' + PORT);

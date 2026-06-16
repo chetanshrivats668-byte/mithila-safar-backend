@@ -15,8 +15,8 @@ export async function getDashboardOverview(req, res) {
 
     const collabBookings = allOrders.filter(o => o.collaboratorId === collabId || o.partnerPhone === req.collaborator.phone);
 
-    const totalBookings = collabBookings.length;
-    const confirmedBookings = collabBookings.filter(o => o.status === 'confirmed').length;
+    const totalBookings = collabBookings.filter(o => o.status === 'confirmed').length;
+    const confirmedBookings = totalBookings;
     const pendingBookings = collabBookings.filter(o => o.status === 'payment_pending').length;
     const totalEarnings = collabBookings
       .filter(o => o.status === 'confirmed')
@@ -33,7 +33,7 @@ export async function getDashboardOverview(req, res) {
         totalEarnings,
         activeBuses,
         totalBuses: buses.length,
-        recentBookings: collabBookings.slice(0, 10)
+        recentBookings: collabBookings.filter(o => o.status === 'confirmed').slice(0, 10)
       }
     });
   } catch (e) {
@@ -49,7 +49,10 @@ export async function getBookings(req, res) {
     const allOrders = await dbList('orders', {
       orderBy: { column: 'createdAt', ascending: false }
     });
-    const collabBookings = allOrders.filter(o => o.collaboratorId === collabId || o.partnerPhone === req.collaborator.phone);
+    const collabBookings = allOrders.filter(o => 
+      (o.collaboratorId === collabId || o.partnerPhone === req.collaborator.phone) &&
+      o.status === 'confirmed'
+    );
 
     res.json({ success: true, bookings: collabBookings });
   } catch (e) {

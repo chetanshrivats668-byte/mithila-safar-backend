@@ -85,6 +85,10 @@ let redisClient;
 const isProd = process.env.NODE_ENV === 'production';
 const redisUrl = process.env.REDIS_URL;
 
+if (isProd && (!redisUrl || !RedisClientClass)) {
+  throw new Error('REDIS_URL and ioredis are required in production. Refusing to start with MockRedis.');
+}
+
 if (RedisClientClass && redisUrl) {
   try {
     redisClient = new RedisClientClass(redisUrl, {

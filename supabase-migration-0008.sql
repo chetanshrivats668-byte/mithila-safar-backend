@@ -41,11 +41,9 @@ ALTER TABLE public.collaborators
   ADD COLUMN IF NOT EXISTS "landmark" TEXT,
   ADD COLUMN IF NOT EXISTS "pinCode" TEXT;
 
--- Enable Row Level Security and add allow_all policy for collab_applications
+-- Enable Row Level Security for collab_applications and remove permissive policies.
 ALTER TABLE public.collab_applications ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS allow_all ON public.collab_applications;
-CREATE POLICY allow_all ON public.collab_applications
-  FOR ALL USING (true) WITH CHECK (true);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_collab_apps_email ON public.collab_applications("email");

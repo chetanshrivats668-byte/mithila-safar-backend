@@ -20,7 +20,7 @@ function buildCollaboratorSessionPayload(collab) {
     name: collab.name,
     collaborator: true,
     type: (collab.type || (Array.isArray(collab.serviceCategories) ? collab.serviceCategories[0] : collab.serviceCategories) || 'business'),
-    serviceCategories: collab.serviceCategories || [],
+    serviceCategories: collab.serviceCategoriesr || [],
     permissions: collab.serviceCategories || []
   };
 }
@@ -265,19 +265,19 @@ export async function loginWithOTP(req, res) {
 
 export async function loginWithPhone(req, res) {
   try {
-    const { phone, token } = req.body;
-    if (!phone || !token) {
-      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
+    const { phone, otp } = req.body || {};
+    if (!phone || !otp) {
+      return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
     }
 
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const normalizedPhone = `+91${cleanPhone}`;
 
     const verificationReq = {
-      body: { phone: normalizedPhone, token }
+      body: { phone: cleanPhone, otp }
     };
 
     let verificationPassed = false;
+    let verificationMessage = 'Phone verification failed';
     const verificationRes = {
       status(code) {
         this.statusCode = code;
@@ -285,6 +285,7 @@ export async function loginWithPhone(req, res) {
       },
       json(payload) {
         verificationPassed = Boolean(payload?.success);
+        verificationMessage = payload?.message || verificationMessage;
         return payload;
       }
     };
@@ -292,7 +293,7 @@ export async function loginWithPhone(req, res) {
     await verifyMsg91Token(verificationReq, verificationRes);
 
     if (!verificationPassed) {
-      return res.status(400).json({ success: false, message: 'Phone verification failed' });
+      return res.status(400).json({ success: false, message: verificationMessage });
     }
 
     const collab = await collabService.getCollaboratorByPhone(req.app.locals.db, cleanPhone);

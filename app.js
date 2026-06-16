@@ -231,55 +231,6 @@ function notify(msg, type) {
     setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500);
 }
 
-// ========== PENDING VERIFICATION QUEUE ==========
-function enqueuePendingVerification(endpoint, token, phone) {
-    try {
-        const key = 'pendingVerifications';
-        const list = JSON.parse(localStorage.getItem(key) || '[]');
-        list.push({ endpoint: endpoint, token: token, phone: phone, createdAt: Date.now() });
-        localStorage.setItem(key, JSON.stringify(list));
-        return true;
-    } catch (e) {
-        console.warn('enqueuePendingVerification error', e);
-        return false;
-    }
-}
-
-async function syncPendingVerifications() {
-    if (!navigator.onLine) return;
-    const key = 'pendingVerifications';
-    let list = JSON.parse(localStorage.getItem(key) || '[]');
-    if (!list || !list.length) return;
-
-    for (let i = 0; i < list.length; i++) {
-        const item = list[i];
-        try {
-            const res = await fetch(window.location.origin + item.endpoint, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify({ token: item.token, phone: item.phone })
-            });
-            const d = await res.json();
-            if (d && d.success) {
-                notify('Pending verification synced for ' + (item.phone || ''), 'success');
-                list.splice(i, 1); i--; // remove and adjust index
-            } else {
-                console.warn('Pending verification rejected by server', d && d.message);
-                // don't remove; server may want retry later
-            }
-        } catch (err) {
-            console.warn('syncPendingVerifications network error', err);
-            break; // stop processing on network failure
-        }
-    }
-
-    try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { console.warn(e); }
-}
-
-window.addEventListener('online', function () { syncPendingVerifications(); });
-// Try syncing on load
-setTimeout(syncPendingVerifications, 1000);
-
 // ========== AUTH STATE ==========
 function updateUILoggedIn() {
     const authBtns = document.getElementById('authBtns');
@@ -299,7 +250,7 @@ function updateUILoggedIn() {
         if (initialEl) initialEl.textContent = initial;
         if (topAccountNameText) topAccountNameText.textContent = displayName;
     }
-    if (topAccountName) topAccountName.style.display = 'inline-flex';
+    if (topAccountName) topAccountName.style.display = 'none';
     document.querySelectorAll('.mobile-menu .btn-login, .mobile-menu .btn-signup').forEach(b => b.style.display = 'none');
 }
 
@@ -340,42 +291,93 @@ function verifyPhoneForBooking(callback) {
 }
 
 function openPhoneVerificationModal() {
-    document.getElementById('verificationPhoneInput').value = currentUser.phone || '';
+    // Reset to Step 1 state every time modal opens
+    const inputSection = document.getElementById('verifyPhoneInputSection');
+    const otpStatus = document.getElementById('verifyPhoneOtpStatus');
+    const btn = document.getElementById('btnSendVerificationOTP');
+    if (inputSection) inputSection.style.display = 'block';
+    if (otpStatus) otpStatus.style.display = 'none';
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '📤 Send OTP';
+    }
+    const phoneInput = document.getElementById('verificationPhoneInput');
+    if (phoneInput) {
+        const raw = (currentUser && currentUser.phone) || '';
+        phoneInput.value = raw.replace('+91', '').replace(/\D/g, '').slice(-10);
+    }
     openModal('phoneVerificationModal');
+}
+
+function cancelPhoneVerification() {
+    // Restore modal to Step 1
+    const inputSection = document.getElementById('verifyPhoneInputSection');
+    const otpStatus = document.getElementById('verifyPhoneOtpStatus');
+    const btn = document.getElementById('btnSendVerificationOTP');
+    if (inputSection) inputSection.style.display = 'block';
+    if (otpStatus) otpStatus.style.display = 'none';
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '📤 Send OTP';
+    }
+    closeModal('phoneVerificationModal');
+}
+
+function normalizeIndianPhone(phone) {
+    const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+    if (!/^[6-9]\d{9}$/.test(cleanPhone)) return null;
+    return {
+        clean: cleanPhone,
+        formatted: '+91' + cleanPhone
+    };
 }
 
 async function sendPhoneVerificationOTP(e) {
     e.preventDefault();
-    const phone = document.getElementById('verificationPhoneInput').value.trim();
-    if (!phone || phone.length < 10) return notify('Please enter a valid phone number', 'error');
-    
+    const phoneInput = document.getElementById('verificationPhoneInput');
+    const btn = document.getElementById('btnSendVerificationOTP');
+    const inputSection = document.getElementById('verifyPhoneInputSection');
+    const otpStatus = document.getElementById('verifyPhoneOtpStatus');
+    const normalizedPhone = normalizeIndianPhone(phoneInput && phoneInput.value);
+
+    if (!normalizedPhone) {
+        return notify('Please enter a valid 10-digit Indian mobile number', 'error');
+    }
+
+    // Transition to Step 2: hide phone input, show spinner
+    if (btn) { btn.disabled = true; setButtonLoading(btn, true, '📤 Send OTP'); }
+    if (inputSection) inputSection.style.display = 'none';
+    if (otpStatus) otpStatus.style.display = 'block';
+
+    const restoreStep1 = function() {
+        if (inputSection) inputSection.style.display = 'block';
+        if (otpStatus) otpStatus.style.display = 'none';
+        if (btn) { setButtonLoading(btn, false, '📤 Send OTP'); btn.disabled = false; }
+    };
+
     try {
-        setButtonLoading(document.getElementById('btnSendVerificationOTP'), true, 'Sending...');
-        // trigger the MSG91 widget
-        const token = await window.msg91OTP.verify(phone);
-        
-        // Once verified by widget, tell backend
+        const verificationToken = await window.msg91OTP.verify(normalizedPhone.clean);
+
         const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + authToken
             },
-            body: JSON.stringify({ phone, token })
+            body: JSON.stringify({ phone: normalizedPhone.formatted, verificationToken: verificationToken })
         });
         const data = await res.json();
-        
+
         if (data.success) {
             notify('Phone number verified successfully!', 'success');
-            // update local storage
-            currentUser.phone = phone;
+            currentUser.phone = normalizedPhone.formatted;
             currentUser.phoneVerified = true;
             saveSession(authToken, currentUser, refreshToken);
             closeModal('phoneVerificationModal');
-            
+            restoreStep1();
+
             if (typeof loadProfile === 'function') loadProfile();
-            
-            // Resume pending action
+
             if (pendingBookingAction) {
                 const action = pendingBookingAction;
                 pendingBookingAction = null;
@@ -383,11 +385,11 @@ async function sendPhoneVerificationOTP(e) {
             }
         } else {
             notify(data.message || 'Verification failed on server', 'error');
+            restoreStep1();
         }
     } catch (err) {
-        notify(err.message || 'Phone verification failed', 'error');
-    } finally {
-        setButtonLoading(document.getElementById('btnSendVerificationOTP'), false, 'Send OTP');
+        notify(err.message || err || 'Phone verification failed', 'error');
+        restoreStep1();
     }
 }
 function getStoredCollaboratorSession() {
@@ -595,6 +597,7 @@ function clearSession() {
 function saveSession(token, user, newRefreshToken) {
     authToken = token;
     currentUser = user;
+    clearCollaboratorSession();
     if (newRefreshToken) {
         refreshToken = newRefreshToken;
         localStorage.setItem('refreshToken', newRefreshToken);
@@ -1016,39 +1019,177 @@ async function completePhoneProfile(e) {
     }
 }
 
-// ========== SIGNUP ==========
+// ========== SIGNUP & FORGOT PASSWORD ==========
+let pendingSignupDetails = null;
+let pendingForgotPasswordPhone = null;
+
 async function handleSignup(e) {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
+    const btn = document.getElementById('signupSubmitBtn') || e.target.querySelector('button[type="submit"]');
     const name = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const phone = document.getElementById('signupPhone').value.trim();
     const password = document.getElementById('signupPassword').value;
     if (!name || !email || !phone || !password) return notify('Please fill all fields', 'error');
 
-    showLoader('Creating your account...');
-    setButtonLoading(btn, true, 'Create Account');
+    const normalizedPhone = normalizeIndianPhone(phone);
+    if (!normalizedPhone) return notify('Please enter a valid 10-digit Indian mobile number', 'error');
+
+    setButtonLoading(btn, true, 'Verifying...');
     try {
-        const res = await fetch(API_URL + '/api/auth/signup', {
+        const token = await window.msg91OTP.verify(normalizedPhone.clean);
+        
+        // OTP verified via widget, now create account
+        const payload = { name, email, phone: normalizedPhone.formatted, password, verificationToken: token };
+        const signupRes = await fetch(API_URL + '/api/auth/signup', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone, password })
+            body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if (!data.success) {
-            notify(data.message || data.errors?.[0] || 'Signup failed', 'error');
+        const signupData = await signupRes.json();
+        
+        if (!signupData.success) {
+            notify(signupData.message || signupData.errors?.[0] || 'Signup failed', 'error');
             return;
         }
         closeModal('signupModal');
-        if (data.token && data.user) {
-            saveSession(data.token, data.user, data.refreshToken);
-            applyCollaboratorLoginContext(data);
+        if (signupData.token && signupData.user) {
+            saveSession(signupData.token, signupData.user, signupData.refreshToken);
+            applyCollaboratorLoginContext(signupData);
         }
         notify('Account created successfully!', 'success');
     } catch (err) {
-        notify('Signup failed: ' + (err.message || 'network error'), 'error');
+        notify('Process failed: ' + (err.message || 'network error'), 'error');
     } finally {
-        setButtonLoading(btn, false, 'Create Account');
-        hideLoader();
+        setButtonLoading(btn, false, 'Verify Phone & Create Account');
+    }
+}
+
+function setForgotPasswordOtpState(isVerifying) {
+    const form = document.getElementById('forgotPasswordForm');
+    const phoneInput = document.getElementById('forgotPasswordPhone');
+    const btn = form ? form.querySelector('button[type="submit"]') : null;
+    const subtitle = document.querySelector('#forgotPasswordModal .subtitle');
+
+    if (!form) return;
+
+    form.dataset.verifying = isVerifying ? 'true' : 'false';
+
+    if (isVerifying) {
+        form.style.display = 'none';
+        form.style.opacity = '0';
+        form.style.pointerEvents = 'none';
+        if (phoneInput) phoneInput.disabled = true;
+        if (btn) btn.disabled = true;
+        if (subtitle) {
+            subtitle.textContent = 'OTP verification is in progress. Complete the MSG91 step to continue.';
+        }
+        return;
+    }
+
+    form.style.display = 'block';
+    form.style.opacity = '1';
+    form.style.pointerEvents = 'auto';
+    if (phoneInput) {
+        phoneInput.disabled = false;
+        phoneInput.value = '';
+    }
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Send OTP';
+    }
+    if (subtitle) {
+        subtitle.textContent = 'Enter your phone number to receive an OTP';
+    }
+}
+
+function openForgotPasswordModal() {
+    closeModal('loginModal');
+    openModal('forgotPasswordModal');
+    setForgotPasswordOtpState(false);
+}
+
+async function handleForgotPassword(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    const phoneInput = document.getElementById('forgotPasswordPhone');
+    const subtitle = document.querySelector('#forgotPasswordModal .subtitle');
+    const phone = phoneInput.value.trim();
+    if (!phone) return notify('Please enter your phone number', 'error');
+
+    const normalizedPhone = normalizeIndianPhone(phone);
+    if (!normalizedPhone) return notify('Please enter a valid 10-digit Indian mobile number', 'error');
+
+    setButtonLoading(btn, true, 'Verifying...');
+    setForgotPasswordOtpState(true);
+    try {
+        const token = await window.msg91OTP.verify(normalizedPhone.clean);
+
+        // OTP verified, log in and prompt for password reset
+        const loginRes = await fetch(API_URL + '/api/auth/forgot-password-login', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: normalizedPhone.formatted, verificationToken: token })
+        });
+        const loginData = await loginRes.json();
+
+        if (!loginData.success) {
+            notify(loginData.message || 'Login failed', 'error');
+            return;
+        }
+
+        saveSession(loginData.token, loginData.user, loginData.refreshToken);
+        applyCollaboratorLoginContext(loginData);
+
+        closeModal('forgotPasswordModal');
+
+        if (loginData.requirePasswordReset) {
+            openModal('resetPasswordModal');
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmNewPassword').value = '';
+            notify(loginData.message || 'Please reset your password.', 'info');
+        } else {
+            notify('Logged in successfully!', 'success');
+        }
+    } catch (err) {
+        notify('Process failed: ' + (err.message || 'network error'), 'error');
+    } finally {
+        setButtonLoading(btn, false, 'Send OTP');
+        if (document.getElementById('forgotPasswordModal')?.classList.contains('active')) {
+            setForgotPasswordOtpState(false);
+        }
+    }
+}
+
+async function handleResetPassword(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+    if (newPassword !== confirmNewPassword) {
+        return notify('Passwords do not match', 'error');
+    }
+    if (newPassword.length < 6) {
+        return notify('Password must be at least 6 characters', 'error');
+    }
+
+    setButtonLoading(btn, true, 'Saving...');
+    try {
+        const res = await fetch(API_URL + '/api/auth/reset-password', {
+            method: 'POST', headers: authHeaders(),
+            body: JSON.stringify({ newPassword })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            notify(data.message || 'Failed to reset password', 'error');
+            return;
+        }
+        closeModal('resetPasswordModal');
+        notify('Password updated successfully! Welcome back.', 'success');
+    } catch (err) {
+        notify('Process failed: ' + (err.message || 'network error'), 'error');
+    } finally {
+        setButtonLoading(btn, false, 'Save Password');
     }
 }
 
@@ -2046,7 +2187,7 @@ function getCouponDetails(code, subtotal) {
         YP120: { discount: 120, minAmountExclusive: 500 },
         YP100: { discount: 100, minAmountExclusive: 400 },
         YP50: { discount: 50, minAmountExclusive: 350 },
-        YP0: { discount: subtotal, minAmountExclusive: -1, hidden: true }
+        YP01: { discount: 1, minAmountExclusive: -1, hidden: true }
     };
 
     var coupon = coupons[code];
@@ -2630,67 +2771,80 @@ function togglePhoneEditForm(show) {
     }
 }
 
+function cancelProfilePhoneVerification() {
+    // Restore profile inline form to Step 1
+    const inputSection = document.getElementById('profilePhoneInputSection');
+    const otpStatus = document.getElementById('profilePhoneOtpStatus');
+    const saveBtn = document.getElementById('btnSaveProfilePhone');
+    if (inputSection) inputSection.style.display = 'block';
+    if (otpStatus) otpStatus.style.display = 'none';
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = 'Send OTP & Verify'; }
+    togglePhoneEditForm(false);
+}
+
 async function saveProfilePhone() {
     var phoneInputEl = document.getElementById('profilePhoneInput');
     if (!phoneInputEl) return;
-    var phoneInput = phoneInputEl.value.trim();
-    var cleanPhone = phoneInput.replace(/\D/g, '').slice(-10);
-    if (!cleanPhone || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+    var normalizedPhone = normalizeIndianPhone(phoneInputEl.value);
+    if (!normalizedPhone) {
         return notify('Please enter a valid 10-digit Indian mobile number', 'error');
     }
-    
-    var formattedPhone = '+91' + cleanPhone;
-    
-    // If user inputs the exact same phone number and it is already verified, do nothing
+
+    var formattedPhone = normalizedPhone.formatted;
+
     if (formattedPhone === currentUser.phone && currentUser.phoneVerified) {
         notify('This phone number is already verified.', 'info');
         togglePhoneEditForm(false);
         return;
     }
 
-    notify('Please verify the new phone number via OTP...', 'info');
+    // Transition to Step 2: hide input section, show spinner
+    const inputSection = document.getElementById('profilePhoneInputSection');
+    const otpStatus = document.getElementById('profilePhoneOtpStatus');
+    const saveBtn = document.getElementById('btnSaveProfilePhone');
+    if (saveBtn) { saveBtn.disabled = true; }
+    if (inputSection) inputSection.style.display = 'none';
+    if (otpStatus) otpStatus.style.display = 'block';
+
+    const restoreStep1 = function() {
+        if (inputSection) inputSection.style.display = 'block';
+        if (otpStatus) otpStatus.style.display = 'none';
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = 'Send OTP & Verify'; }
+    };
 
     try {
-        // Trigger MSG91 OTP verification first
-        const token = await window.msg91OTP.verify(formattedPhone);
-        
+        notify('Initializing verification...', 'info');
+        const token = await window.msg91OTP.verify(normalizedPhone.clean);
+
         notify('Saving changes...', 'info');
-        
-        // Once verified by widget, tell backend to update phone & mark verified
+
         const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + authToken
             },
-            body: JSON.stringify({ phone: formattedPhone, token: token })
+            body: JSON.stringify({ phone: formattedPhone, token: token, otp: token })
         });
         const data = await res.json();
-        
+
         if (data.success) {
             notify('Phone number changed and verified successfully!', 'success');
             currentUser.phone = formattedPhone;
             currentUser.phoneVerified = true;
             saveSession(authToken, currentUser, refreshToken);
-            
+
             togglePhoneEditForm(false);
+            restoreStep1();
             loadProfile();
         } else {
             notify(data.message || 'Verification failed on server', 'error');
+            restoreStep1();
         }
     } catch (err) {
         console.error(err);
-        if (err === 'mock-otp-token' || (err && err.message === 'mock-otp-token')) {
-            // Support local offline/mock testing if widget resolves mock token
-            currentUser.phone = formattedPhone;
-            currentUser.phoneVerified = true;
-            saveSession(authToken, currentUser, refreshToken);
-            togglePhoneEditForm(false);
-            loadProfile();
-            notify('Phone number changed and verified (mock OTP)', 'success');
-        } else {
-            notify(err.message || err || 'Phone verification failed. Number was not changed.', 'error');
-        }
+        notify(err.message || err || 'Phone verification failed. Number was not changed.', 'error');
+        restoreStep1();
     }
 }
 
@@ -2868,6 +3022,14 @@ function initCollabOTP() {
     var btn = document.getElementById('collabSendOtpBtn');
     if (btn) btn.textContent = 'Verified';
     if (btn) btn.style.background = '#28a745';
+    
+    // Update the warning label under the phone number
+    const warningEl = document.querySelector('#collabPhoneSection small');
+    if (warningEl) {
+        warningEl.style.color = '#28a745';
+        warningEl.innerHTML = '✅ Phone verified!';
+    }
+    
     notify('Phone verified', 'success');
 }
 
@@ -2980,11 +3142,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(function (err) {
             console.error('Failed to load /api/config:', err);
             notify('Unable to initialize payment. Please refresh and try again.', 'error');
-            // Fallback only for Google sign-in. Do NOT fallback Razorpay to a hardcoded key,
-            // otherwise frontend can drift from backend env and payments will fail.
-            GOOGLE_CLIENT_ID = '494833578713-r3tbr8e1bquphe3r84pbdeba5no7tqmj.apps.googleusercontent.com';
-            RAZORPAY_KEY_ID = '';
-            initGoogleSignIn();
+            // No fallback keys - /api/config must work for security
         });
 
     // Close dropdown on outside click

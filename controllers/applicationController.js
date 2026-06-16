@@ -85,38 +85,11 @@ export async function submitApplication(req, res) {
   }
 }
 
-export async function checkApplicationStatus(req, res) {
-  try {
-    const queryVal = (req.query.email || '').trim();
-    if (!queryVal) return res.status(400).json({ success: false, message: 'Identifier is required' });
-
-    let app = null;
-    if (queryVal.includes('@')) {
-      const email = normalizeEmail(queryVal);
-      app = await appService.getApplicationByGoogleEmail(req.app.locals.db, email)
-        || await appService.getApplicationByEmail(req.app.locals.db, email);
-    } else {
-      app = await appService.getApplicationByPhone(req.app.locals.db, queryVal);
-    }
-
-    if (!app) return res.json({ success: true, hasApplication: false });
-
-    res.json({
-      success: true,
-      hasApplication: true,
-      application: {
-        id: app.id,
-        name: app.name,
-        serviceCategory: app.serviceCategory,
-        status: app.status,
-        googleEmail: app.googleEmail || app.email || '',
-        createdAt: app.createdAt
-      }
-    });
-  } catch (e) {
-    console.error('Check application status error:', e);
-    res.status(500).json({ success: false, message: 'Failed to check status' });
-  }
+export async function checkApplicationStatus(_req, res) {
+  return res.status(410).json({
+    success: false,
+    message: 'Public application status lookup has been disabled for security reasons. Please contact support or wait for admin review updates.'
+  });
 }
 
 export async function adminListApplications(req, res) {

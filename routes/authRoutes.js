@@ -8,6 +8,8 @@ const router = Router();
 router.post('/signup', authController.registerUser);
 router.post('/login', authController.loginUser);
 router.post('/google', authController.googleLogin);
+router.post('/forgot-password-login', authController.forgotPasswordLogin);
+router.post('/reset-password', requireAuth, authController.resetPassword);
 
 // Email OTP Endpoints
 router.post('/send-email-otp', authController.sendEmailOTP);

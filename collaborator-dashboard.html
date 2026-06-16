@@ -1472,6 +1472,8 @@ async function sendLoginPhoneOtp() {
   const phone = document.getElementById('loginPhone').value.trim();
   const err = document.getElementById('loginError');
   const btn = document.getElementById('sendLoginOtpBtn');
+  const otpGroup = document.getElementById('loginPhoneOtpGroup');
+  const otpInput = document.getElementById('loginPhoneOtpInput');
   err.style.display = 'none';
 
   if (!/^[6-9]\d{9}$/.test(phone)) {
@@ -1481,50 +1483,26 @@ async function sendLoginPhoneOtp() {
   }
 
   btn.disabled = true;
-  btn.textContent = 'Opening...';
+  btn.textContent = 'Sending...';
 
-  // Trigger MSG91 OTP widget
-  msg91OTP.verify('+91' + phone)
-    .then(async function(verifiedToken) {
-      // Widget success — attempt login using the verified token
-      showLoader('Logging you in...');
-      try {
-        const r = await fetch(API + '/api/collaborator/login-with-phone', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, token: verifiedToken })
-        });
-        const d = await r.json();
-        if (d.success) {
-          setToken(d);
-          return;
-        }
-        // Check application status
-        const sr = await fetch(API + '/api/collab-applications/status?email=' + encodeURIComponent(phone));
-        const sd = await sr.json();
-        if (sd.hasApplication) {
-          if (sd.application.status === 'pending') {
-            err.textContent = 'Your collaborator request is under review.'; err.style.display = 'block'; return;
-          }
-          if (sd.application.status === 'rejected') {
-            err.textContent = 'You are not eligible for this.'; err.style.display = 'block'; return;
-          }
-        }
-        err.textContent = d.message || 'Login failed'; err.style.display = 'block';
-      } catch {
-        err.textContent = 'Network error'; err.style.display = 'block';
-      } finally {
-        hideLoader();
-      }
-      btn.disabled = false;
-      btn.textContent = 'Send OTP';
-    })
-    .catch(function(widgetErr) {
-      err.textContent = typeof widgetErr === 'string' ? widgetErr : 'OTP verification failed. Please try again.';
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'Send OTP';
-    });
+  try {
+    showLoader('Sending OTP...');
+    await msg91OTP.send(phone);
+    if (otpGroup) otpGroup.style.display = 'block';
+    if (otpInput) otpInput.focus();
+    btn.textContent = 'Resend OTP';
+    err.style.color = '#86efac';
+    err.textContent = 'OTP sent to your phone. Enter it below to continue.';
+    err.style.display = 'block';
+  } catch (sendErr) {
+    err.style.color = '#fca5a5';
+    err.textContent = sendErr && sendErr.message ? sendErr.message : 'Failed to send OTP. Please try again.';
+    err.style.display = 'block';
+    btn.textContent = 'Send OTP';
+  } finally {
+    btn.disabled = false;
+    hideLoader();
+  }
 }
 
 async function handleLogin(e) { e.preventDefault();
@@ -1561,17 +1539,6 @@ async function handleLogin(e) { e.preventDefault();
         return;
       }
       
-      // If login failed, check application status
-      const sr = await fetch(API + '/api/collab-applications/status?email=' + encodeURIComponent(email));
-      const sd = await sr.json();
-      if (sd.hasApplication) {
-        if (sd.application.status === 'pending') {
-          err.textContent = 'Your collaborator request is under review. Please wait for admin approval.'; err.style.display = 'block'; return;
-        }
-        if (sd.application.status === 'rejected') {
-          err.textContent = 'You are not eligible for this.'; err.style.display = 'block'; return;
-        }
-      }
       err.textContent = d.message || 'Invalid credentials'; err.style.display = 'block';
     } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; } finally {
       hideLoader();
@@ -1598,17 +1565,6 @@ async function handleLogin(e) { e.preventDefault();
         return;
       }
       
-      // Check application status for phone too if login fails
-      const sr = await fetch(API + '/api/collab-applications/status?email=' + encodeURIComponent(phone));
-      const sd = await sr.json();
-      if (sd.hasApplication) {
-        if (sd.application.status === 'pending') {
-          err.textContent = 'Your collaborator request is under review. Please wait for admin approval.'; err.style.display = 'block'; return;
-        }
-        if (sd.application.status === 'rejected') {
-          err.textContent = 'You are not eligible for this.'; err.style.display = 'block'; return;
-        }
-      }
       err.textContent = d.message || 'Invalid verification code'; err.style.display = 'block';
     } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; } finally {
       hideLoader();
@@ -1621,6 +1577,8 @@ async function sendRegisterPhoneOtp() {
   const phone = document.getElementById('appPhone').value.trim();
   const status = document.getElementById('otpStatus');
   const btn = document.getElementById('sendOtpBtn');
+  const otpSection = document.getElementById('otpSection');
+  const otpInput = document.getElementById('appOtp');
   status.textContent = '';
 
   if (!/^[6-9]\d{9}$/.test(phone)) {
@@ -1629,59 +1587,68 @@ async function sendRegisterPhoneOtp() {
     return;
   }
 
+  otpSection.style.display = 'block';
+  status.style.color = 'var(--text2)';
+  status.textContent = 'Sending OTP...';
   btn.disabled = true;
-  btn.textContent = 'Opening...';
+  btn.textContent = 'Sending...';
 
-  // Trigger MSG91 OTP widget
-  msg91OTP.verify('+91' + phone)
-    .then(async function(verifiedToken) {
-      // Confirm with backend
-      showLoader('Verifying OTP...');
-      try {
-        const r = await fetch(API + '/api/collaborator/verify-msg91-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token: verifiedToken, phone })
-        });
-        const d = await r.json();
-        if (d.success) {
-          _registerPhoneVerified = true;
-          status.style.color = '#86efac';
-          status.textContent = '✅ Phone verified!';
-          document.getElementById('appPhone').readOnly = true;
-          document.getElementById('appOtp').readOnly = true;
-          document.getElementById('sendOtpBtn').style.display = 'none';
-          document.getElementById('verifyOtpBtn').style.display = 'none';
-        } else {
-          status.style.color = '#fca5a5';
-          status.textContent = d.message || 'Verification failed';
-          btn.disabled = false;
-          btn.textContent = 'Verify Phone';
-        }
-      } catch {
-        // Offline — mark verified locally
-        _registerPhoneVerified = true;
-        status.style.color = '#86efac';
-        status.textContent = '✅ Phone verified!';
-        document.getElementById('appPhone').readOnly = true;
-        btn.textContent = '✅ Verified';
-      } finally {
-        hideLoader();
-      }
-    })
-    .catch(function(widgetErr) {
-      status.style.color = '#fca5a5';
-      status.textContent = typeof widgetErr === 'string' ? widgetErr : 'OTP verification failed. Please try again.';
-      btn.disabled = false;
-      btn.textContent = 'Verify Phone';
-    });
+  try {
+    await msg91OTP.send(phone);
+    if (otpInput) otpInput.focus();
+    status.style.color = '#86efac';
+    status.textContent = 'OTP sent successfully. Enter the 6-digit code below.';
+    btn.textContent = 'Resend OTP';
+  } catch (sendErr) {
+    status.style.color = '#fca5a5';
+    status.textContent = sendErr && sendErr.message ? sendErr.message : 'Failed to send OTP. Please try again.';
+    btn.textContent = 'Send OTP';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
-// Verify button clicked — re-invokes the MSG91 OTP widget which handles full
-// OTP entry and confirmation internally. MSG91's promise resolution is handled
-// inside sendRegisterPhoneOtp() above, which auto-hides this button on success.
+// Verify button clicked — validates the entered OTP with the server-mediated flow.
 async function verifyRegisterPhoneOtp() {
-  sendRegisterPhoneOtp();
+  const phone = document.getElementById('appPhone').value.trim();
+  const otp = document.getElementById('appOtp').value.trim();
+  const status = document.getElementById('otpStatus');
+  const verifyBtn = document.getElementById('verifyOtpBtn');
+
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Enter a valid 10-digit phone number.';
+    return;
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    status.style.color = '#fca5a5';
+    status.textContent = 'Enter a valid 6-digit OTP.';
+    return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = 'Verifying...';
+  showLoader('Verifying OTP...');
+
+  try {
+    await msg91OTP.verify(phone, otp);
+    _registerPhoneVerified = true;
+    status.style.color = '#86efac';
+    status.textContent = '✅ Phone verified!';
+    document.getElementById('appPhone').readOnly = true;
+    document.getElementById('appOtp').readOnly = true;
+    document.getElementById('sendOtpBtn').style.display = 'none';
+    verifyBtn.style.display = 'none';
+  } catch (verifyErr) {
+    _registerPhoneVerified = false;
+    status.style.color = '#fca5a5';
+    status.textContent = verifyErr && verifyErr.message ? verifyErr.message : 'OTP verification failed. Please try again.';
+  } finally {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Verify';
+    hideLoader();
+  }
 }
 
 /* ─── Visual Route Builder & Category Form Toggle ─── */
@@ -2120,12 +2087,38 @@ async function restoreCollaboratorSessionFromMainAuth() {
   showCollabRoleSwitcher(validRoles, rolePayload.mainToken);
   return false;
 }
+function isCollaboratorSessionValidForUser(collab, user) {
+  if (!user) return true; // If no main user is logged in, we can trust the collaborator session
+  if (!collab) return false;
+  
+  const userEmail = (user.email || '').trim().toLowerCase();
+  const collabEmail = (collab.email || '').trim().toLowerCase();
+  
+  if (userEmail && collabEmail && userEmail !== collabEmail) {
+    return false;
+  }
+  
+  const userPhone = (user.phone || '').replace(/\D/g, '').slice(-10);
+  const collabPhone = (collab.phone || '').replace(/\D/g, '').slice(-10);
+  
+  if (userPhone && collabPhone && userPhone !== collabPhone) {
+    return false;
+  }
+  
+  return true;
+}
 
 async function ensureCollaboratorSession() {
   const savedToken = localStorage.getItem('collabToken') || sessionStorage.getItem('yp_token');
   if (savedToken) {
     const validatedProfile = await validateCollaboratorSession(savedToken);
-    if (validatedProfile) {
+    let mainUser = null;
+    try {
+      const mainUserStr = localStorage.getItem('currentUser');
+      if (mainUserStr) mainUser = JSON.parse(mainUserStr);
+    } catch(e) {}
+    
+    if (validatedProfile && isCollaboratorSessionValidForUser(validatedProfile, mainUser)) {
       TOKEN = savedToken;
       COLLAB = validatedProfile;
       localStorage.setItem('collabData', JSON.stringify(validatedProfile));
@@ -3912,135 +3905,6 @@ function showAddCabModal() {
   modal.style.display = 'flex';
 }
 
-/* ─── Init ─── */
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Check for existing collabToken in localStorage
-  let savedToken = localStorage.getItem('collabToken');
-  let savedCollab = localStorage.getItem('collabData');
-  
-  if (savedToken && savedCollab) {
-    try {
-      TOKEN = savedToken;
-      COLLAB = JSON.parse(savedCollab);
-      initDashboard();
-      return;
-    } catch(e) {
-      console.error('Error parsing saved collaborator data:', e);
-    }
-  }
-
-  // 2. Check for existing main user authToken in localStorage
-  let mainToken = localStorage.getItem('authToken');
-  if (mainToken) {
-    try {
-      // Show loader or status
-      const loginForm = document.getElementById('loginForm');
-      if (loginForm) loginForm.style.opacity = '0.5';
-      const loginBtn = document.getElementById('loginBtn');
-      if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Auto-detecting profile...';
-      }
-      
-      const r = await fetch(API + '/api/collaborator/my-roles', {
-        headers: { 'Authorization': 'Bearer ' + mainToken }
-      });
-      const d = await r.json();
-      
-      if (d.success && d.roles && d.roles.length > 0) {
-        const validRoles = d.roles.filter(role => role.verification_status !== 'suspended');
-        if (validRoles.length === 1) {
-          // Auto-select and activate the role
-          await autoActivateCollabRole(validRoles[0].id, mainToken);
-          return;
-        } else if (validRoles.length > 1) {
-          // Show role switcher inside the login box
-          showCollabRoleSwitcher(validRoles, mainToken);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Error auto-detecting collaborator profile:', e);
-    } finally {
-      const loginForm = document.getElementById('loginForm');
-      if (loginForm) loginForm.style.opacity = '1';
-      const loginBtn = document.getElementById('loginBtn');
-      if (loginBtn) {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-      }
-    }
-  }
-
-  // 3. Fallback: if there was a sessionStorage yp_token, try it
-  if (TOKEN) {
-    try {
-      const payload = JSON.parse(atob(TOKEN.split('.')[1]));
-      COLLAB = payload;
-      initDashboard();
-      return;
-    } catch(e) { logout(); }
-  }
-});
-
-async function autoActivateCollabRole(collaboratorId, mainToken) {
-  try {
-    const res = await fetch(API + '/api/collaborator/select-role', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + mainToken
-      },
-      body: JSON.stringify({ collaboratorId })
-    });
-    const d = await res.json();
-    if (d.success && d.token && d.collaborator) {
-      setToken(d);
-    } else {
-      logout();
-    }
-  } catch (e) {
-    console.error('Error activating collaborator role:', e);
-    logout();
-  }
-}
-
-function showCollabRoleSwitcher(roles, mainToken) {
-  const container = document.getElementById('roleSelectorContainer');
-  const list = document.getElementById('roleList');
-  if (!container || !list) return;
-
-  // Hide login forms and tabs
-  const tabs = document.querySelector('.auth-tabs');
-  if (tabs) tabs.style.display = 'none';
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) loginForm.style.display = 'none';
-  const registerForm = document.getElementById('registerForm');
-  if (registerForm) registerForm.style.display = 'none';
-  
-  // Show container
-  container.style.display = 'flex';
-  list.innerHTML = '';
-
-  roles.forEach(role => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn-sec';
-    btn.style.cssText = 'text-align:left; padding:12px; display:flex; flex-direction:column; gap:4px; font-family:inherit; cursor:pointer; width:100%; border-radius:12px; background:rgba(255,255,255,.05); color:#fff; border:1px solid rgba(255,255,255,.1);';
-    
-    const icons = { bus: '🚌', cab: '🚗', hotel: '🏨', cafe: '☕' };
-    const label = role.type.charAt(0).toUpperCase() + role.type.slice(1);
-    const icon = icons[role.type] || '🏢';
-
-    btn.innerHTML = `<span style="font-weight:700; color:var(--gold);">${icon} ${label} Collaborator</span><span style="font-size:0.78rem; color:var(--text2);">${role.businessName || role.name}</span>`;
-    btn.onclick = async () => {
-      btn.disabled = true;
-      btn.textContent = 'Loading...';
-      await autoActivateCollabRole(role.id, mainToken);
-    };
-    list.appendChild(btn);
-  });
-}
 
 // ========== GLOBAL LOADER UTILITIES ==========
 function showLoader(message = 'Processing your request...') {

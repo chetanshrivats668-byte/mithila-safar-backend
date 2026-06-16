@@ -218,6 +218,10 @@ img {
     }
 }
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* === WELCOME BADGE === */
 .welcome-badge {
     display: inline-block;
@@ -427,6 +431,12 @@ header {
 .user-name {
     font-size: .85rem;
     font-weight: 600;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .top-account-name {

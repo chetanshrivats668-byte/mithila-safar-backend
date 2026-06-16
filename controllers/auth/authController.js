@@ -58,13 +58,13 @@ async function getPartnerCollabRedirect(db, user) {
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt/jwtHelper.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken } from '../../utils/jwt/jwtHelper.js';
 import { generateOTPCode, saveEmailOTP, checkOTPRequestRateLimit, verifyEmailOTP as verifyEmailOTPService } from '../../utils/otp/otpHelper.js';
 import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/email/emailService.js';
 import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
 import {
   sendOTP,
-  verifyOTP as verifyMsg91OTP
+  verifyWidgetToken
 } from '../../services/msg91/msg91Service.js';
 import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
 import { memoryDb } from '../../utils/firestoreFallback.js';
@@ -99,8 +99,19 @@ export async function registerUser(req, res) {
       return res.status(400).json({ success: false, errors });
     }
 
-    const { name, email, phone, password } = data;
+    const { name, email, phone, password, verificationToken } = data;
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const formattedPhone = '+91' + cleanPhone;
+
+    if (!verificationToken) {
+      return res.status(400).json({ success: false, message: 'Phone number verification is required before creating an account.' });
+    }
+    try {
+      await verifyWidgetToken(verificationToken);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired phone verification token. Please verify your phone number again.' });
+    }
+
     const db = req.app.locals.db;
     const useMemory = !isSupabaseAvailable();
 
@@ -116,7 +127,6 @@ export async function registerUser(req, res) {
       if (existingUsers.length > 0) return res.status(409).json({ success: false, message: 'An account with this email already exists' });
     }
 
-    const formattedPhone = '+91' + cleanPhone;
     if (useMemory) {
       const existingUser = Array.from(memoryDb.users.values()).find(u => u.phone === formattedPhone);
       if (existingUser) return res.status(409).json({ success: false, message: 'An account with this phone already exists' });
@@ -136,7 +146,7 @@ export async function registerUser(req, res) {
       password: hashedPassword,
       authProvider: 'email',
       role: 'user',
-      phoneVerified: false,
+      phoneVerified: true,
       emailVerified: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -491,26 +501,57 @@ export async function refreshAccessToken(req, res) {
   }
 }
 
+async function verifyPhoneOtpValue(phone, verificationToken) {
+  const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+    const error = new Error('Invalid phone number');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const normalizedPhone = `+91${cleanPhone}`;
+  if (!verificationToken || typeof verificationToken !== 'string') {
+    const error = new Error('Verification token is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  try {
+    await verifyWidgetToken(verificationToken);
+  } catch (err) {
+    const error = new Error('Phone verification failed');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalizedPhone;
+}
+
 export async function markPhoneVerified(req, res) {
   try {
-    const { phone, token } = req.body || {};
-    if (!phone || !token) {
-      return res.status(400).json({ success: false, message: 'Phone and token are required' });
+    const { phone, verificationToken, token, otp } = req.body || {};
+    const widgetAccessToken = verificationToken || token || otp;
+    if (!phone || !widgetAccessToken) {
+      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
     }
 
-    console.log('[DEBUG markPhoneVerified] req.user:', req.user);
-    const updates = { phone, phoneVerified: true };
+    const normalizedPhone = await verifyPhoneOtpValue(phone, widgetAccessToken);
+
+    const updates = { phone: normalizedPhone, phoneVerified: true };
     await dbUpdate('users', req.user.userId, updates);
     const userData = await dbGet('users', req.user.userId);
-    
+
     if (!userData) {
-      console.warn('[DEBUG markPhoneVerified] User profile not found for id:', req.user.userId);
       return res.status(404).json({ success: false, message: 'User profile not found.' });
     }
-    
+
     const { password: _, ...safeUser } = userData;
     return res.json({ success: true, user: safeUser });
   } catch (err) {
+    const statusCode = err?.statusCode && Number.isInteger(err.statusCode) ? err.statusCode : 500;
+    if (statusCode >= 400 && statusCode < 500) {
+      return res.status(statusCode).json({ success: false, message: err.message || 'Phone verification failed' });
+    }
     console.error('[MARK PHONE VERIFIED ERROR]:', err.stack || err);
     return res.status(500).json({ success: false, message: 'Failed to verify phone: ' + (err.message || 'unknown error') });
   }
@@ -518,26 +559,112 @@ export async function markPhoneVerified(req, res) {
 
 export async function verifyMsg91Token(req, res) {
   try {
-    const { phone, token } = req.body || {};
-    if (!phone || !token) {
-      return res.status(400).json({ success: false, message: 'Phone and token are required' });
+    const { phone, verificationToken, token, otp } = req.body || {};
+    const widgetAccessToken = verificationToken || token || otp;
+    if (!phone || !widgetAccessToken) {
+      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
     }
 
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    const normalizedPhone = `+91${cleanPhone}`;
-
-    const result = await verifyMsg91OTP(normalizedPhone, token);
-
-    if (result && result.status === 'success') {
-      return res.json({ success: true, message: 'Phone verified successfully' });
-    }
-
-    return res.status(400).json({ success: false, message: 'Phone verification failed' });
+    await verifyPhoneOtpValue(phone, widgetAccessToken);
+    return res.json({ success: true, message: 'Phone verified successfully' });
   } catch (err) {
+    const statusCode = err?.statusCode && Number.isInteger(err.statusCode) ? err.statusCode : 500;
+    if (statusCode >= 400 && statusCode < 500) {
+      return res.status(statusCode).json({ success: false, message: err.message || 'Phone verification failed' });
+    }
     console.error('[VERIFY MSG91 TOKEN ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Verification failed' });
   }
 }
 
 export const verifyMsg91AccessToken = verifyMsg91Token;
+
+export async function forgotPasswordLogin(req, res) {
+  try {
+    const { phone, verificationToken } = req.body;
+    if (!phone || !verificationToken) {
+      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const formattedPhone = '+91' + cleanPhone;
+
+    try {
+      await verifyWidgetToken(verificationToken);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired phone verification token. Please verify your phone number again.' });
+    }
+
+    const db = req.app.locals.db;
+    const useMemory = !isSupabaseAvailable();
+
+    let users = [];
+    if (useMemory) {
+      const u = Array.from(memoryDb.users.entries()).find(([_, user]) => user.phone === formattedPhone);
+      if (u) users.push(u[1]);
+    } else {
+      users = await dbList('users', { filters: [{ column: 'phone', op: 'eq', value: formattedPhone }] });
+    }
+
+    if (users.length === 0) {
+      return res.status(404).json({ success: false, message: 'No account found with this phone number.' });
+    }
+
+    const userData = users[0];
+    const docId = userData.id || userData.userId;
+
+    const tokenPayload = { userId: docId, email: userData.email, name: userData.name, role: userData.role || 'user' };
+    const token = generateAccessToken(tokenPayload, true);
+    const refreshToken = generateRefreshToken(tokenPayload, true);
+    const { password: _, ...safeUser } = userData;
+    safeUser.id = docId;
+
+    const redirect = await getPartnerCollabRedirect(db, safeUser);
+    
+    return res.json({ 
+      success: true, 
+      token, 
+      refreshToken, 
+      user: safeUser, 
+      redirectTo: redirect?.redirectTo || null, 
+      collaboratorContext: redirect?.collaboratorContext || null,
+      requirePasswordReset: true,
+      message: 'Logged in successfully. Please reset your password.'
+    });
+  } catch (err) {
+    console.error('[FORGOT PASSWORD LOGIN ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Login failed. Please try again.' });
+  }
+}
+
+export async function resetPassword(req, res) {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+    }
+
+    const db = req.app.locals.db;
+    const useMemory = !isSupabaseAvailable();
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    if (useMemory) {
+      const user = memoryDb.users.get(req.user.userId);
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      user.password = hashedPassword;
+      user.updatedAt = new Date().toISOString();
+      memoryDb.users.set(req.user.userId, user);
+    } else {
+      await dbUpdate('users', req.user.userId, { 
+        password: hashedPassword, 
+        updatedAt: new Date().toISOString() 
+      });
+    }
+
+    return res.json({ success: true, message: 'Password has been reset successfully.' });
+  } catch (err) {
+    console.error('[RESET PASSWORD ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Failed to reset password.' });
+  }
+}
 

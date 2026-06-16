@@ -463,18 +463,34 @@
                     <!-- Inline Change Form -->
                     <div id="phoneEditFormContainer"
                         style="display:none; margin-top:.8rem; padding:1rem; background:rgba(255,255,255,0.02); border: 1px dashed var(--border); border-radius:12px;">
-                        <label
-                            style="font-size:.75rem; color:var(--gray); font-weight:600; display:block; margin-bottom:.5rem;">NEW
-                            INDIAN MOBILE NUMBER</label>
-                        <input id="profilePhoneInput" type="tel" maxlength="10"
-                            style="width:100%; padding:.65rem .8rem; border:1.5px solid var(--border); border-radius:8px; font-size:.95rem; background:var(--bg); color:var(--text); min-height:unset; height:42px; margin-bottom:.6rem;"
-                            placeholder="10-digit number" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                        <div style="display:flex; gap:.5rem; justify-content:flex-end;">
+
+                        <!-- Step 1: Phone input (hidden when widget is active) -->
+                        <div id="profilePhoneInputSection">
+                            <label
+                                style="font-size:.75rem; color:var(--gray); font-weight:600; display:block; margin-bottom:.5rem;">NEW
+                                INDIAN MOBILE NUMBER</label>
+                            <input id="profilePhoneInput" type="tel" maxlength="10"
+                                style="width:100%; padding:.65rem .8rem; border:1.5px solid var(--border); border-radius:8px; font-size:.95rem; background:var(--bg); color:var(--text); min-height:unset; height:42px; margin-bottom:.6rem;"
+                                placeholder="10-digit number" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                            <div style="display:flex; gap:.5rem; justify-content:flex-end;">
+                                <button class="btn-secondary"
+                                    style="flex:1; padding:0 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:38px;"
+                                    onclick="togglePhoneEditForm(false)">Cancel</button>
+                                <button class="btn-primary" id="btnSaveProfilePhone" style="flex:1; padding:0 1.2rem; min-height:unset; height:38px;"
+                                    onclick="saveProfilePhone()">Send OTP & Verify</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: OTP in-progress indicator (shown when MSG91 widget is active) -->
+                        <div id="profilePhoneOtpStatus" style="display:none; text-align:center; padding:.5rem 0;">
+                            <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.6rem;">
+                                <span style="display:inline-block;width:18px;height:18px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
+                                <span style="font-size:.9rem;font-weight:600;color:var(--text);">Waiting for OTP verification…</span>
+                            </div>
+                            <p style="font-size:.78rem;color:var(--gray);margin:0 0 .75rem;">Complete the verification in the popup/widget, then this form will update automatically.</p>
                             <button class="btn-secondary"
-                                style="flex:1; padding:0 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:38px;"
-                                onclick="togglePhoneEditForm(false)">Cancel</button>
-                            <button class="btn-primary" style="flex:1; padding:0 1.2rem; min-height:unset; height:38px;"
-                                onclick="saveProfilePhone()">Verify & Save</button>
+                                style="width:100%; padding:.4rem 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:36px; font-size:.83rem;"
+                                onclick="cancelProfilePhoneVerification()">Cancel Verification</button>
                         </div>
                     </div>
                 </div>
@@ -528,7 +544,7 @@
                 Patna, and nearby cities.</div>
             <div class="policy-card"><strong>Support Promise:</strong> We aim to provide responsive customer help and a
                 smoother booking experience for every journey.</div>
-            <div style="text-align: center; margin-top: 2rem; font-weight: bold; color: var(--primary);">made by group❤️Chetan</div>
+            <div style="text-align: center; margin-top: 2rem; font-weight: bold; color: var(--primary);">Crafted By Group❤️Chetan</div>
         </div>
     </div>
 
@@ -683,11 +699,29 @@
             <button class="close-modal" onclick="closeModal('phoneVerificationModal')">×</button>
             <h2>📱 Verify Phone Number</h2>
             <p class="subtitle">Please verify your phone number to continue</p>
-            <form class="modal-form" onsubmit="sendPhoneVerificationOTP(event)">
-                <input type="tel" id="verificationPhoneInput" placeholder="Phone Number (+91)" required>
-                <div id="msg91-widget-container-verify" style="margin-top: 10px;"></div>
-                <button type="submit" class="btn-primary" id="btnSendVerificationOTP" style="display:none;">Send
-                    OTP</button>
+            <form class="modal-form" id="phoneVerificationForm" onsubmit="sendPhoneVerificationOTP(event)">
+
+                <!-- Step 1: Phone input -->
+                <div id="verifyPhoneInputSection">
+                    <input type="tel" id="verificationPhoneInput" placeholder="10-digit mobile number" maxlength="10"
+                        style="letter-spacing:.1rem;"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                        required>
+                    <button type="submit" class="btn-primary" id="btnSendVerificationOTP"
+                        style="width:100%; margin-top:.5rem;">📤 Send OTP</button>
+                </div>
+
+                <!-- Step 2: OTP in-progress indicator -->
+                <div id="verifyPhoneOtpStatus" style="display:none; text-align:center; padding:.75rem 0;">
+                    <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.6rem;">
+                        <span style="display:inline-block;width:20px;height:20px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
+                        <span style="font-size:.95rem;font-weight:600;color:var(--text);">Verifying your number…</span>
+                    </div>
+                    <p style="font-size:.82rem;color:var(--gray);margin:0 0 .8rem;">Complete the OTP verification in the widget above, then this modal will close automatically.</p>
+                    <button type="button" class="btn-secondary"
+                        style="width:100%; padding:.45rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:36px; font-size:.83rem;"
+                        onclick="cancelPhoneVerification()">Cancel</button>
+                </div>
             </form>
         </div>
     </div>
@@ -714,6 +748,9 @@
                     <span onclick="togglePassword('loginPassword',this)"
                         style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
                 </div>
+                <div style="text-align: right; margin-top: 0.5rem; margin-bottom: 1rem;">
+                    <a href="#" onclick="openForgotPasswordModal(); return false;" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot Password?</a>
+                </div>
                 <button type="submit" class="btn-primary">Login</button>
             </form>
 
@@ -727,18 +764,55 @@
         </div>
     </div>
 
+    <!-- ===== FORGOT PASSWORD MODAL ===== -->
+    <div class="modal" id="forgotPasswordModal" onclick="closeOnOverlay(event,'forgotPasswordModal')">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal('forgotPasswordModal')">×</button>
+            <h2>Reset Password</h2>
+            <p class="subtitle">Enter your phone number to receive an OTP</p>
+            <form class="modal-form" id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+                <input type="tel" id="forgotPasswordPhone" placeholder="Phone Number (+91)" required>
+                <button type="submit" class="btn-primary">Send OTP</button>
+            </form>
+            <div class="modal-toggle">
+                Remember your password? <a onclick="switchModals('forgotPasswordModal','loginModal')">Login</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ===== RESET PASSWORD MODAL ===== -->
+    <div class="modal" id="resetPasswordModal" onclick="closeOnOverlay(event,'resetPasswordModal')">
+        <div class="modal-content">
+            <h2>Set New Password</h2>
+            <p class="subtitle">Please choose a new password for your account</p>
+            <form class="modal-form" onsubmit="handleResetPassword(event)">
+                <div style="position:relative;">
+                    <input type="password" id="newPassword" placeholder="New Password (min 6 chars)" required minlength="6" style="padding-right:40px;">
+                    <span onclick="togglePassword('newPassword',this)"
+                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
+                </div>
+                <div style="position:relative;">
+                    <input type="password" id="confirmNewPassword" placeholder="Confirm Password" required minlength="6" style="padding-right:40px;">
+                    <span onclick="togglePassword('confirmNewPassword',this)"
+                        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
+                </div>
+                <button type="submit" class="btn-primary">Save Password</button>
+            </form>
+        </div>
+    </div>
+
     <!-- ===== SIGNUP MODAL ===== -->
     <div class="modal" id="signupModal" onclick="closeOnOverlay(event,'signupModal')">
         <div class="modal-content">
             <button class="close-modal" onclick="closeModal('signupModal')">×</button>
             <h2>Create Account</h2>
             <p class="subtitle">Join Yatri Point</p>
-            <form class="modal-form" onsubmit="handleSignup(event)">
+            <form class="modal-form" id="signupForm" onsubmit="handleSignup(event)">
                 <input type="text" id="signupName" placeholder="Full Name" required>
                 <input type="email" id="signupEmail" placeholder="Email Address" required>
                 <input type="tel" id="signupPhone" placeholder="Phone Number (+91)" required>
                 <input type="password" id="signupPassword" placeholder="Password (min 6 chars)" required minlength="6">
-                <button type="submit" class="btn-primary">Create Account</button>
+                <button type="submit" class="btn-primary" id="signupSubmitBtn">Verify Phone & Create Account</button>
             </form>
             <div class="divider"><span>OR</span></div>
             <div id="googleSignInBtnSignup" style="display:flex;justify-content:center;"></div>

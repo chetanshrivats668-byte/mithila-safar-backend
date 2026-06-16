@@ -30,15 +30,9 @@ CREATE TABLE IF NOT EXISTS public.collab_applications (
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Enable Row Level Security (RLS)
+-- Enable Row Level Security (RLS) and keep browser roles denied by default.
 ALTER TABLE public.collab_applications ENABLE ROW LEVEL SECURITY;
-
--- Drop existing permissive policy if any, then create a permissive "allow all" policy
 DROP POLICY IF EXISTS allow_all ON public.collab_applications;
-CREATE POLICY allow_all ON public.collab_applications
-  FOR ALL
-  USING (true)
-  WITH CHECK (true);
 
 -- Create Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_collab_apps_email ON public.collab_applications("email");

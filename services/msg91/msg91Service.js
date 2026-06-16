@@ -35,25 +35,27 @@ export async function sendOTP(phone, otpCode) {
   return data;
 }
 
-export async function verifyOTP(phone, otpCode) {
+export async function verifyWidgetToken(accessToken) {
   ensureMsg91Configured();
-  const url = 'https://control.msg91.com/api/v5/otp/verify';
+  // Using the widget token verification API
+  const url = 'https://api.msg91.com/api/v5/widget/verifyAccessToken';
   const payload = {
-    authkey: MSG91_AUTH_KEY,
-    mobile: phone.replace('+91', ''),
-    otp: otpCode
+    "access-token": accessToken
   };
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'authkey': MSG91_AUTH_KEY 
+    },
     body: JSON.stringify(payload)
   });
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const err = new Error(data?.message || 'MSG91 OTP verify failed');
-    err.statusCode = response.status;
+  if (!response.ok || data.type === 'error') {
+    const err = new Error(data?.message || 'MSG91 widget token verify failed');
+    err.statusCode = response.status !== 200 ? response.status : 400;
     err.payload = data;
     throw err;
   }
