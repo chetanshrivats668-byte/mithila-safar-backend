@@ -856,8 +856,7 @@
         <div class="section-title">💳 Choose Payment Method</div>
         <div class="pay-tabs" id="payTabs">
           <button class="pay-tab-btn active" id="tab-upiapp" onclick="switchTab('upiapp')">📱 Pay via UPI App</button>
-          <button class="pay-tab-btn" id="tab-razorpay" onclick="switchTab('razorpay')">💳 Card / UPI / Wallets</button>
-          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">🔢 Enter UPI ID</button>
+          <button class="pay-tab-btn" id="tab-upiid"     onclick="switchTab('upiid')">📧 Enter UPI ID</button>
         </div>
       </div>
 
@@ -873,19 +872,7 @@
         <div style="margin-top:1rem;font-size:.8rem;color:var(--text-muted);">Works on mobile devices with UPI apps installed</div>
       </div>
 
-      <!-- PANEL: Razorpay -->
-      <div class="razorpay-panel pay-panel" id="panel-razorpay">
-        <div class="panel-icon">🔐</div>
-        <div class="panel-title">Secure Checkout</div>
-        <div class="panel-subtitle">Pay via any UPI app, Credit/Debit Card, Netbanking, or Wallet.<br>Scan QR with GPay/PhonePe is also available inside the checkout.</div>
-        <button class="pay-now-btn" id="btnRazorpay" onclick="handleRazorpayPay()">
-          <span>Pay ₹<span id="rzpBtnAmt">0</span></span>
-          <span class="arrow">→</span>
-        </button>
-        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:1rem;opacity:.5;">
-          <img src="https://admin.razorpay.com/assets/badges/razorpay-badge.svg" alt="Razorpay Secure" style="height:22px;">
-        </div>
-      </div>
+
 
       <!-- PANEL: UPI ID -->
       <div class="upi-panel pay-panel" id="panel-upiid">

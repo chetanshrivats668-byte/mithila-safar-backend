@@ -860,35 +860,32 @@
             <!-- Payment Method Tabs -->
             <div class="payment-tabs"
                 style="display:flex; margin-bottom:1.5rem; background:rgba(0,0,0,0.03); border-radius:12px; padding:6px; border:1px solid var(--border);">
-                <button type="button" class="pay-tab-btn active" onclick="switchPayTab('card')"
-                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:var(--card); color:var(--primary); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s; box-shadow:var(--shadow-sm);">💳
-                    Card/Netbanking</button>
+                <button type="button" class="pay-tab-btn active" onclick="switchPayTab('upi-app')"
+                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:var(--card); color:var(--primary); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s; box-shadow:var(--shadow-sm);">📱
+                    Pay via UPI App</button>
                 <button type="button" class="pay-tab-btn" onclick="switchPayTab('upi-id')"
-                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📱
+                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📧
                     Pay via UPI ID</button>
-                <button type="button" class="pay-tab-btn" onclick="switchPayTab('upi-qr')"
-                    style="flex:1; padding:0.8rem; border-radius:8px; border:none; background:transparent; color:var(--gray); font-weight:700; cursor:pointer; font-size:0.9rem; transition:all 0.2s;">📷
-                    Scan QR Code</button>
             </div>
 
-            <!-- Razorpay Section -->
-            <div id="razorpaySection"
+            <!-- UPI App Section -->
+            <div id="upiAppSection"
                 style="text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
-                <div style="font-size:3.5rem; margin-bottom:1rem;">🔐</div>
-                <h3 style="margin-bottom:0.5rem; color:var(--primary);">Secure Checkout</h3>
-                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:2rem;">One-tap payment via UPI, Cards,
-                    Netbanking or Wallets.</p>
+                <div style="font-size:3.5rem; margin-bottom:1rem;">📱</div>
+                <h3 style="margin-bottom:0.5rem; color:var(--primary);">Pay via UPI App</h3>
+                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:2rem;">One-tap payment via GPay, PhonePe, Paytm, or any installed UPI App.</p>
 
-                <button class="pay-now-btn" id="razorpayBtn" onclick="payViaRazorpay()"
+                <button class="pay-now-btn" id="upiAppBtn" onclick="payViaUpiApp()"
                     style="background:var(--primary); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(216,78,85,0.35); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px;">
-                    <span>Pay ₹<span id="razorpayBtnAmount">0</span></span>
+                    <span>Pay ₹<span id="upiAppBtnAmount">0</span></span>
                     <span style="font-size:1.4rem;">→</span>
                 </button>
 
                 <div
                     style="display:flex; align-items:center; justify-content:center; gap:15px; margin-top:1.5rem; opacity:0.6;">
-                    <img src="https://admin.razorpay.com/assets/badges/razorpay-badge.svg" alt="Razorpay Secure"
-                        style="height:25px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png" alt="GPay" style="height:25px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png" alt="PhonePe" style="height:25px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Paytm_logo.png/512px-Paytm_logo.png" alt="Paytm" style="height:25px;">
                 </div>
             </div>
 
@@ -917,62 +914,7 @@
                 </button>
             </div>
 
-            <!-- UPI QR Code Section -->
-            <div id="upiSection"
-                style="display:none; text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
-                <div style="font-size:2.5rem; margin-bottom:0.5rem;">📱</div>
-                <h3 style="margin-bottom:0.3rem; color:var(--success);">UPI QR Payment</h3>
-                <p style="font-size:0.85rem; color:var(--gray); margin-bottom:1.5rem;">Scan QR code with any UPI app
-                    available on the user's phone (GPay, PhonePe, Paytm, etc.)</p>
 
-                <div
-                    style="background:white; padding:1.5rem; border-radius:12px; display:inline-block; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-                    <img src="/public/images/upi-qr-code.png" alt="UPI QR Code"
-                        style="width:280px; height:auto; display:block;">
-                </div>
-
-                <div
-                    style="margin-top:1.5rem; padding:1rem; background:rgba(0,128,0,0.05); border-radius:10px; border:1px solid rgba(0,128,0,0.2);">
-                    <p style="font-size:0.9rem; color:var(--text); margin-bottom:0.5rem;"><strong>Payment
-                            Steps:</strong></p>
-                    <ol
-                        style="font-size:0.85rem; color:var(--gray); text-align:left; padding-left:1.2rem; line-height:1.8;">
-                        <li>Open any UPI app available on your phone</li>
-                        <li>Scan the QR code above</li>
-                        <li>Enter amount: <strong><span id="upiAmount">0</span></strong></li>
-                        <li>Complete payment</li>
-                        <li>If you exit before successful payment, ticket will not be generated</li>
-                    </ol>
-                </div>
-
-                <div
-                    style="margin-top:1.5rem; display:flex; align-items:center; justify-content:center; gap:20px; opacity:0.7;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png"
-                        alt="GPay" style="height:30px;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png"
-                        alt="PhonePe" style="height:30px;">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Paytm_logo.png/512px-Paytm_logo.png"
-                        alt="Paytm" style="height:30px;">
-                </div>
-
-                <p style="margin-top:1rem; font-size:0.8rem; color:var(--gray);">
-                    <strong>UPI ID:</strong> 8178030064@ptyes<br>
-                    <strong>Name:</strong> SUDHAKAR KUMAR MISHRA
-                </p>
-
-                <div style="margin-top: 1.5rem; text-align: left; margin-bottom: 1rem;">
-                    <label for="qrUpiIdInput"
-                        style="display:block; margin-bottom:0.5rem; font-weight:600; font-size:0.9rem; color:var(--text);">Your
-                        UPI ID / Trans Ref No (for confirmation)</label>
-                    <input type="text" id="qrUpiIdInput" placeholder="e.g., name@upi or 12-digit Ref No"
-                        style="width:100%; padding:0.9rem; border-radius:12px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:1rem; outline:none; transition:border-color 0.2s;">
-                </div>
-
-                <button class="pay-now-btn" onclick="confirmUpiPayment()"
-                    style="margin-top:1rem; background:var(--success); font-size:1.1rem; width:100%; padding:1rem; border-radius:14px; box-shadow:0 8px 25px rgba(0,128,0,0.35); font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px;">
-                    <span>✅ I've Completed UPI Payment</span>
-                </button>
-            </div>
 
         </div>
     </div>
