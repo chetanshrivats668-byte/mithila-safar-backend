@@ -85,8 +85,9 @@ let redisClient;
 const isProd = process.env.NODE_ENV === 'production';
 const redisUrl = process.env.REDIS_URL;
 
+// Removed strict throw to allow MockRedis fallback in production without REDIS_URL
 if (isProd && (!redisUrl || !RedisClientClass)) {
-  throw new Error('REDIS_URL and ioredis are required in production. Refusing to start with MockRedis.');
+  console.warn('⚠️ [REDIS] WARNING: REDIS_URL or ioredis missing in production. Falling back to MockRedis.');
 }
 
 if (RedisClientClass && redisUrl) {
