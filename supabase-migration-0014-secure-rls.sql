@@ -11,19 +11,11 @@ BEGIN
     -- 1. Enable RLS on every table in the public schema
     FOR t_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP 
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t_name); 
-    END LOOP; 
-END $$;
-
--- 2. Drop the specific permissive policy that was flagged for sensitive data exposure
-DROP POLICY IF EXISTS "Allow all access to sms_otps" ON public.sms_otps;
-
--- 3. Drop any other generic permissive policies just to be safe
-DO $$ 
-DECLARE 
-    t_name text; 
-BEGIN 
-    FOR t_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP 
-        EXECUTE format('DROP POLICY IF EXISTS allow_all ON public.%I;', t_name); 
+        
+        -- 2. Safely drop any permissive policies only if the table actually exists
+        -- This prevents "relation does not exist" errors
+        EXECUTE format('DROP POLICY IF EXISTS allow_all ON public.%I;', t_name);
+        EXECUTE format('DROP POLICY IF EXISTS "Allow all access to sms_otps" ON public.%I;', t_name);
     END LOOP; 
 END $$;
 
