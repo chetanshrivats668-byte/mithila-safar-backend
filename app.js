@@ -1821,7 +1821,9 @@ function bookCab(cabId, fare) {
     }
     if (!cab) return notify('Cab not found', 'error');
     currentBooking.selectedCab = cab;
-    var amount = parseFloat(fare || cab.fare || cab.rate || cab.ratePerKm || 0);
+    var parsedFare = parseFloat(fare);
+    if (isNaN(parsedFare)) parsedFare = 0;
+    var amount = parsedFare || parseFloat(cab.fare || cab.rate || cab.ratePerKm || 0);
     if (!amount || amount <= 0) return notify('Invalid cab fare', 'error');
     currentBooking.amount = amount;
     openPayment(currentBooking.amount);
