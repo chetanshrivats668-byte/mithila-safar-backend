@@ -365,10 +365,10 @@ header {
     background: transparent;
     color: var(--white);
     border: 2px solid var(--white);
-    padding: .4rem 1rem;
+    padding: .3rem .8rem;
     border-radius: 4px;
     font-weight: 600;
-    font-size: .85rem;
+    font-size: .8rem;
     transition: .3s;
 }
 
@@ -381,10 +381,10 @@ header {
     background: var(--white);
     color: var(--primary);
     border: none;
-    padding: .45rem 1rem;
+    padding: .3rem .8rem;
     border-radius: 4px;
     font-weight: 700;
-    font-size: .85rem;
+    font-size: .8rem;
     transition: .3s;
 }
 
@@ -2382,7 +2382,6 @@ footer {
         font-size: .85rem;
     }
 
-    .user-name,
     .dropdown-arrow {
         display: none;
     }
