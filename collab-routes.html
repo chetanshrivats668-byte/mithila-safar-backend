@@ -361,8 +361,7 @@
             e.preventDefault();
 
             const phoneInput = document.getElementById('collabPhoneInput');
-            const verifyBtn = document.getElementById('collabSendOtpBtn');
-            if (!phoneInput || !phoneInput.value || (verifyBtn && verifyBtn.textContent !== 'Verified')) {
+            if (!phoneInput || !phoneInput.value || !collabPhoneVerified) {
                 alert('Please verify your phone number with OTP first');
                 return;
             }
@@ -480,6 +479,54 @@
                 alert('An error occurred during submission. Please try again.');
             } finally {
                 setButtonLoading(btn, false, '🚀 Submit Application');
+            }
+        }
+
+        // ========== PHONE OTP VERIFICATION (MSG91) ==========
+        let collabPhoneVerified = false;
+
+        async function initCollabOTP() {
+            const phoneInput = document.getElementById('collabPhoneInput');
+            const btn = document.getElementById('collabSendOtpBtn');
+
+            const rawPhone = (phoneInput && phoneInput.value || '').replace(/\D/g, '').slice(-10);
+            if (!/^[6-9]\d{9}$/.test(rawPhone)) {
+                alert('Please enter a valid 10-digit Indian mobile number before verifying.');
+                if (phoneInput) phoneInput.focus();
+                return;
+            }
+
+            if (!window.msg91OTP || typeof window.msg91OTP.verify !== 'function') {
+                alert('OTP service is not ready. Please refresh the page and try again.');
+                return;
+            }
+
+            // Show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Loading...';
+            }
+
+            try {
+                await window.msg91OTP.verify(rawPhone);
+                // MSG91 widget opened; success/failure are handled by callbacks inside msg91-otp.js
+                // The promise resolves on success (widget returns a token)
+                collabPhoneVerified = true;
+                if (btn) {
+                    btn.textContent = '✅ Verified';
+                    btn.style.background = '#28a745';
+                    btn.disabled = true;
+                }
+                if (phoneInput) phoneInput.readOnly = true;
+            } catch (err) {
+                collabPhoneVerified = false;
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Verify';
+                    btn.style.background = '';
+                }
+                const reason = (typeof err === 'string' ? err : (err && err.message)) || 'OTP verification failed. Please try again.';
+                alert('❌ ' + reason);
             }
         }
 

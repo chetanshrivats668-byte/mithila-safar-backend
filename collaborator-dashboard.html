@@ -1472,35 +1472,55 @@ async function sendLoginPhoneOtp() {
   const phone = document.getElementById('loginPhone').value.trim();
   const err = document.getElementById('loginError');
   const btn = document.getElementById('sendLoginOtpBtn');
-  const otpGroup = document.getElementById('loginPhoneOtpGroup');
-  const otpInput = document.getElementById('loginPhoneOtpInput');
   err.style.display = 'none';
 
   if (!/^[6-9]\d{9}$/.test(phone)) {
+    err.style.color = '#fca5a5';
     err.textContent = 'Enter a valid 10-digit phone number.';
     err.style.display = 'block';
     return;
   }
 
+  if (!window.msg91OTP || typeof window.msg91OTP.verify !== 'function') {
+    err.style.color = '#fca5a5';
+    err.textContent = 'OTP service is not ready. Please refresh and try again.';
+    err.style.display = 'block';
+    return;
+  }
+
   btn.disabled = true;
-  btn.textContent = 'Sending...';
+  btn.textContent = '⏳ Opening...';
 
   try {
-    showLoader('Sending OTP...');
-    await msg91OTP.send(phone);
-    if (otpGroup) otpGroup.style.display = 'block';
-    if (otpInput) otpInput.focus();
-    btn.textContent = 'Resend OTP';
+    // MSG91 widget handles send + verify in one call; resolves with a token on success
+    await window.msg91OTP.verify(phone);
+
+    // Widget succeeded — now log in via server
     err.style.color = '#86efac';
-    err.textContent = 'OTP sent to your phone. Enter it below to continue.';
+    err.textContent = '✅ Phone verified! Logging in...';
     err.style.display = 'block';
-  } catch (sendErr) {
+    showLoader('Logging in...');
+
+    const r = await fetch(API + '/api/collaborator/login-with-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const d = await r.json();
+    if (d.success) {
+      setToken(d);
+      return;
+    }
     err.style.color = '#fca5a5';
-    err.textContent = sendErr && sendErr.message ? sendErr.message : 'Failed to send OTP. Please try again.';
+    err.textContent = d.message || 'Login failed after verification. Please try again.';
     err.style.display = 'block';
-    btn.textContent = 'Send OTP';
+  } catch (e) {
+    err.style.color = '#fca5a5';
+    err.textContent = (typeof e === 'string' ? e : (e && e.message)) || 'OTP verification failed. Please try again.';
+    err.style.display = 'block';
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Send OTP';
     hideLoader();
   }
 }
@@ -1573,12 +1593,13 @@ async function handleLogin(e) { e.preventDefault();
 }
 
 /* ─── Collaborator Apply Form OTP ─── */
+// MSG91 widget handles send+verify in one call. Clicking "Send OTP" opens the
+// widget; on success the phone is marked verified automatically.
 async function sendRegisterPhoneOtp() {
   const phone = document.getElementById('appPhone').value.trim();
   const status = document.getElementById('otpStatus');
   const btn = document.getElementById('sendOtpBtn');
   const otpSection = document.getElementById('otpSection');
-  const otpInput = document.getElementById('appOtp');
   status.textContent = '';
 
   if (!/^[6-9]\d{9}$/.test(phone)) {
@@ -1587,67 +1608,50 @@ async function sendRegisterPhoneOtp() {
     return;
   }
 
-  otpSection.style.display = 'block';
-  status.style.color = 'var(--text2)';
-  status.textContent = 'Sending OTP...';
+  if (!window.msg91OTP || typeof window.msg91OTP.verify !== 'function') {
+    status.style.color = '#fca5a5';
+    status.textContent = 'OTP service is not ready. Please refresh and try again.';
+    return;
+  }
+
   btn.disabled = true;
-  btn.textContent = 'Sending...';
+  btn.textContent = '⏳ Opening...';
+  status.style.color = 'var(--text2)';
+  status.textContent = 'Opening OTP widget...';
+  // Hide the manual OTP entry row — widget handles it
+  if (otpSection) otpSection.style.display = 'none';
 
   try {
-    await msg91OTP.send(phone);
-    if (otpInput) otpInput.focus();
+    await window.msg91OTP.verify(phone);
+    // Widget closed with success
+    _registerPhoneVerified = true;
     status.style.color = '#86efac';
-    status.textContent = 'OTP sent successfully. Enter the 6-digit code below.';
-    btn.textContent = 'Resend OTP';
-  } catch (sendErr) {
+    status.textContent = '✅ Phone verified!';
+    document.getElementById('appPhone').readOnly = true;
+    btn.textContent = '✅ Verified';
+    btn.style.background = 'rgba(34,197,94,.2)';
+    btn.style.color = '#86efac';
+    btn.style.borderColor = 'rgba(34,197,94,.4)';
+  } catch (e) {
+    _registerPhoneVerified = false;
     status.style.color = '#fca5a5';
-    status.textContent = sendErr && sendErr.message ? sendErr.message : 'Failed to send OTP. Please try again.';
+    status.textContent = (typeof e === 'string' ? e : (e && e.message)) || 'OTP verification failed. Please try again.';
     btn.textContent = 'Send OTP';
+    btn.style.background = '';
+    btn.style.color = '';
+    btn.style.borderColor = '';
   } finally {
     btn.disabled = false;
   }
 }
 
-// Verify button clicked — validates the entered OTP with the server-mediated flow.
-async function verifyRegisterPhoneOtp() {
-  const phone = document.getElementById('appPhone').value.trim();
-  const otp = document.getElementById('appOtp').value.trim();
+// verifyRegisterPhoneOtp is no longer used (widget handles verify internally),
+// but kept as a no-op to avoid errors if called from old HTML.
+function verifyRegisterPhoneOtp() {
   const status = document.getElementById('otpStatus');
-  const verifyBtn = document.getElementById('verifyOtpBtn');
-
-  if (!/^[6-9]\d{9}$/.test(phone)) {
-    status.style.color = '#fca5a5';
-    status.textContent = 'Enter a valid 10-digit phone number.';
-    return;
-  }
-
-  if (!/^\d{6}$/.test(otp)) {
-    status.style.color = '#fca5a5';
-    status.textContent = 'Enter a valid 6-digit OTP.';
-    return;
-  }
-
-  verifyBtn.disabled = true;
-  verifyBtn.textContent = 'Verifying...';
-  showLoader('Verifying OTP...');
-
-  try {
-    await msg91OTP.verify(phone, otp);
-    _registerPhoneVerified = true;
+  if (status) {
     status.style.color = '#86efac';
-    status.textContent = '✅ Phone verified!';
-    document.getElementById('appPhone').readOnly = true;
-    document.getElementById('appOtp').readOnly = true;
-    document.getElementById('sendOtpBtn').style.display = 'none';
-    verifyBtn.style.display = 'none';
-  } catch (verifyErr) {
-    _registerPhoneVerified = false;
-    status.style.color = '#fca5a5';
-    status.textContent = verifyErr && verifyErr.message ? verifyErr.message : 'OTP verification failed. Please try again.';
-  } finally {
-    verifyBtn.disabled = false;
-    verifyBtn.textContent = 'Verify';
-    hideLoader();
+    status.textContent = 'Use the "Send OTP" button above to verify via the widget.';
   }
 }
 
