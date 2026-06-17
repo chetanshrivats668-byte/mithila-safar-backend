@@ -1,5 +1,20 @@
 import * as appService from '../../services/applicationService.js';
 import * as collabService from '../../services/collabService.js';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken } from '../../utils/jwt/jwtHelper.js';
+import jwt from 'jsonwebtoken';
+import { generateOTPCode, saveEmailOTP, checkOTPRequestRateLimit, verifyEmailOTP as verifyEmailOTPService } from '../../utils/otp/otpHelper.js';
+import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/email/emailService.js';
+import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
+import {
+  sendOTP,
+  verifyWidgetToken
+} from '../../services/msg91/msg91Service.js';
+import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
+import { memoryDb } from '../../utils/firestoreFallback.js';
+import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, isSupabaseAvailable } from '../../utils/db.js';
 
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -33,8 +48,13 @@ async function getPartnerCollabRedirect(db, user) {
     return null;
   }
 
+  const userRecord = await dbGet('users', userId).catch(() => null);
+  const preferredCollaboratorId = userRecord?.preferredCollaboratorId || null;
   const collaborators = await collabService.getCollaboratorsByUserId(db, userId);
-  const approvedPartnerCollab = collaborators.find(collab => shouldRedirectToCollaboratorDashboard(collab, userId));
+  const redirectCandidates = collaborators.filter(collab => shouldRedirectToCollaboratorDashboard(collab, userId));
+  const approvedPartnerCollab = redirectCandidates.find(collab => collab.id === preferredCollaboratorId)
+    || redirectCandidates[0]
+    || null;
 
   if (!approvedPartnerCollab) {
     return null;
@@ -43,6 +63,13 @@ async function getPartnerCollabRedirect(db, user) {
   if (!approvedPartnerCollab.userId || approvedPartnerCollab.userId !== userId) {
     await collabService.updateCollaborator(db, approvedPartnerCollab.id, { userId });
     approvedPartnerCollab.userId = userId;
+  }
+
+  if (preferredCollaboratorId !== approvedPartnerCollab.id) {
+    await dbUpdate('users', userId, {
+      preferredCollaboratorId: approvedPartnerCollab.id,
+      updatedAt: new Date().toISOString()
+    }).catch(() => {});
   }
 
   return {
@@ -54,22 +81,6 @@ async function getPartnerCollabRedirect(db, user) {
     }
   };
 }
-
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken } from '../../utils/jwt/jwtHelper.js';
-import jwt from 'jsonwebtoken';
-import { generateOTPCode, saveEmailOTP, checkOTPRequestRateLimit, verifyEmailOTP as verifyEmailOTPService } from '../../utils/otp/otpHelper.js';
-import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/email/emailService.js';
-import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
-import {
-  sendOTP,
-  verifyWidgetToken
-} from '../../services/msg91/msg91Service.js';
-import { sanitizeInput, validateUserRegistration, validateUserLogin } from '../../middleware/validator.js';
-import { memoryDb } from '../../utils/firestoreFallback.js';
-import { get as dbGet, list as dbList, create as dbCreate, update as dbUpdate, isSupabaseAvailable } from '../../utils/db.js';
 
 
 function buildEmailDeliveryFailurePayload(email, context = 'verification email') {

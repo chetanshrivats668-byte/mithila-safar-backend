@@ -265,21 +265,29 @@ export async function getCollaboratorsByUserId(db, userId) {
 
   const memoryMatches = Array.from(memoryDb.collabs.values()).filter(c => {
     const cleanCollabPhone = c.phone ? c.phone.replace(/\D/g, '').slice(-10) : '';
-    return c.userId === userId || 
-      (userEmail && c.email === userEmail) || 
+    return c.userId === userId ||
+      c.submittedFrom === userId ||
+      (userEmail && c.email === userEmail) ||
       (cleanUserPhone && cleanCollabPhone === cleanUserPhone);
   });
   if (memoryMatches.length > 0 || !isSupabaseAvailable()) {
     return normalizeList(memoryMatches);
   }
 
-  let results = [];
+  const resultsMap = new Map();
+  const mergeResults = (rows) => {
+    for (const row of rows || []) {
+      if (row?.id && !resultsMap.has(row.id)) resultsMap.set(row.id, row);
+    }
+  };
+
+  mergeResults(await dbList('collaborators', { filters: [{ column: 'submittedFrom', op: 'eq', value: userId }] }));
+  mergeResults(await dbList('collaborators', { filters: [{ column: 'userId', op: 'eq', value: userId }] }));
   if (userEmail) {
-    results = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: userEmail }] });
+    mergeResults(await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: userEmail }] }));
   }
-  if (results.length === 0 && userPhone) {
-    const cleanPhone = userPhone.replace(/\D/g, '').slice(-10);
-    results = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: cleanPhone }] });
+  if (cleanUserPhone) {
+    mergeResults(await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: cleanUserPhone }] }));
   }
-  return normalizeList(results);
+  return normalizeList(Array.from(resultsMap.values()));
 }

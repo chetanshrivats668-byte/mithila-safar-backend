@@ -131,9 +131,22 @@ export async function approvePartnerCollab(req, res) {
       if (collabSnap.status === 'pending' || collabSnap.status === 'rejected') {
         updates.status = 'approved';
       }
+      if (!collabSnap.userId && collabSnap.submittedFrom) {
+        updates.userId = collabSnap.submittedFrom;
+      }
     }
 
     await collabService.updateCollaborator(req.app.locals.db, collaboratorId, updates);
+
+    if (action === 'approve') {
+      const linkedUserId = collabSnap.userId || collabSnap.submittedFrom || updates.userId || null;
+      if (linkedUserId) {
+        await dbUpdate('users', linkedUserId, {
+          preferredCollaboratorId: collaboratorId,
+          updatedAt: now
+        }).catch(() => {});
+      }
+    }
 
     return res.json({
       success: true,

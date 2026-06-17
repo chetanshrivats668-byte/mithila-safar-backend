@@ -420,6 +420,8 @@ export async function getMyCollaboratorRoles(req, res) {
       return res.status(400).json({ success: false, message: 'Authenticated user id is required' });
     }
 
+    const user = await req.app.locals.db.get('users', userId).catch(() => null);
+    const preferredCollaboratorId = user?.preferredCollaboratorId || null;
     const collaborators = await collabService.getCollaboratorsByUserId(req.app.locals.db, userId);
     const roles = collaborators.filter(collab => isCollaboratorApproved(collab)).map(collab => ({
       id: collab.id,
@@ -430,13 +432,17 @@ export async function getMyCollaboratorRoles(req, res) {
       businessName: collab.businessName || '',
       name: collab.name || '',
       email: collab.email || '',
-      permissions: collab.serviceCategories || []
+      permissions: collab.serviceCategories || [],
+      isPreferred: collab.id === preferredCollaboratorId
     }));
+
+    const preferredRole = roles.find(r => r.id === preferredCollaboratorId) || null;
 
     return res.json({
       success: true,
       roles,
-      defaultRole: roles.find(r => r.verification_status === 'verified')?.type || roles[0]?.type || null
+      preferredCollaboratorId,
+      defaultRole: preferredRole?.type || roles.find(r => r.verification_status === 'verified')?.type || roles[0]?.type || null
     });
   } catch (e) {
     console.error('Get my collaborator roles error:', e);
@@ -479,9 +485,18 @@ export async function selectCollaboratorRole(req, res) {
       return res.status(403).json({ success: false, message: 'This collaborator profile is still awaiting admin approval' });
     }
 
+    const userUpdates = {
+      preferredCollaboratorId: collaboratorId,
+      updatedAt: new Date().toISOString()
+    };
+
     if (!collab.userId) {
       await collabService.updateCollaborator(req.app.locals.db, collaboratorId, { userId });
       collab.userId = userId;
+    }
+
+    if (req.app.locals.db?.update) {
+      await req.app.locals.db.update('users', userId, userUpdates);
     }
 
     const token = generateToken(buildCollaboratorSessionPayload(collab));

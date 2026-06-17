@@ -1957,6 +1957,53 @@ async function handleRegister(e) { e.preventDefault();
   }
 }
 
+const COLLAB_ACCOUNT_MAP_KEY = 'collaboratorAccountMap';
+
+function getMainUserForCollaboratorMapping() {
+  try {
+    const raw = localStorage.getItem('currentUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getCollaboratorEmailKey() {
+  const mainUser = getMainUserForCollaboratorMapping();
+  return String(mainUser?.email || '').trim().toLowerCase();
+}
+
+function getCollaboratorAccountMap() {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAB_ACCOUNT_MAP_KEY) || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function persistCollaboratorSelectionForMainUser(collabId, collabRole) {
+  const emailKey = getCollaboratorEmailKey();
+  if (!emailKey || !collabId) return;
+  const map = getCollaboratorAccountMap();
+  map[emailKey] = {
+    collaboratorId: collabId,
+    collaboratorRole: collabRole || null
+  };
+  localStorage.setItem(COLLAB_ACCOUNT_MAP_KEY, JSON.stringify(map));
+}
+
+function restoreCollaboratorSelectionForMainUser() {
+  const emailKey = getCollaboratorEmailKey();
+  if (!emailKey) return null;
+  const stored = getCollaboratorAccountMap()[emailKey] || null;
+  if (!stored?.collaboratorId) return null;
+  localStorage.setItem('selectedCollaboratorId', stored.collaboratorId);
+  if (stored.collaboratorRole) {
+    localStorage.setItem('selectedCollaboratorRole', stored.collaboratorRole);
+  }
+  return stored;
+}
+
 function setToken(d) {
   TOKEN = d.token;
   localStorage.setItem('collabToken', TOKEN);
@@ -1968,6 +2015,7 @@ function setToken(d) {
   }
   const selectedRole = (COLLAB?.serviceCategories || [])[0] || 'business';
   localStorage.setItem('selectedCollaboratorRole', selectedRole);
+  persistCollaboratorSelectionForMainUser(COLLAB?.id, selectedRole);
   localStorage.setItem('selectedCollaboratorPermissions', JSON.stringify(COLLAB?.serviceCategories || []));
   initDashboard();
 }
@@ -2045,8 +2093,9 @@ function pickPreferredCollaboratorRole(roles) {
   const validRoles = (roles || []).filter(role => role.verification_status !== 'suspended');
   if (!validRoles.length) return null;
 
-  const selectedCollaboratorId = localStorage.getItem('selectedCollaboratorId');
-  const selectedCollaboratorRole = localStorage.getItem('selectedCollaboratorRole');
+  const restoredSelection = restoreCollaboratorSelectionForMainUser();
+  const selectedCollaboratorId = (restoredSelection && restoredSelection.collaboratorId) || localStorage.getItem('selectedCollaboratorId');
+  const selectedCollaboratorRole = (restoredSelection && restoredSelection.collaboratorRole) || localStorage.getItem('selectedCollaboratorRole');
 
   return validRoles.find(role => role.id === selectedCollaboratorId)
     || validRoles.find(role => role.verification_status === 'verified' && role.type === selectedCollaboratorRole)

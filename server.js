@@ -211,6 +211,47 @@ async function sendPartnerNotification(orderData) {
   } catch (err) { console.error('Partner notification error:', err); }
 }
 
+// Build SMS message for customer notification
+function buildCustomerSMS(booking) {
+  const details = getBookingDetailsObject(booking);
+  const type = String(booking?.type || details?.type || '').toUpperCase();
+  const lines = [
+    'YATRI POINT Booking Confirmed!',
+    'Ticket ID: ' + getBookingFieldValue(booking?.orderId),
+    'Service: ' + getBookingFieldValue(booking?.itemName),
+    'Name: ' + getBookingFieldValue(booking?.userName, details.userName, details.name),
+    'Payment Status: Paid',
+    ...buildCollaboratorSpecificDetails(booking),
+    'Thank you for booking with us!',
+    '- Yatri Point'
+  ];
+  return lines.join('\n');
+}
+
+// Send SMS notification to customer.
+async function sendCustomerNotification(orderData) {
+  try {
+    const customerPhone = orderData.userPhone || orderData.details?.userPhone || '';
+    if (!customerPhone) {
+      console.log('[CUSTOMER NOTIFICATION] No phone number for order:', orderData.orderId);
+      return;
+    }
+    const smsMsg = buildCustomerSMS(orderData);
+    await sendSMS(customerPhone, smsMsg);
+    console.log(`[CUSTOMER NOTIFICATION] Sent booking confirmation SMS to ${customerPhone} for order ${orderData.orderId}`);
+  } catch (err) {
+    console.error('Customer notification error:', err);
+  }
+}
+
+// Send unified booking notifications to both partner and customer
+async function sendBookingNotifications(orderData) {
+  await Promise.all([
+    sendPartnerNotification(orderData).catch(err => console.error('Partner notification error:', err)),
+    sendCustomerNotification(orderData).catch(err => console.error('Customer notification error:', err))
+  ]);
+}
+
 
 
 // ========== RATE LIMITER ==========
@@ -491,13 +532,13 @@ app.post('/api/payment-link/verify', async (req, res) => {
       const orderData = await dbGet('orders', orderId);
       if (!orderData) return res.status(404).json({ success: false, message: 'Order not found' });
       await dbUpdate('orders', orderId, updates);
-      await sendPartnerNotification({ ...orderData, ...updates, orderId });
+      await sendBookingNotifications({ ...orderData, ...updates, orderId });
     } else {
       const existingOrder = memoryDb.orders.get(orderId);
       if (!existingOrder) return res.status(404).json({ success: false, message: 'Order not found' });
       const updatedOrder = { ...existingOrder, ...updates };
       memoryDb.orders.set(orderId, updatedOrder);
-      await sendPartnerNotification(updatedOrder);
+      await sendBookingNotifications(updatedOrder);
     }
 
     console.log(`[PayLink] Payment verified: ${orderId} | PaymentID: ${razorpayPaymentId}`);
@@ -728,11 +769,11 @@ app.post('/api/booking/create-free', requireAuth, blockTemporarySession, async (
 
     if (isSupabaseAvailable()) {
       await dbCreate('orders', orderId, orderData);
-      await sendPartnerNotification(orderData);
+      await sendBookingNotifications(orderData);
     } else {
       memoryDb.orders.set(orderId, orderData);
       console.log('[FALLBACK]: Free Order stored in memory:', orderId);
-      await sendPartnerNotification(orderData);
+      await sendBookingNotifications(orderData);
     }
 
     res.json({
@@ -772,7 +813,7 @@ app.post('/api/booking/create-free', requireAuth, blockTemporarySession, async (
       if (!orderData) { return res.status(404).json({ success: false, message: 'Order not found' }); }
       await dbUpdate('orders', orderId, updates);
       const updatedData = { ...orderData, ...updates, orderId };
-      await sendPartnerNotification(updatedData);
+      await sendBookingNotifications(updatedData);
     } else {
       const existingOrder = memoryDb.orders.get(orderId);
       if (!existingOrder) {
@@ -781,7 +822,7 @@ app.post('/api/booking/create-free', requireAuth, blockTemporarySession, async (
       const updatedOrder = { ...existingOrder, ...updates };
       memoryDb.orders.set(orderId, updatedOrder);
       console.log('[FALLBACK]: Order verified in memory:', orderId);
-      await sendPartnerNotification(updatedOrder);
+      await sendBookingNotifications(updatedOrder);
     }
     res.json({ success: true, orderId, status: 'confirmed' });
   } catch (err) {
@@ -893,8 +934,8 @@ app.post('/api/razorpay/webhook', async (req, res) => {
         memoryDb.orders.set(orderId, { ...orderData, ...updates });
       }
 
-      // Notify partner operator via SMS
-      await sendPartnerNotification({ ...orderData, ...updates, orderId });
+      // Notify partner operator and customer via SMS
+      await sendBookingNotifications({ ...orderData, ...updates, orderId });
 
       // Notify admin via SMS that payment arrived
       try {
@@ -1342,7 +1383,7 @@ app.post('/api/admin/verify-payment', requireAdmin, validate(validateSchemas.adm
     }
 
     if (action === 'approve') {
-      await sendPartnerNotification({ ...orderData, ...updates, orderId });
+      await sendBookingNotifications({ ...orderData, ...updates, orderId });
     }
     res.json({ success: true });
   }

@@ -13,6 +13,60 @@ let refreshToken = localStorage.getItem('refreshToken') || null;
 let collaboratorRoles = JSON.parse(localStorage.getItem('collaboratorRoles') || '[]');
 let selectedCollaboratorId = localStorage.getItem('selectedCollaboratorId') || null;
 let selectedCollaboratorRole = localStorage.getItem('selectedCollaboratorRole') || null;
+const COLLAB_ACCOUNT_MAP_KEY = 'collaboratorAccountMap';
+
+function getCurrentUserEmailKey() {
+    return String(currentUser?.email || '').trim().toLowerCase();
+}
+
+function getCollaboratorAccountMap() {
+    try {
+        return JSON.parse(localStorage.getItem(COLLAB_ACCOUNT_MAP_KEY) || '{}');
+    } catch {
+        return {};
+    }
+}
+
+function setCollaboratorAccountMap(map) {
+    localStorage.setItem(COLLAB_ACCOUNT_MAP_KEY, JSON.stringify(map || {}));
+}
+
+function persistCollaboratorSelectionForCurrentUser(collaboratorId, collaboratorRole) {
+    const emailKey = getCurrentUserEmailKey();
+    if (!emailKey || !collaboratorId) return;
+    const map = getCollaboratorAccountMap();
+    map[emailKey] = {
+        collaboratorId: collaboratorId,
+        collaboratorRole: collaboratorRole || null
+    };
+    setCollaboratorAccountMap(map);
+}
+
+function restoreCollaboratorSelectionForCurrentUser() {
+    const emailKey = getCurrentUserEmailKey();
+    if (!emailKey) return false;
+    const stored = getCollaboratorAccountMap()[emailKey] || null;
+    if (!stored?.collaboratorId) return false;
+    selectedCollaboratorId = stored.collaboratorId;
+    selectedCollaboratorRole = stored.collaboratorRole || selectedCollaboratorRole || null;
+    localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
+    if (selectedCollaboratorRole) {
+        localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+    } else {
+        localStorage.removeItem('selectedCollaboratorRole');
+    }
+    return true;
+}
+
+function clearCollaboratorSelectionForCurrentUser() {
+    const emailKey = getCurrentUserEmailKey();
+    if (!emailKey) return;
+    const map = getCollaboratorAccountMap();
+    if (map[emailKey]) {
+        delete map[emailKey];
+        setCollaboratorAccountMap(map);
+    }
+}
 
 let currentBooking = {};
 let selectedSeats = [];
@@ -442,6 +496,7 @@ async function fetchCurrentUserProfile() {
         if (!data.success || !data.user) return null;
         currentUser = data.user;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        restoreCollaboratorSelectionForCurrentUser();
         updateUILoggedIn();
         return currentUser;
     } catch {
@@ -479,6 +534,7 @@ async function activateCollaboratorRole(collaboratorId, options) {
         selectedCollaboratorRole = (data.collaborator.serviceCategories || [])[0] || 'business';
         localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
         localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+        persistCollaboratorSelectionForCurrentUser(selectedCollaboratorId, selectedCollaboratorRole);
         if (!options || options.redirect !== false) {
             window.location.href = 'collaborator-dashboard.html';
         }
@@ -518,22 +574,100 @@ async function autoOpenCollaboratorDashboard() {
         window.location.href = 'index.html#login';
         return;
     }
+    
+    // Ensure currentUser is loaded
+    if (!currentUser) {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                currentUser = JSON.parse(savedUser);
+            } catch (e) {
+                console.error('[autoOpenCollaboratorDashboard] Failed to parse saved user:', e);
+            }
+        }
+    }
+    
+    const restored = restoreCollaboratorSelectionForCurrentUser();
+    console.log('[autoOpenCollaboratorDashboard] restoreCollaboratorSelectionForCurrentUser returned:', restored);
+    console.log('[autoOpenCollaboratorDashboard] selectedCollaboratorId after restore:', selectedCollaboratorId);
+    console.log('[autoOpenCollaboratorDashboard] selectedCollaboratorRole after restore:', selectedCollaboratorRole);
+    
     const roles = await loadCollaboratorRoles();
     const validRoles = (roles || []).filter(r => r.verification_status !== 'suspended');
+    console.log('[autoOpenCollaboratorDashboard] validRoles:', validRoles);
+    
     if (!validRoles.length) {
-        notify('No collaborator profile is linked to this account yet.', 'info');
+        console.log('[autoOpenCollaboratorDashboard] No valid roles, redirecting to collaborator-dashboard.html');
+        window.location.href = 'collaborator-dashboard.html';
         return;
     }
-    const preferred = validRoles.find(r => r.id === selectedCollaboratorId) || null;
+    
+    // First try: preferred collaborator (from saved mapping or isPreferred flag)
+    const preferred = validRoles.find(r => r.id === selectedCollaboratorId || r.isPreferred) || null;
     if (preferred) {
+        console.log('[autoOpenCollaboratorDashboard] Activating preferred collaborator:', preferred.id);
         await activateCollaboratorRole(preferred.id);
         return;
     }
+    
+    // Second try: if only one valid role, use it
     if (validRoles.length === 1) {
+        console.log('[autoOpenCollaboratorDashboard] Only one valid role, activating:', validRoles[0].id);
         await activateCollaboratorRole(validRoles[0].id);
         return;
     }
+    
+    // Third try: find a collaborator owned by the current user (match by email or phone)
+    if (currentUser) {
+        const userEmail = currentUser.email?.toLowerCase().trim();
+        const userPhone = currentUser.phone?.replace(/\D/g, '').slice(-10);
+        
+        const ownedRole = validRoles.find(r => {
+            const roleEmail = r.email?.toLowerCase().trim();
+            const rolePhone = r.phone?.replace(/\D/g, '').slice(-10);
+            return (userEmail && roleEmail === userEmail) || (userPhone && rolePhone === userPhone);
+        });
+        
+        if (ownedRole) {
+            console.log('[autoOpenCollaboratorDashboard] Found owned collaborator by email/phone:', ownedRole.id);
+            await activateCollaboratorRole(ownedRole.id);
+            return;
+        }
+    }
+    
+    // Fallback: show role selector
+    console.log('[autoOpenCollaboratorDashboard] Multiple roles, showing selector');
     renderCollaboratorRoleSelector(validRoles);
+}
+
+function openPartnerPortal() {
+    if (!authToken) {
+        window.location.href = 'index.html#login';
+        return;
+    }
+    
+    // Ensure currentUser is loaded from localStorage if not in memory
+    if (!currentUser) {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                currentUser = JSON.parse(savedUser);
+                console.log('[PartnerPortal] Restored currentUser from localStorage:', currentUser?.email);
+            } catch (e) {
+                console.error('[PartnerPortal] Failed to parse saved user:', e);
+            }
+        }
+    }
+    
+    // Debug: log the email key and collaborator map state
+    const emailKey = getCurrentUserEmailKey();
+    const collabMap = getCollaboratorAccountMap();
+    console.log('[PartnerPortal] Current user email:', currentUser?.email);
+    console.log('[PartnerPortal] Email key (normalized):', emailKey);
+    console.log('[PartnerPortal] Collaborator account map:', collabMap);
+    console.log('[PartnerPortal] Mapped collaborator for this email:', collabMap[emailKey]);
+    
+    autoOpenCollaboratorDashboard();
 }
 
 async function bootstrapAuthenticatedExperience() {
@@ -563,6 +697,7 @@ function restoreSession() {
     if (savedUser) {
         try {
             currentUser = JSON.parse(savedUser);
+            restoreCollaboratorSelectionForCurrentUser();
             updateUILoggedIn();
             if (currentUser.temporarySession) showTempSessionBanner();
         } catch (e) {
@@ -776,9 +911,17 @@ function applyCollaboratorLoginContext(data) {
     }
 
     selectedCollaboratorId = context.collaboratorId;
-    selectedCollaboratorRole = context.partnerCollabStatus || selectedCollaboratorRole || 'approved';
+    const existingRoleType = selectedCollaboratorRole && !['approved', 'pending', 'rejected'].includes(selectedCollaboratorRole)
+        ? selectedCollaboratorRole
+        : null;
+    selectedCollaboratorRole = existingRoleType;
     localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
-    localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+    if (selectedCollaboratorRole) {
+        localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
+    } else {
+        localStorage.removeItem('selectedCollaboratorRole');
+    }
+    persistCollaboratorSelectionForCurrentUser(selectedCollaboratorId, selectedCollaboratorRole);
     return true;
 }
 

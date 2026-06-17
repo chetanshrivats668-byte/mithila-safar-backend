@@ -136,7 +136,7 @@
                 </li>
                 <li><a href="#" data-section="help" onclick="navigateTo('help');return false">Help</a></li>
                 <li><a href="#" data-section="about" onclick="navigateTo('about');return false">About</a></li>
-                <li><a href="collaborator-dashboard.html">Partner Portal</a></li>
+                <li><a href="#" onclick="openPartnerPortal();return false">Partner Portal</a></li>
                 <li><a href="terms.html">T&C</a></li>
 
             </ul>
@@ -155,9 +155,9 @@
                 <span class="user-name" id="userNameDisplay">User</span>
                 <span class="dropdown-arrow">▼</span>
                 <div class="dropdown-menu" id="dropdownMenu">
-                    <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
-                    <a href="#" onclick="openProfile();return false">👤 Profile</a>
-                    <a href="#" onclick="logout();return false">🚪 Logout</a>
+                    <a href="#" onclick="openBookings();return false"> My Bookings</a>
+                    <a href="#" onclick="openProfile();return false"> Profile</a>
+                    <a href="#" onclick="logout();return false"> Logout</a>
                 </div>
             </div>
 
@@ -169,17 +169,17 @@
 
     <!-- MOBILE MENU -->
     <div class="mobile-menu" id="mobileMenu">
-        <a href="#" onclick="navigateTo('home');return false">🏠 Home</a>
-        <a href="#" onclick="showCafes();return false">☕ Café</a>
-        <a href="#" onclick="navigateTo('help');return false">❓ Help</a>
-        <a href="#" onclick="navigateTo('about');return false">ℹ️ About</a>
-        <a href="collaborator-dashboard.html">📊 Partner Portal</a>
-        <a href="terms.html">📜 T&C</a>
-        <a href="#" onclick="openBookings();return false">📅 My Bookings</a>
+        <a href="#" onclick="navigateTo('home');return false"> Home</a>
+        <a href="#" onclick="showCafes();return false"> Café</a>
+        <a href="#" onclick="navigateTo('help');return false"> Help</a>
+        <a href="#" onclick="navigateTo('about');return false"> About</a>
+        <a href="#" onclick="openPartnerPortal();return false"> Partner Portal</a>
+        <a href="terms.html"> T&C</a>
+        <a href="#" onclick="openBookings();return false"> My Bookings</a>
 
         <div class="mobile-auth" id="mobileAuth">
-            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();">🔑 Login</button>
-            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();">📝 Sign Up</button>
+            <button class="btn-login" onclick="openModal('loginModal');closeMobileMenu();"> Login</button>
+            <button class="btn-signup" onclick="openModal('signupModal');closeMobileMenu();"> Sign Up</button>
         </div>
     </div>
 
@@ -197,10 +197,10 @@
         <!-- BOOKING -->
         <div class="booking-section">
             <div class="booking-tabs">
-                <button class="active" onclick="switchTab('bus',this)">🚌 Bus</button>
-                <button onclick="switchTab('hotel',this)">🏨 Hotel</button>
-                <button onclick="switchTab('car',this)">🚗 Rapid Car</button>
-                <button onclick="showCafes()">☕ Café</button>
+                <button class="active" onclick="switchTab('bus',this)"> Bus</button>
+                <button onclick="switchTab('hotel',this)"> Hotel</button>
+                <button onclick="switchTab('car',this)"> Rapid Car</button>
+                <button onclick="showCafes()"> Café</button>
             </div>
 
             <!-- BUS FORM -->
@@ -237,7 +237,7 @@
                     <span class="filter-chip" data-filter="sleeper" onclick="toggleFilter(this)">🛏️ Sleeper</span>
                     <span class="filter-chip" data-filter="seater" onclick="toggleFilter(this)">💺 Seater</span>
                 </div>
-                <button type="submit" class="search-btn">🔍 Search Buses</button>
+                <button type="submit" class="search-btn"> Search Buses</button>
             </form>
 
             <!-- HOTEL FORM -->
@@ -268,7 +268,7 @@
                         <option value="4">4 Guests</option>
                     </select>
                 </div>
-                <button type="submit" class="search-btn">🔍 Search Hotels</button>
+                <button type="submit" class="search-btn"> Search Hotels</button>
             </form>
 
             <!-- RAPID CAR FORM -->
@@ -345,22 +345,22 @@
             <h3>✨ Why Choose Yatri Point?</h3>
             <div class="services-grid">
                 <div class="service-card">
-                    <div class="service-icon">🚌</div>
+                    <div class="service-icon"></div>
                     <h4>All India Bus</h4>
                     <p>Low/Luxury, AC/Non-AC, Sleeper/Seater — animated seat selection with instant booking.</p>
                 </div>
                 <div class="service-card">
-                    <div class="service-icon">🏨</div>
+                    <div class="service-icon"></div>
                     <h4>Premium Hotels</h4>
                     <p>General, AC & Balcony rooms with verified properties and clear policies.</p>
                 </div>
                 <div class="service-card">
-                    <div class="service-icon">🚗</div>
+                    <div class="service-icon"></div>
                     <h4>Rapid Car</h4>
                     <p>Instant cab booking with auto-calculated distance & pricing across 6 cities.</p>
                 </div>
                 <div class="service-card">
-                    <div class="service-icon">☕</div>
+                    <div class="service-icon"></div>
                     <h4>Café & Restaurant</h4>
                     <p>Explore the best local eateries of Mithila — from tea to thali!</p>
                 </div>
@@ -476,18 +476,23 @@
                                 <button class="btn-secondary"
                                     style="flex:1; padding:0 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:38px;"
                                     onclick="togglePhoneEditForm(false)">Cancel</button>
-                                <button class="btn-primary" id="btnSaveProfilePhone" style="flex:1; padding:0 1.2rem; min-height:unset; height:38px;"
+                                <button class="btn-primary" id="btnSaveProfilePhone"
+                                    style="flex:1; padding:0 1.2rem; min-height:unset; height:38px;"
                                     onclick="saveProfilePhone()">Send OTP & Verify</button>
                             </div>
                         </div>
 
                         <!-- Step 2: OTP in-progress indicator (shown when MSG91 widget is active) -->
                         <div id="profilePhoneOtpStatus" style="display:none; text-align:center; padding:.5rem 0;">
-                            <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.6rem;">
-                                <span style="display:inline-block;width:18px;height:18px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
-                                <span style="font-size:.9rem;font-weight:600;color:var(--text);">Waiting for OTP verification…</span>
+                            <div
+                                style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.6rem;">
+                                <span
+                                    style="display:inline-block;width:18px;height:18px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
+                                <span style="font-size:.9rem;font-weight:600;color:var(--text);">Waiting for OTP
+                                    verification…</span>
                             </div>
-                            <p style="font-size:.78rem;color:var(--gray);margin:0 0 .75rem;">Complete the verification in the popup/widget, then this form will update automatically.</p>
+                            <p style="font-size:.78rem;color:var(--gray);margin:0 0 .75rem;">Complete the verification
+                                in the popup/widget, then this form will update automatically.</p>
                             <button class="btn-secondary"
                                 style="width:100%; padding:.4rem 1rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:36px; font-size:.83rem;"
                                 onclick="cancelProfilePhoneVerification()">Cancel Verification</button>
@@ -544,7 +549,8 @@
                 Patna, and nearby cities.</div>
             <div class="policy-card"><strong>Support Promise:</strong> We aim to provide responsive customer help and a
                 smoother booking experience for every journey.</div>
-            <div style="text-align: center; margin-top: 2rem; font-weight: bold; color: var(--primary);">Crafted By Group❤️Chetan</div>
+            <div style="text-align: center; margin-top: 2rem; font-weight: bold; color: var(--primary);">Crafted By
+                Group❤️Chetan</div>
         </div>
     </div>
 
@@ -704,9 +710,7 @@
                 <!-- Step 1: Phone input -->
                 <div id="verifyPhoneInputSection">
                     <input type="tel" id="verificationPhoneInput" placeholder="10-digit mobile number" maxlength="10"
-                        style="letter-spacing:.1rem;"
-                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                        required>
+                        style="letter-spacing:.1rem;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" required>
                     <button type="submit" class="btn-primary" id="btnSendVerificationOTP"
                         style="width:100%; margin-top:.5rem;">📤 Send OTP</button>
                 </div>
@@ -714,10 +718,12 @@
                 <!-- Step 2: OTP in-progress indicator -->
                 <div id="verifyPhoneOtpStatus" style="display:none; text-align:center; padding:.75rem 0;">
                     <div style="display:flex;align-items:center;justify-content:center;gap:.6rem;margin-bottom:.6rem;">
-                        <span style="display:inline-block;width:20px;height:20px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
+                        <span
+                            style="display:inline-block;width:20px;height:20px;border:2.5px solid var(--primary);border-radius:50%;border-top-color:transparent;animation:spin 0.7s linear infinite;"></span>
                         <span style="font-size:.95rem;font-weight:600;color:var(--text);">Verifying your number…</span>
                     </div>
-                    <p style="font-size:.82rem;color:var(--gray);margin:0 0 .8rem;">Complete the OTP verification in the widget above, then this modal will close automatically.</p>
+                    <p style="font-size:.82rem;color:var(--gray);margin:0 0 .8rem;">Complete the OTP verification in the
+                        widget above, then this modal will close automatically.</p>
                     <button type="button" class="btn-secondary"
                         style="width:100%; padding:.45rem; background:transparent; border:1px solid var(--border); color:var(--text); min-height:unset; height:36px; font-size:.83rem;"
                         onclick="cancelPhoneVerification()">Cancel</button>
@@ -749,7 +755,8 @@
                         style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
                 </div>
                 <div style="text-align: right; margin-top: 0.5rem; margin-bottom: 1rem;">
-                    <a href="#" onclick="openForgotPasswordModal(); return false;" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot Password?</a>
+                    <a href="#" onclick="openForgotPasswordModal(); return false;"
+                        style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot Password?</a>
                 </div>
                 <button type="submit" class="btn-primary">Login</button>
             </form>
@@ -779,7 +786,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- ===== RESET PASSWORD MODAL ===== -->
     <div class="modal" id="resetPasswordModal" onclick="closeOnOverlay(event,'resetPasswordModal')">
         <div class="modal-content">
@@ -787,12 +794,14 @@
             <p class="subtitle">Please choose a new password for your account</p>
             <form class="modal-form" onsubmit="handleResetPassword(event)">
                 <div style="position:relative;">
-                    <input type="password" id="newPassword" placeholder="New Password (min 6 chars)" required minlength="6" style="padding-right:40px;">
+                    <input type="password" id="newPassword" placeholder="New Password (min 6 chars)" required
+                        minlength="6" style="padding-right:40px;">
                     <span onclick="togglePassword('newPassword',this)"
                         style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
                 </div>
                 <div style="position:relative;">
-                    <input type="password" id="confirmNewPassword" placeholder="Confirm Password" required minlength="6" style="padding-right:40px;">
+                    <input type="password" id="confirmNewPassword" placeholder="Confirm Password" required minlength="6"
+                        style="padding-right:40px;">
                     <span onclick="togglePassword('confirmNewPassword',this)"
                         style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray)">Show</span>
                 </div>
@@ -950,7 +959,8 @@
                 style="text-align:center; padding:2rem 1.5rem; background:var(--card); border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-md);">
                 <div style="font-size:3.5rem; margin-bottom:1rem;">📱</div>
                 <h3 style="margin-bottom:0.5rem; color:var(--primary);">Pay via UPI App</h3>
-                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:2rem;">One-tap payment via any installed UPI App.</p>
+                <p style="font-size:0.9rem; color:var(--gray); margin-bottom:2rem;">One-tap payment via any installed
+                    UPI App.</p>
 
                 <button class="pay-now-btn" id="upiAppBtn" onclick="payViaUpiApp()"
                     style="background:var(--primary); font-size:1.2rem; width:100%; padding:1.2rem; border-radius:14px; box-shadow:0 8px 25px rgba(216,78,85,0.35); font-weight:800; display:flex; align-items:center; justify-content:center; gap:10px;">
