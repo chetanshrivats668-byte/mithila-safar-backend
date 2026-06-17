@@ -517,15 +517,23 @@ async function loadCollaboratorRoles() {
 }
 
 async function activateCollaboratorRole(collaboratorId, options) {
-    if (!authToken || !collaboratorId) return false;
+    if (!authToken || !collaboratorId) {
+        console.error('[activateCollaboratorRole] Missing authToken or collaboratorId');
+        return false;
+    }
     try {
+        console.log('[activateCollaboratorRole] Activating collaborator:', collaboratorId);
         const res = await authFetch(API_URL + '/api/collaborator/select-role', {
             method: 'POST',
             body: JSON.stringify({ collaboratorId })
         });
         const data = await res.json();
+        console.log('[activateCollaboratorRole] Response:', data);
+        
         if (!data.success || !data.token || !data.collaborator) {
-            notify(data.message || 'Unable to activate collaborator role', 'error');
+            const errorMsg = data.message || 'Unable to activate collaborator role';
+            console.error('[activateCollaboratorRole] Failed:', errorMsg, data);
+            notify(errorMsg, 'error');
             return false;
         }
         localStorage.setItem('collabToken', data.token);
@@ -535,12 +543,14 @@ async function activateCollaboratorRole(collaboratorId, options) {
         localStorage.setItem('selectedCollaboratorId', selectedCollaboratorId);
         localStorage.setItem('selectedCollaboratorRole', selectedCollaboratorRole);
         persistCollaboratorSelectionForCurrentUser(selectedCollaboratorId, selectedCollaboratorRole);
+        console.log('[activateCollaboratorRole] Success, redirecting to collaborator-dashboard.html');
         if (!options || options.redirect !== false) {
             window.location.href = 'collaborator-dashboard.html';
         }
         return true;
-    } catch {
-        notify('Failed to activate collaborator role', 'error');
+    } catch (err) {
+        console.error('[activateCollaboratorRole] Error:', err);
+        notify('Failed to activate collaborator role: ' + (err.message || 'unknown error'), 'error');
         return false;
     }
 }

@@ -281,13 +281,37 @@ export async function getCollaboratorsByUserId(db, userId) {
     }
   };
 
-  mergeResults(await dbList('collaborators', { filters: [{ column: 'submittedFrom', op: 'eq', value: userId }] }));
-  mergeResults(await dbList('collaborators', { filters: [{ column: 'userId', op: 'eq', value: userId }] }));
+  try {
+    const res = await dbList('collaborators', { filters: [{ column: 'submittedFrom', op: 'eq', value: userId }] });
+    mergeResults(res);
+  } catch (err) {
+    console.warn('[collabService] Failed to query collaborators by submittedFrom:', err.message);
+  }
+
+  try {
+    const res = await dbList('collaborators', { filters: [{ column: 'userId', op: 'eq', value: userId }] });
+    mergeResults(res);
+  } catch (err) {
+    console.warn('[collabService] Failed to query collaborators by userId:', err.message);
+  }
+
   if (userEmail) {
-    mergeResults(await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: userEmail }] }));
+    try {
+      const res = await dbList('collaborators', { filters: [{ column: 'email', op: 'eq', value: userEmail }] });
+      mergeResults(res);
+    } catch (err) {
+      console.warn('[collabService] Failed to query collaborators by email:', err.message);
+    }
   }
+
   if (cleanUserPhone) {
-    mergeResults(await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: cleanUserPhone }] }));
+    try {
+      const res = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: cleanUserPhone }] });
+      mergeResults(res);
+    } catch (err) {
+      console.warn('[collabService] Failed to query collaborators by phone:', err.message);
+    }
   }
+
   return normalizeList(Array.from(resultsMap.values()));
 }
