@@ -14,6 +14,8 @@ router.post('/reset-password', requireAuth, authController.resetPassword);
 // Email OTP Endpoints
 router.post('/send-email-otp', authController.sendEmailOTP);
 router.post('/verify-email-otp', authController.verifyEmailOTP);
+router.post('/send-phone-otp', authController.sendPhoneOTP);
+router.post('/verify-phone-otp', authController.verifyPhoneOTP);
 router.post('/refresh', authController.refreshAccessToken);
 
 // Profile Management Endpoints

@@ -358,12 +358,8 @@ async function sendPhoneVerificationOTP(e) {
     try {
         const verificationToken = await window.msg91OTP.verify(normalizedPhone.clean);
 
-        const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
+        const res = await authFetch(API_URL + '/api/auth/mark-phone-verified', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + authToken
-            },
             body: JSON.stringify({ phone: normalizedPhone.formatted, verificationToken: verificationToken })
         });
         const data = await res.json();
@@ -440,28 +436,22 @@ async function refreshUserSession() {
 
 async function fetchCurrentUserProfile() {
     if (!authToken) return null;
-    let res = await fetch(API_URL + '/api/auth/me', { headers: authHeaders() });
-    if (res.status === 401 && refreshToken) {
-        const refreshed = await refreshUserSession();
-        if (!refreshed) return null;
-        res = await fetch(API_URL + '/api/auth/me', { headers: authHeaders() });
+    try {
+        let res = await authFetch(API_URL + '/api/auth/me');
+        const data = await res.json();
+        if (!data.success || !data.user) return null;
+        currentUser = data.user;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        updateUILoggedIn();
+        return currentUser;
+    } catch {
+        return null;
     }
-    const data = await res.json();
-    if (!data.success || !data.user) return null;
-    currentUser = data.user;
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    updateUILoggedIn();
-    return currentUser;
 }
 async function loadCollaboratorRoles() {
     if (!authToken) return [];
     try {
-        let res = await fetch(API_URL + '/api/collaborator/my-roles', { headers: authHeaders() });
-        if (res.status === 401 && refreshToken) {
-            const refreshed = await refreshUserSession();
-            if (!refreshed) return [];
-            res = await fetch(API_URL + '/api/collaborator/my-roles', { headers: authHeaders() });
-        }
+        let res = await authFetch(API_URL + '/api/collaborator/my-roles');
         const data = await res.json();
         if (!data.success) return [];
         persistCollaboratorRoles(data.roles || []);
@@ -474,9 +464,8 @@ async function loadCollaboratorRoles() {
 async function activateCollaboratorRole(collaboratorId, options) {
     if (!authToken || !collaboratorId) return false;
     try {
-        const res = await fetch(API_URL + '/api/collaborator/select-role', {
+        const res = await authFetch(API_URL + '/api/collaborator/select-role', {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify({ collaboratorId })
         });
         const data = await res.json();
@@ -609,6 +598,37 @@ function saveSession(token, user, newRefreshToken) {
 
 function authHeaders() {
     return authToken ? { 'Authorization': 'Bearer ' + authToken, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+}
+
+async function authFetch(url, options = {}) {
+    if (!options.headers) {
+        options.headers = {};
+    }
+    const headers = authHeaders();
+    for (const key in headers) {
+        if (!options.headers[key]) {
+            options.headers[key] = headers[key];
+        }
+    }
+
+    let res = await fetch(url, options);
+
+    if (res.status === 401) {
+        if (refreshToken) {
+            const refreshed = await refreshUserSession();
+            if (refreshed) {
+                options.headers['Authorization'] = 'Bearer ' + authToken;
+                res = await fetch(url, options);
+            } else {
+                clearSession();
+                notify('Your session has expired. Please log in again.', 'warning');
+            }
+        } else if (authToken) {
+            clearSession();
+            notify('Your session has expired. Please log in again.', 'warning');
+        }
+    }
+    return res;
 }
 
 async function handleCollaboratorApplicationMessaging(loginPayload) {
@@ -1175,8 +1195,8 @@ async function handleResetPassword(e) {
 
     setButtonLoading(btn, true, 'Saving...');
     try {
-        const res = await fetch(API_URL + '/api/auth/reset-password', {
-            method: 'POST', headers: authHeaders(),
+        const res = await authFetch(API_URL + '/api/auth/reset-password', {
+            method: 'POST',
             body: JSON.stringify({ newPassword })
         });
         const data = await res.json();
@@ -1336,8 +1356,8 @@ async function searchBuses(e) {
     if (from === to) return notify('From and To cannot be same', 'error');
     showLoader('Searching for buses from ' + from + ' to ' + to + '...');
     try {
-        var res = await fetch(API_URL + '/api/buses/search', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/buses/search', {
+            method: 'POST',
             body: JSON.stringify({ from, to, date, passengers })
         });
         var data = await res.json();
@@ -1648,9 +1668,7 @@ async function openBusSeats(busId) {
 
     try {
         const travelDate = currentBooking.date || new Date().toISOString().split('T')[0];
-        const res = await fetch(`${API_URL}/api/buses/${busId}/seats?date=${travelDate}`, {
-            headers: authHeaders()
-        });
+        const res = await authFetch(`${API_URL}/api/buses/${busId}/seats?date=${travelDate}`);
         const data = await res.json();
 
         if (!data.success) {
@@ -1792,8 +1810,8 @@ async function searchHotels(e) {
     if (!location) return notify('Please select a location', 'error');
     showLoader('Finding hotels in ' + location + '...');
     try {
-        var res = await fetch(API_URL + '/api/hotels/search', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/hotels/search', {
+            method: 'POST',
             body: JSON.stringify({ location, checkin, checkout, guests })
         });
         var data = await res.json();
@@ -1899,8 +1917,8 @@ async function searchCars(e) {
     if (!city) return notify('Please select a city', 'error');
     showLoader('Locating cabs in ' + city + '...');
     try {
-        var res = await fetch(API_URL + '/api/cabs/search', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/cabs/search', {
+            method: 'POST',
             body: JSON.stringify({ city, boarding, dropping, date, time, passengers })
         });
         var data = await res.json();
@@ -2000,7 +2018,7 @@ async function loadCafes() {
     if (!container) return;
     showLoader('Loading cafes...');
     try {
-        var res = await fetch(API_URL + '/api/cafes', { headers: authHeaders() });
+        var res = await authFetch(API_URL + '/api/cafes');
         var data = await res.json();
         if (data.success && (data.cafes || data.data)) {
             currentBooking.cafes = data.cafes || data.data;
@@ -2242,9 +2260,8 @@ async function bookFree() {
 
     showLoader('Processing free booking...');
     try {
-        var res = await fetch(API_URL + '/api/booking/create-free', {
+        var res = await authFetch(API_URL + '/api/booking/create-free', {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(buildPaymentPayload(0))
         });
         
@@ -2284,8 +2301,8 @@ async function payViaUpiApp() {
 
     showLoader('Initializing UPI payment...');
     try {
-        var res = await fetch(API_URL + '/api/razorpay/create-order', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/razorpay/create-order', {
+            method: 'POST',
             body: JSON.stringify(buildPaymentPayload(amount))
         });
         var data = await res.json();
@@ -2330,8 +2347,8 @@ async function payViaRazorpay() {
 
     showLoader('Initializing Razorpay gateway...');
     try {
-        var res = await fetch(API_URL + '/api/razorpay/create-order', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/razorpay/create-order', {
+            method: 'POST',
             body: JSON.stringify(buildPaymentPayload(amount))
         });
         var data = await res.json();
@@ -2423,8 +2440,8 @@ async function verifyRazorpayPayment(response, data, paymentMethodLabel, amountI
     showLoader('Verifying payment and generating ticket...');
     try {
         notify('Verifying payment...', 'info');
-        var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
-            method: 'POST', headers: authHeaders(),
+        var verifyRes = await authFetch(API_URL + '/api/razorpay/verify-payment', {
+            method: 'POST',
             body: JSON.stringify({
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
@@ -2547,8 +2564,8 @@ async function payViaUpiId() {
             passengerCount: currentBooking.passengers || 1
         };
 
-        var res = await fetch(API_URL + '/api/razorpay/create-order', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/razorpay/create-order', {
+            method: 'POST',
             body: JSON.stringify(payload)
         });
         var data = await res.json();
@@ -2580,8 +2597,8 @@ async function payViaUpiId() {
                 showLoader('Verifying payment and generating ticket...');
                 try {
                     notify('Verifying payment...', 'info');
-                    var verifyRes = await fetch(API_URL + '/api/razorpay/verify-payment', {
-                        method: 'POST', headers: authHeaders(),
+                    var verifyRes = await authFetch(API_URL + '/api/razorpay/verify-payment', {
+                        method: 'POST',
                         body: JSON.stringify({
                             razorpayOrderId: response.razorpay_order_id,
                             razorpayPaymentId: response.razorpay_payment_id,
@@ -2653,7 +2670,7 @@ async function loadBookings() {
         </div>
     `;
     try {
-        var res = await fetch(API_URL + '/api/user/bookings', { method: 'POST', headers: authHeaders() });
+        var res = await authFetch(API_URL + '/api/user/bookings', { method: 'POST' });
         var data = await res.json();
         if (data.success && (data.bookings || data.data)) {
             renderBookings(data.bookings || data.data);
@@ -2818,12 +2835,8 @@ async function saveProfilePhone() {
 
         notify('Saving changes...', 'info');
 
-        const res = await fetch(API_URL + '/api/auth/mark-phone-verified', {
+        const res = await authFetch(API_URL + '/api/auth/mark-phone-verified', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + authToken
-            },
             body: JSON.stringify({ phone: formattedPhone, token: token, otp: token })
         });
         const data = await res.json();
@@ -2851,8 +2864,8 @@ async function saveProfilePhone() {
 function saveProfileName() {
     var name = document.getElementById('profileNameInput').value.trim();
     if (!name) return notify('Name cannot be empty', 'error');
-    fetch(API_URL + '/api/auth/profile', {
-        method: 'PUT', headers: authHeaders(),
+    authFetch(API_URL + '/api/auth/profile', {
+        method: 'PUT',
         body: JSON.stringify({ name: name })
     }).then(function (r) { return r.json(); }).then(function (data) {
         if (data.success) {
@@ -3074,8 +3087,8 @@ async function submitCollab(e) {
     showLoader('Submitting application...');
     setButtonLoading(btn, true, '🚀 Submit Application');
     try {
-        var res = await fetch(API_URL + '/api/submit-collab', {
-            method: 'POST', headers: authHeaders(),
+        var res = await authFetch(API_URL + '/api/submit-collab', {
+            method: 'POST',
             body: JSON.stringify(data)
         });
         var result = await res.json();

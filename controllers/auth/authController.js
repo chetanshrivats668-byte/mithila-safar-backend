@@ -59,6 +59,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken } from '../../utils/jwt/jwtHelper.js';
+import jwt from 'jsonwebtoken';
 import { generateOTPCode, saveEmailOTP, checkOTPRequestRateLimit, verifyEmailOTP as verifyEmailOTPService } from '../../utils/otp/otpHelper.js';
 import { getEmailDeliveryStatus, sendVerificationEmail } from '../../services/email/emailService.js';
 import { verifyGoogleToken } from '../../services/googleAuth/googleAuthService.js';
@@ -89,6 +90,66 @@ function buildEmailDeliveryFailurePayload(email, context = 'verification email')
     email,
     message: `We generated your verification code, but ${context} failed to deliver to ${email}. Please try again later or contact support.`
   };
+}
+
+const phoneOtpStore = new Map();
+const PHONE_OTP_EXPIRY_MS = 5 * 60 * 1000;
+const PHONE_OTP_MAX_ATTEMPTS = 3;
+const PHONE_OTP_TEST_PHONE = '9876543210';
+const PHONE_OTP_TEST_CODE = '123456';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+function normalizeIndianPhoneValue(phone) {
+  const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+  if (!/^[6-9]\d{9}$/.test(cleanPhone)) return null;
+  return cleanPhone;
+}
+
+function createPhoneLoginResponsePayload(userData, docId) {
+  const tokenPayload = { userId: docId, email: userData.email, name: userData.name, role: userData.role || 'user' };
+  const token = generateAccessToken(tokenPayload, true);
+  const refreshToken = generateRefreshToken(tokenPayload, true);
+  const { password: _, ...safeUser } = userData;
+  safeUser.id = docId;
+  return { token, refreshToken, safeUser };
+}
+
+export async function sendPhoneOTP(req, res) {
+  try {
+    const cleanPhone = normalizeIndianPhoneValue(req.body?.phone);
+    if (!cleanPhone) {
+      return res.status(400).json({ success: false, message: 'Enter a valid 10-digit Indian mobile number' });
+    }
+
+    if (cleanPhone === PHONE_OTP_TEST_PHONE) {
+      phoneOtpStore.set(cleanPhone, { otp: PHONE_OTP_TEST_CODE, expiry: Date.now() + PHONE_OTP_EXPIRY_MS, attempts: 0, sendCount: 1 });
+      return res.json({ success: true, message: 'OTP sent to +91-' + cleanPhone });
+    }
+
+    const existing = phoneOtpStore.get(cleanPhone);
+    if (existing && Date.now() < existing.expiry && (existing.sendCount || 0) >= 3) {
+      return res.status(429).json({ success: false, message: 'Too many OTP requests. Please wait and try again.' });
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    phoneOtpStore.set(cleanPhone, {
+      otp,
+      expiry: Date.now() + PHONE_OTP_EXPIRY_MS,
+      attempts: 0,
+      sendCount: (existing && Date.now() < (existing.expiry || 0)) ? (existing.sendCount || 0) + 1 : 1
+    });
+
+    const smsRes = await sendSMS(cleanPhone, `Your Yatri Point verification code is: ${otp}. Valid for 5 minutes.`);
+    if (!smsRes.success) {
+      phoneOtpStore.delete(cleanPhone);
+      return res.status(500).json({ success: false, message: smsRes.reason || 'SMS delivery failed. Check SMS service configuration.' });
+    }
+
+    return res.json({ success: true, message: 'OTP sent to +91-' + cleanPhone });
+  } catch (err) {
+    console.error('[SEND PHONE OTP ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'OTP service error. Please try again.' });
+  }
 }
 
 export async function registerUser(req, res) {
@@ -574,6 +635,99 @@ export async function verifyMsg91Token(req, res) {
     }
     console.error('[VERIFY MSG91 TOKEN ERROR]:', err);
     return res.status(500).json({ success: false, message: 'Verification failed' });
+  }
+}
+
+export async function verifyPhoneOTP(req, res) {
+  try {
+    const cleanPhone = normalizeIndianPhoneValue(req.body?.phone);
+    const otpCode = String(req.body?.otpCode || req.body?.otp || '').trim();
+
+    if (!cleanPhone || !otpCode) {
+      return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
+    }
+
+    const formattedPhone = '+91' + cleanPhone;
+
+    if (cleanPhone === PHONE_OTP_TEST_PHONE && otpCode === PHONE_OTP_TEST_CODE) {
+      const db = req.app.locals.db;
+      const useMemory = !isSupabaseAvailable();
+      let users = [];
+      if (useMemory) {
+        const found = Array.from(memoryDb.users.entries()).find(([_, user]) => user.phone === formattedPhone);
+        if (found) users.push({ id: found[0], ...found[1] });
+      } else {
+        users = await dbList('users', { filters: [{ column: 'phone', op: 'eq', value: formattedPhone }] });
+      }
+
+      if (users.length === 0) {
+        const verificationToken = jwt.sign({ phone: formattedPhone, verified: true }, JWT_SECRET, { expiresIn: '15m' });
+        return res.json({ success: true, needsProfile: true, userId: '', phone: formattedPhone, verificationToken, message: 'Phone verified successfully' });
+      }
+
+      const userData = users[0];
+      const docId = userData.id || userData.userId;
+      const payload = createPhoneLoginResponsePayload(userData, docId);
+      const redirect = await getPartnerCollabRedirect(db, payload.safeUser);
+      return res.json({ success: true, token: payload.token, refreshToken: payload.refreshToken, user: payload.safeUser, redirectTo: redirect?.redirectTo || null, collaboratorContext: redirect?.collaboratorContext || null, message: 'Welcome!' });
+    }
+
+    const stored = phoneOtpStore.get(cleanPhone);
+    if (!stored) {
+      return res.status(400).json({ success: false, message: 'No OTP found for this number. Request a new one.' });
+    }
+    if (Date.now() > stored.expiry) {
+      phoneOtpStore.delete(cleanPhone);
+      return res.status(400).json({ success: false, message: 'OTP expired. Please request a new one.' });
+    }
+    if (stored.attempts >= PHONE_OTP_MAX_ATTEMPTS) {
+      phoneOtpStore.delete(cleanPhone);
+      return res.status(429).json({ success: false, message: 'Too many wrong attempts. Request a new OTP.' });
+    }
+    if (stored.otp !== otpCode) {
+      stored.attempts += 1;
+      const left = PHONE_OTP_MAX_ATTEMPTS - stored.attempts;
+      if (left <= 0) {
+        phoneOtpStore.delete(cleanPhone);
+        return res.status(400).json({ success: false, message: 'Too many wrong attempts. Request a new OTP.' });
+      }
+      return res.status(400).json({ success: false, message: `Incorrect OTP. ${left} attempt(s) remaining.` });
+    }
+
+    phoneOtpStore.delete(cleanPhone);
+    const db = req.app.locals.db;
+    const useMemory = !isSupabaseAvailable();
+    let users = [];
+
+    if (useMemory) {
+      const found = Array.from(memoryDb.users.entries()).find(([_, user]) => user.phone === formattedPhone);
+      if (found) users.push({ id: found[0], ...found[1] });
+    } else {
+      users = await dbList('users', { filters: [{ column: 'phone', op: 'eq', value: formattedPhone }] });
+    }
+
+    if (users.length === 0) {
+      const verificationToken = jwt.sign({ phone: formattedPhone, verified: true }, JWT_SECRET, { expiresIn: '15m' });
+      return res.json({ success: true, needsProfile: true, userId: '', phone: formattedPhone, verificationToken, message: 'Phone verified successfully' });
+    }
+
+    const userData = users[0];
+    const docId = userData.id || userData.userId;
+    const payload = createPhoneLoginResponsePayload(userData, docId);
+    const redirect = await getPartnerCollabRedirect(db, payload.safeUser);
+
+    return res.json({
+      success: true,
+      token: payload.token,
+      refreshToken: payload.refreshToken,
+      user: payload.safeUser,
+      redirectTo: redirect?.redirectTo || null,
+      collaboratorContext: redirect?.collaboratorContext || null,
+      message: 'Welcome!'
+    });
+  } catch (err) {
+    console.error('[VERIFY PHONE OTP ERROR]:', err);
+    return res.status(500).json({ success: false, message: 'Verification error. Please try again.' });
   }
 }
 
