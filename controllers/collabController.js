@@ -20,7 +20,7 @@ function buildCollaboratorSessionPayload(collab) {
     name: collab.name,
     collaborator: true,
     type: (collab.type || (Array.isArray(collab.serviceCategories) ? collab.serviceCategories[0] : collab.serviceCategories) || 'business'),
-    serviceCategories: collab.serviceCategoriesr || [],
+    serviceCategories: collab.serviceCategories || [],
     permissions: collab.serviceCategories || []
   };
 }
@@ -496,7 +496,11 @@ export async function selectCollaboratorRole(req, res) {
     }
 
     if (req.app.locals.db?.update) {
-      await req.app.locals.db.update('users', userId, userUpdates);
+      try {
+        await req.app.locals.db.update('users', userId, userUpdates);
+      } catch (err) {
+        console.warn('[collabController] Failed to update user preferredCollaboratorId (column might be missing):', err.message);
+      }
     }
 
     const token = generateToken(buildCollaboratorSessionPayload(collab));

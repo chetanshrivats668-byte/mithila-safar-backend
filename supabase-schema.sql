@@ -28,6 +28,7 @@ CREATE TABLE users (
   "emailVerified" BOOLEAN DEFAULT false,
   "googleId" TEXT,
   "picture" TEXT,
+  "preferredCollaboratorId" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -91,6 +92,14 @@ CREATE TABLE collaborators (
   "rating" NUMERIC DEFAULT 0,
   "totalBookings" INTEGER DEFAULT 0,
   "totalEarnings" NUMERIC DEFAULT 0,
+  "partnerCollabStatus" TEXT DEFAULT 'pending',
+  "submittedFrom" TEXT,
+  "approvedAt" TIMESTAMPTZ,
+  "approvedBy" TEXT,
+  "partnerCollabRejectedAt" TIMESTAMPTZ,
+  "partnerCollabReapplyAfter" TIMESTAMPTZ,
+  "verificationRequestedAt" TIMESTAMPTZ,
+  "rejectionReason" TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -98,6 +107,8 @@ ALTER TABLE collaborators ENABLE ROW LEVEL SECURITY;
 CREATE INDEX idx_collabs_email ON collaborators("email");
 CREATE INDEX idx_collabs_phone ON collaborators("phone");
 CREATE INDEX idx_collabs_status ON collaborators("status");
+CREATE INDEX idx_collabs_partner_collab_status ON collaborators("partnerCollabStatus");
+CREATE INDEX idx_collabs_submitted_from ON collaborators("submittedFrom");
 
 CREATE TABLE collaborator_buses (
   "id" TEXT PRIMARY KEY,
