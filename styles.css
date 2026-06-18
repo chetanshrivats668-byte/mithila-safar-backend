@@ -2126,12 +2126,12 @@ footer {
 
     .booking-section {
         margin: -30px .8rem 1.5rem;
-        padding: 1rem;
+        padding: 1.25rem;
         border-radius: 14px;
     }
 
     .booking-tabs {
-        gap: .35rem;
+        gap: .5rem;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
@@ -2160,7 +2160,11 @@ footer {
 
     .booking-form.active {
         grid-template-columns: 1fr;
-        gap: .9rem;
+        gap: 1.2rem;
+    }
+
+    .form-group label {
+        margin-bottom: .45rem;
     }
 
     .form-group input,
@@ -2200,7 +2204,20 @@ footer {
     }
 
     .result-card-body {
-        padding: 1rem;
+        padding: 1.25rem;
+    }
+
+    .result-card-title {
+        font-size: 1.15rem;
+        margin-bottom: .5rem;
+    }
+
+    .result-card-desc {
+        margin-bottom: 1rem;
+    }
+
+    .result-tags {
+        margin-bottom: 1rem;
     }
 
     .result-footer,
@@ -2267,7 +2284,11 @@ footer {
 
     .services-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 1.5rem;
+    }
+
+    .service-card {
+        padding: 1.5rem;
     }
 
     .page-view {
@@ -2313,8 +2334,8 @@ footer {
     }
 
     .cafe-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: .8rem;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 1.2rem;
     }
 
     .cafe-card-img {
@@ -2413,7 +2434,7 @@ footer {
 
     .booking-section {
         margin: -25px .5rem 1.2rem;
-        padding: .9rem;
+        padding: 1.2rem;
     }
 
     .booking-tabs {
@@ -3039,12 +3060,25 @@ footer {
 @media (max-width: 600px) {
     .bus-card-body {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 1.25rem;
         text-align: center;
+        padding: 1.2rem;
     }
 
     .bus-card-route-timeline {
         justify-content: center !important;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.8rem;
+    }
+
+    .seats-occupancy-status {
+        align-items: center !important;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.8rem;
+    }
+
+    .price-booking-cell {
+        align-items: center !important;
     }
 }
 
