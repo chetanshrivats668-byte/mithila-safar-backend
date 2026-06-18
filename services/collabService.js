@@ -135,11 +135,29 @@ export async function getCollaboratorByGoogleEmail(db, googleEmail) {
 
 export async function getCollaboratorByPhone(db, phone) {
   const normalizedPhone = normalizePhone(phone);
-  const found = Array.from(memoryDb.collabs.values()).find(c => normalizePhone(c.phone) === normalizedPhone);
+  const matchesPhone = (collab) => {
+    if (!collab) return false;
+    const candidatePhones = [
+      collab.phone,
+      collab.phoneNumber,
+      collab.phonenumber,
+      collab.phone_number
+    ];
+    return candidatePhones.some((value) => normalizePhone(value) === normalizedPhone);
+  };
+
+  const found = Array.from(memoryDb.collabs.values()).find(matchesPhone);
   if (found) return normalize(found);
   if (isSupabaseAvailable()) {
-    const results = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: normalizedPhone }] });
-    return normalize(results.length > 0 ? results[0] : null);
+    const exactPhoneResults = await dbList('collaborators', { filters: [{ column: 'phone', op: 'eq', value: normalizedPhone }] });
+    if (exactPhoneResults.length > 0) return normalize(exactPhoneResults[0]);
+
+    const exactPhoneNumberResults = await dbList('collaborators', { filters: [{ column: 'phoneNumber', op: 'eq', value: normalizedPhone }] });
+    if (exactPhoneNumberResults.length > 0) return normalize(exactPhoneNumberResults[0]);
+
+    const allResults = await dbList('collaborators');
+    const matched = (allResults || []).find(matchesPhone);
+    return normalize(matched || null);
   }
   return null;
 }

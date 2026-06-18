@@ -265,15 +265,16 @@ export async function loginWithOTP(req, res) {
 
 export async function loginWithPhone(req, res) {
   try {
-    const { phone, otp } = req.body || {};
-    if (!phone || !otp) {
-      return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
+    const { phone, otp, verificationToken, token } = req.body || {};
+    const widgetAccessToken = verificationToken || token || otp;
+    if (!phone || !widgetAccessToken) {
+      return res.status(400).json({ success: false, message: 'Phone and verification token are required' });
     }
 
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
 
     const verificationReq = {
-      body: { phone: cleanPhone, otp }
+      body: { phone: cleanPhone, verificationToken: widgetAccessToken, token: widgetAccessToken, otp: widgetAccessToken }
     };
 
     let verificationPassed = false;

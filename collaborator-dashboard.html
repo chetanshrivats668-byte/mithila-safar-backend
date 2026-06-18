@@ -1493,7 +1493,7 @@ async function sendLoginPhoneOtp() {
 
   try {
     // MSG91 widget handles send + verify in one call; resolves with a token on success
-    await window.msg91OTP.verify(phone);
+    const verificationToken = await window.msg91OTP.verify(phone);
 
     // Widget succeeded — now log in via server
     err.style.color = '#86efac';
@@ -1504,7 +1504,7 @@ async function sendLoginPhoneOtp() {
     const r = await fetch(API + '/api/collaborator/login-with-phone', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ phone, verificationToken })
     });
     const d = await r.json();
     if (d.success) {
