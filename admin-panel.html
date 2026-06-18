@@ -365,7 +365,7 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
     </div>
     <nav class="sb-nav">
       <button class="sb-link active" id="btn-stats" onclick="switchTab('stats')"><span class="sb-ico">📊</span>Dashboard</button>
-      <button class="sb-link" id="btn-orders" onclick="switchTab('orders')"><span class="sb-ico">📦</span>Orders</button>
+      <button class="sb-link" id="btn-orders" onclick="switchTab('orders')"><span class="sb-ico">💳</span>Payments</button>
       <button class="sb-link" id="btn-users" onclick="switchTab('users')"><span class="sb-ico">👤</span>Users</button>
       <button class="sb-link" id="btn-bookings" onclick="switchTab('bookings')"><span class="sb-ico">🎫</span>Bookings</button>
       <button class="sb-link" id="btn-services" onclick="switchTab('services')"><span class="sb-ico">🏪</span>Services</button>
@@ -376,7 +376,7 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
       <button class="logout-btn" onclick="out()">🚪 Logout</button>
     </div>
   </aside>
-
+ 
   <!-- Main -->
   <main class="main">
     <div class="topbar">
@@ -386,12 +386,12 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
         <button class="refresh-btn" onclick="loadAllData()">Refresh</button>
       </div>
     </div>
-
+ 
     <!-- Stats Pane -->
     <div class="pane active" id="pane-stats">
       <div class="stats" id="stats">
         <div class="stat pending"><div class="stat-ico">👤</div><div class="stat-n" id="s-users">—</div><div class="stat-l">Users</div></div>
-        <div class="stat confirmed"><div class="stat-ico">📦</div><div class="stat-n" id="s-orders">—</div><div class="stat-l">Orders (7w)</div></div>
+        <div class="stat confirmed"><div class="stat-ico">💳</div><div class="stat-n" id="s-orders">—</div><div class="stat-l">Payments (7w)</div></div>
         <div class="stat pending"><div class="stat-ico">⏳</div><div class="stat-n" id="s-pending">—</div><div class="stat-l">Pending</div></div>
         <div class="stat confirmed"><div class="stat-ico">✅</div><div class="stat-n" id="s-confirmed">—</div><div class="stat-l">Confirmed</div></div>
         <div class="stat confirmed" style="cursor:pointer" onclick="switchTab('collaborators')" title="Click to view all collaborators"><div class="stat-ico">🤝</div><div class="stat-n" id="s-collaborators">—</div><div class="stat-l">Collaborators ↗</div></div>
@@ -399,12 +399,12 @@ body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--text);min
         <div class="stat confirmed"><div class="stat-ico">💰</div><div class="stat-n" id="s-revenue">—</div><div class="stat-l">Revenue</div></div>
       </div>
     </div>
-
+ 
     <!-- Orders Pane -->
     <div class="pane" id="pane-orders">
-      <div class="sec-hdr">All Orders</div>
+      <div class="sec-hdr">All Payments</div>
       <div class="search-bar">
-        <input type="text" id="orderSearchInput" placeholder="🔍 Search by Booking ID..." onkeydown="if(event.key==='Enter')searchOrder()">
+        <input type="text" id="orderSearchInput" placeholder="🔍 Search by Payment ID..." onkeydown="if(event.key==='Enter')searchOrder()">
         <button onclick="searchOrder()">Search</button>
         <button class="sec" onclick="clearSearch()">Clear</button>
       </div>
@@ -605,28 +605,22 @@ function renderOrderCard(x) {
       upiRef = detailsObj.upiRef || '';
     } catch(e) {}
   }
-  const paymentDetails = `${x.payMethod||'N/A'}${upiRef ? ` (Ref: ${upiRef})` : ''} · ${x.transactionId||'N/A'}`;
+  const paymentDetails = `${x.payMethod||'N/A'}${upiRef ? ` (Ref: ${upiRef})` : ''}`;
   return `
     <div class="card">
       <div class="card-head">
         <div>
-          <div class="card-id">${typeIcon(x.type)} ${x.orderId}</div>
-          <div class="card-name">${x.itemName}</div>
+          <div class="card-id">💰 Payment ${x.orderId}</div>
+          <div class="card-name">Txn: ${x.transactionId||'N/A'}</div>
         </div>
         ${badge(x.status)}
       </div>
       <div class="card-grid">
         <div class="info"><div class="lbl">Amount</div><div class="val">₹${x.amount}</div></div>
         <div class="info"><div class="lbl">Paid</div><div class="val">₹${x.payNow}</div></div>
-        <div class="info"><div class="lbl">Customer</div><div class="val">${x.userName||'N/A'}</div></div>
-        <div class="info"><div class="lbl">Phone</div><div class="val">${x.userPhone||'N/A'}</div></div>
+        <div class="info"><div class="lbl">Payment Method</div><div class="val">${paymentDetails}</div></div>
         <div class="info"><div class="lbl">Date</div><div class="val">${fmtDateTime(x.createdAt)}</div></div>
-        <div class="info"><div class="lbl">Payment</div><div class="val">${paymentDetails}</div></div>
       </div>
-      ${x.status === 'payment_pending' ? `<div class="card-actions">
-        <button class="act approve" onclick="vfy('${x.orderId}','approve')">✅ Approve</button>
-        <button class="act reject" onclick="vfy('${x.orderId}','reject')">❌ Reject</button>
-      </div>` : ''}
     </div>`;
 }
 

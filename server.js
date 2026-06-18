@@ -583,10 +583,10 @@ app.post('/api/payment-link/qr-confirm', async (req, res) => {
       userName:  String(userName || '').trim().slice(0, 80),
       userPhone: cleanPhone ? '+91' + cleanPhone : (userPhone || ''),
       source:    'payment_link_qr',
-      status:    'payment_pending',
+      status:    'confirmed',
       payMethod: 'upi_qr',
       createdAt: new Date().toISOString(),
-      verifiedAt: null, verifiedBy: null,
+      verifiedAt: new Date().toISOString(), verifiedBy: 'upi_qr_auto',
     };
 
     if (isSupabaseAvailable()) {
@@ -594,6 +594,9 @@ app.post('/api/payment-link/qr-confirm', async (req, res) => {
     } else {
       memoryDb.orders.set(orderId, order);
     }
+
+    // Send customer and collaborator ticket notifications
+    await sendBookingNotifications(order);
 
     // Notify admin via SMS
     try {
@@ -603,8 +606,8 @@ app.post('/api/payment-link/qr-confirm', async (req, res) => {
       console.warn('[PayLink] Admin SMS failed:', smsErr.message);
     }
 
-    console.log(`[PayLink] QR confirm submitted: ${orderId} | UPI Ref: ${upiRef}`);
-    res.json({ success: true, orderId, message: 'Payment submitted. Our team will verify within 30 minutes.' });
+    console.log(`[PayLink] QR confirm auto-verified: ${orderId} | UPI Ref: ${upiRef}`);
+    res.json({ success: true, orderId, message: 'Payment confirmed successfully.' });
   } catch (err) {
     console.error('[PayLink] QR confirm error:', err);
     res.status(500).json({ success: false, message: 'Failed to submit payment confirmation' });
@@ -1039,14 +1042,16 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
     
     if (isSupabaseAvailable()) {
       const existing = await dbGet('orders', orderId);
+      const updates = {
+        status: 'confirmed',
+        payMethod: 'upi',
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: 'upi_auto'
+      };
       
       if (existing) {
-        await dbUpdate('orders', orderId, {
-          status: 'payment_pending',
-          payMethod: 'upi',
-          verifiedAt: null,
-          verifiedBy: null
-        });
+        await dbUpdate('orders', orderId, updates);
+        await sendBookingNotifications({ ...existing, ...updates, orderId });
       } else {
         const order = {
           orderId,
@@ -1063,29 +1068,31 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
           passengerCount: 1,
           // Audit 2026-06-14: route partner SMS to the right operator
           collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
-          status: 'payment_pending',
-          payMethod: 'upi',
-          createdAt: new Date().toISOString(),
-          verifiedAt: null,
-          verifiedBy: null
+          ...updates,
+          createdAt: new Date().toISOString()
         };
         await dbCreate('orders', orderId, order);
+        await sendBookingNotifications(order);
       }
     } else {
       // Handle in memory when Firestore unavailable
       const existingOrder = memoryDb.orders.get(orderId);
+      const updates = {
+        status: 'confirmed',
+        payMethod: 'upi',
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: 'upi_auto'
+      };
       
       if (existingOrder) {
         // Update existing order
         const updatedOrder = {
           ...existingOrder,
-          status: 'payment_pending',
-          payMethod: 'upi',
-          verifiedAt: null,
-          verifiedBy: null
+          ...updates
         };
         memoryDb.orders.set(orderId, updatedOrder);
         console.log('[FALLBACK]: Order updated in memory:', orderId);
+        await sendBookingNotifications(updatedOrder);
       } else {
         // Create new order
         const order = {
@@ -1103,14 +1110,12 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
           passengerCount: 1,
           // Audit 2026-06-14: route partner SMS to the right operator
           collaboratorId: (details && (details.collaboratorId || details.collabId)) || null,
-          status: 'payment_pending',
-          payMethod: 'upi',
-          createdAt: new Date().toISOString(),
-          verifiedAt: null,
-          verifiedBy: null
+          ...updates,
+          createdAt: new Date().toISOString()
         };
         memoryDb.orders.set(orderId, order);
         console.log('[FALLBACK]: Order created in memory:', orderId);
+        await sendBookingNotifications(order);
       }
     }
     
@@ -1122,7 +1127,7 @@ app.post('/api/upi/confirm-payment', requireAuth, blockTemporarySession, validat
       console.log('SMS notification failed:', smsErr);
     }
     
-    res.json({ success: true, message: 'Payment confirmation submitted. Admin will verify shortly.' });
+    res.json({ success: true, message: 'Payment confirmed successfully.' });
   } catch (err) {
     console.error('UPI confirm payment error:', err);
     res.status(500).json({ success: false, message: 'Failed to confirm payment' });
