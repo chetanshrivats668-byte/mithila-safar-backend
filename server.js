@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
@@ -50,6 +51,7 @@ if (!isSupabaseAvailable()) {
 }
 
 const app = express();
+app.use(compression());
 app.locals.db = {
   get: dbGet,
   list: dbList,
@@ -336,7 +338,10 @@ app.use('/api/collaborator/verification', verificationRoutes);
 // ========== STATIC FILES ==========
 // Serve root-level HTML/CSS/JS files (index.html, pay.html, styles.css, etc.)
 // and the /public directory for images, icons, manifests.
-app.use('/public', express.static(path.join(ROOT_DIR, 'public')));
+app.use('/public', express.static(path.join(ROOT_DIR, 'public'), {
+  maxAge: '1y',
+  immutable: true
+}));
 app.use(express.static(ROOT_DIR, {
   index: 'index.html',
   extensions: ['html'],
@@ -344,6 +349,9 @@ app.use(express.static(ROOT_DIR, {
   setHeaders(res, filePath) {
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      // Cache images, JS, CSS files for 1 year
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
 }));
