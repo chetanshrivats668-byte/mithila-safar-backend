@@ -3292,23 +3292,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // Listen to hash changes
     window.addEventListener('hashchange', handleHashAction);
 
-    // Fetch config and init Google Sign-In + MSG91 widget auth
-    fetch(API_URL + '/api/config')
+    // Fetch public config and init Google Sign-In
+    // SECURITY: Only fetches the Google Client ID (safe to expose).
+    // Razorpay key_id comes back from the create-order endpoint response.
+    fetch(API_URL + '/api/config/public')
         .then(function (r) { return r.json(); })
         .then(function (config) {
             if (config.googleClientId) {
                 GOOGLE_CLIENT_ID = config.googleClientId;
             }
-            if (config.razorpayKeyId) {
-                RAZORPAY_KEY_ID = config.razorpayKeyId;
-            }
             // Initialize Google Sign-In once config is ready
             initGoogleSignIn();
         })
         .catch(function (err) {
-            console.error('Failed to load /api/config:', err);
-            notify('Unable to initialize payment. Please refresh and try again.', 'error');
-            // No fallback keys - /api/config must work for security
+            console.error('Failed to load /api/config/public:', err);
+            // Still try to init Google Sign-In with any pre-set GOOGLE_CLIENT_ID
+            initGoogleSignIn();
         });
 
     // Close dropdown on outside click
@@ -3487,9 +3486,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // 4) Auto-hide the server-error overlay when the user retries and the
         //    next request succeeds. We do that by listening on the global
-        //    retry event and probing /api/config.
+        //    retry event and probing /api/health.
         window.addEventListener('yp:retry', function () {
-            api.get('/api/config', { timeout: 4000, showErrorOnFail: false })
+            api.get('/api/health', { timeout: 4000, showErrorOnFail: false })
                 .then(function () { ServerError.hide(); })
                 .catch(function () { ServerError.show(); });
         });

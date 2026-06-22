@@ -51,6 +51,7 @@ if (!isSupabaseAvailable()) {
 }
 
 const app = express();
+app.disable('x-powered-by'); // Remove Express fingerprint (security audit fix)
 app.use(compression());
 app.locals.db = {
   get: dbGet,
@@ -321,7 +322,27 @@ app.use('/api/collaborator', (req, res, next) => {
     });
     next();
 });
-app.use((req, res, next) => { res.setHeader('X-Request-ID', req.reqId || ''); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('X-Frame-Options', 'DENY'); res.setHeader('X-XSS-Protection', '1; mode=block'); next(); });
+app.use((req, res, next) => {
+  res.setHeader('X-Request-ID', req.reqId || '');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Security audit fixes: add missing headers
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://accounts.google.com https://checkout.razorpay.com https://www.googletagmanager.com https://verify.msg91.com https://verify.phone91.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://nominatim.openstreetmap.org https://accounts.google.com; " +
+    "frame-src https://checkout.razorpay.com https://accounts.google.com;"
+  );
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  next();
+});
 
 // ========== ROUTES ==========
 app.use('/api/auth', authRoutes);
@@ -362,19 +383,26 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ========== STATIC CONFIG ==========
-app.get('/api/config', (req, res) => {
+// ========== SCOPED CONFIG ENDPOINTS (replaces the removed /api/config catch-all) ==========
+// SECURITY: The old /api/config endpoint was exposing ALL credentials publicly.
+// It has been removed and replaced by two narrowly-scoped endpoints:
+
+// Public endpoint — returns ONLY the Google Client ID which is required client-side
+// for the Google Sign-In button. The client_id is safe to expose (it's a public identifier).
+app.get('/api/config/public', (req, res) => {
   res.json({
-    firebaseApiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-    razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
-    googleClientId: process.env.GOOGLE_CLIENT_ID,
-    msg91WidgetId: process.env.MSG91_WIDGET_ID || '366668686d37313131303336',
-    msg91TokenAuth: process.env.MSG91_WIDGET_TOKEN_AUTH
+    googleClientId: process.env.GOOGLE_CLIENT_ID || ''
+  });
+});
+
+// Auth-gated endpoint — returns MSG91 widget credentials.
+// Only authenticated users can access this (phone verification is post-login only).
+// The Razorpay key_id is NOT returned here — it's already included in the
+// create-order response (razorpayKey field) so no separate config call is needed.
+app.get('/api/config/msg91', requireAuth, (req, res) => {
+  res.json({
+    widgetId: process.env.MSG91_WIDGET_ID || '',
+    tokenAuth: process.env.MSG91_WIDGET_TOKEN_AUTH || ''
   });
 });
 

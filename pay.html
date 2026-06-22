@@ -1008,14 +1008,8 @@ async function init() {
     el.classList.add('prefilled');
   }
 
-  // Fetch Razorpay key from config
-  try {
-    const res  = await fetch(API_BASE + '/api/config');
-    const data = await res.json();
-    RAZORPAY_KEY = data.razorpayKeyId || '';
-  } catch (e) {
-    console.warn('Could not fetch config, Razorpay card tab may not work.');
-  }
+  // RAZORPAY_KEY is populated from the create-order response (orderData.razorpayKey).
+  // No separate config fetch needed — see createPaymentLinkOrder() response handling.
 }
 
 // =============================================

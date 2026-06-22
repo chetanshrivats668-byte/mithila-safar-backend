@@ -1,9 +1,12 @@
 (function() {
 
-  // Fetch the configuration dynamically from backend
-  var configPromise = fetch('/api/config')
-    .then(function(r) { return r.json(); })
-    .catch(function() { return {}; });
+  // Fetch MSG91 widget credentials from the auth-gated endpoint.
+  // SECURITY: /api/config/msg91 requires a valid JWT — prevents credential scraping.
+  // Phone verification is only triggered post-login, so the token will always be present.
+  var configPromise = fetch('/api/config/msg91', {
+    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || '') }
+  }).then(function(r) { return r.json(); }).catch(function() { return {}; });
+
 
   function findTokenInPayload(payload, visited) {
     if (!payload) return null;
@@ -115,8 +118,8 @@
     verify: function(phone) {
       return new Promise(function(resolve, reject) {
         configPromise.then(function(config) {
-          var wId = config.msg91WidgetId;
-          var tAuth = config.msg91TokenAuth;
+          var wId = config.widgetId;
+          var tAuth = config.tokenAuth;
 
           if (!wId || !tAuth) {
             reject('MSG91 widget is not configured. Please contact support.');
